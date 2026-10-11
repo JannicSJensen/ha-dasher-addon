@@ -47,6 +47,7 @@ export function createAreasPage(model, ctx) {
   const el = h(
     "div",
     { class: "areas" },
+    h("h1", { class: "radio__title areas__title" }, model.title ?? ctx.t("areas")),
     cards.length
       ? h("div", { class: "areas__grid" }, cards.map((c) => c.el))
       : h("div", { class: "notice" }, icon("floor-plan"), h("h2", null, ctx.t("no_areas")), h("p", null, ctx.t("no_areas_hint"))),

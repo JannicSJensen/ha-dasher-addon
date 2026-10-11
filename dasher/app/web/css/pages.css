@@ -3,7 +3,8 @@
 .areas::-webkit-scrollbar { display: none; }
 .areas__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(clamp(220px, 27vw, 340px), 1fr)); gap: 12px; }
 .areas__grid .tile { aspect-ratio: 1.45; }
-.areas .notice { height: 100%; display: grid; place-content: center; }
+.areas__title { margin-bottom: 14px; }
+.areas .notice { min-height: 60%; display: grid; place-content: center; }
 
 /* ---- single area ---- */
 .area {
@@ -402,7 +403,9 @@
 /* ---- car page ---- */
 .ev { height: 100%; overflow-y: auto; overscroll-behavior: contain; padding: 14px; scrollbar-width: none; }
 .ev::-webkit-scrollbar { display: none; }
-.ev__grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 12px; align-items: start; max-width: 1180px; margin: 0 auto; }
+.ev__inner { max-width: 1180px; margin: 0 auto; }
+.ev__title { margin: 4px 0 14px; }
+.ev__grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 12px; align-items: stretch; }
 .ev__col { display: grid; gap: 12px; }
 .ev__col .notice { padding: 30px 12px; }
 @media (max-width: 760px), (orientation: portrait) { .ev__grid { grid-template-columns: 1fr; } }
@@ -417,7 +420,7 @@
 .evcard__plan[hidden] { display: none; }
 .evcard .evtimes { margin-top: 12px; }
 
-.evcar { text-align: center; }
+.evcar { display: flex; flex-direction: column; justify-content: center; text-align: center; }
 .evcar__name { margin: 0; font-size: clamp(20px, 2.6vw, 28px); font-weight: 300; letter-spacing: 0.16em; text-transform: uppercase; }
 .evcar__img { display: block; width: 100%; max-height: 260px; margin: 16px 0; border-radius: 14px; object-fit: cover; }
 .evcar__glyph { display: grid; place-items: center; height: 170px; margin: 12px 0; font-size: 110px; color: #3d3d41; }

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.11.1
+
+- The Car page and the Areas overview now have a page title like the other pages. On the Car page the card only shows a name when `name:` is set in `ev:`.
+- Car page: the car card is as tall as the column next to it.
+
 ## 0.11.0
 
 - New **Climate** page: an overview of the heating with a card per room (temperature, heating state, setpoint with −/+ and a power button). It lists your climate helpers by default instead of every thermostat; `climate:` in `dashboard.yaml` chooses `source`, `entities` or `exclude`.

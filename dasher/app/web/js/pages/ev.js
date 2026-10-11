@@ -38,7 +38,7 @@ export function createEvPage(model, ctx) {
   const car = h(
     "section",
     { class: "evcard evcar" },
-    h("h2", { class: "evcar__name" }, model.name ?? t("ev_car")),
+    model.name ? h("h2", { class: "evcar__name" }, model.name) : null,
     art,
     h("div", { class: "evcar__battery" }, percent, h("div", { class: "evbar" }, fill, targetMark)),
     targetText,
@@ -138,7 +138,12 @@ export function createEvPage(model, ctx) {
   const el = h(
     "div",
     { class: "ev" },
-    h("div", { class: "ev__grid" }, car, h("div", { class: "ev__col" }, chargeCard, smartCard, chargerCard, nothing)),
+    h(
+      "div",
+      { class: "ev__inner" },
+      h("h1", { class: "radio__title ev__title" }, model.title ?? t("ev_car")),
+      h("div", { class: "ev__grid" }, car, h("div", { class: "ev__col" }, chargeCard, smartCard, chargerCard, nothing)),
+    ),
   );
 
   // ---- rendering ---------------------------------------------------------------------------
