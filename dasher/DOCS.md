@@ -93,8 +93,24 @@ Large area picture with clock, date and quick buttons.
 | `image` | Default background. |
 | `backgrounds` | List of `{ when, image }`; the first match wins, an entry without `when` is the fallback. |
 | `buttons` | List of `{ icon, name, entity, tap, active_when }`. A button with `entity` toggles it and is highlighted while it is `on`. |
+| `messages` | [Status messages](#status-messages) shown under the clock while they apply. |
 | `show_clock` | `false` to hide clock and date. |
 | `time_format` | `24h` (default) or `12h`. |
+
+##### Status messages
+Short reminders on the front page that only appear while they apply, as cards between the clock and the buttons:
+
+```yaml
+- type: hero
+  messages:
+    - { entity: sensor.renoweb_240_l_rest_mad_spand }                 # waste pick-up
+    - { entity: sensor.renoweb_pap, within_days: 2, title: Put out the paper }
+    - { entity: binary_sensor.garage_door, text: The garage door is open, icon: garage-open }
+```
+
+* **Pick-up reminders:** an entity with a `next_pickup_date` attribute (the RenoWeb sensors, and others) shows *Empty the trash can* with the bin's name, the date and *Today* or *Tomorrow*. It appears when the pick-up is **today or within `within_days` days** (default `1`, so the evening before and the day itself; `0` means only on the day). The icon and colour follow the sensor's `icon` and `icon_color`. Other options: `name`, `title`, `icon`, `color`, `kind: pickup` for a sensor without the date attribute (it then counts the sensor's own number of days).
+* **State messages:** any other entity shows `text` (default: its name) while `when` holds, e.g. `when: { entity: sensor.temp, above: 30 }`; without `when` while it is `on`. Options: `text`, `detail`, `icon`, `color`, `urgent: true`.
+* Pick-ups are re-checked every minute, so a message appears at midnight without a reload. The entities take part in entity mapping and are read-only (nothing is controlled).
 
 #### `toggle`
 Light, switch, fan, cover, input_boolean or media player. Tap toggles (a switched-off media player is turned on). Long-press on a dimmable light opens a brightness dialog, long-press on a media player turns it off.

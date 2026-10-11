@@ -6,7 +6,7 @@ This repository contains the **Dasher** app (add-on) for Home Assistant: a dark,
 
 * Tablets just open `http://<home-assistant>:8099/`; no Home Assistant login, no HACS cards.
 * Dashboards are described in one `dashboard.yaml` and hot-reload on save.
-* Tiles: area hero with clock and scene buttons, lights/switches (with brightness slider), electricity price timeline, calendar agenda with weather, vehicle, "now playing", heat pump/AC and button grids.
+* Tiles: area hero with clock, status messages (like waste pick-up reminders) and quick buttons, lights/switches (with brightness slider), electricity price timeline, calendar agenda with weather, vehicle, "now playing", heat pump/AC and button grids.
 * **Area pages:** every Home Assistant area as a clickable picture card; each opens a sub-page with its temperature, humidity, windows and a picture tile with brightness slider for every light and player.
 * **Now playing tile and full-screen player:** the tile follows whichever speaker is playing, with controls, volume and progress; when everything is stopped it shows the last track that played (remembered by the app). When music starts, a full-screen player opens with big artwork, seeking, shuffle/repeat and volume.
 * **Music page:** swipeable tabs for Discover, Radio, Albums, Artists, Podcasts (with episodes), Party (QR code and live queue of Music Assistant's Party plugin) and Search, a speaker picker with Music Assistant grouping and a now-playing bar. Browsing uses Music Assistant's API with a read-only token in the app options; playback goes through Home Assistant.

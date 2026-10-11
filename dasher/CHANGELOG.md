@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.18.0
+
+- **Status messages** on the front page: the hero tile takes `messages:`, cards that only show while they apply. Waste pick-up sensors (RenoWeb and others with a `next_pickup_date`) show "Empty the trash can" today and tomorrow (`within_days` changes that); any entity can also show a message while a condition holds. The example front page has three pick-up messages.
+
 ## 0.17.1
 
 - The example front page has **Good night** and **Vacation** buttons (input booleans that toggle and light up while on) instead of the *Cozy* and *Movie* scenes.

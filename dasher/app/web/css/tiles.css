@@ -302,3 +302,16 @@
 .cal__title { font-size: 5.3cqmin; font-weight: 600; line-height: 1.25; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .cal__time { display: flex; align-items: center; gap: 1.4cqmin; margin-top: 0.8cqmin; font-size: 4.2cqmin; color: var(--muted); font-variant-numeric: tabular-nums; }
 .cal__time .icon { font-size: 4.6cqmin; flex: none; }
+
+/* ---- hero status messages ---- */
+.hero__messages { position: absolute; z-index: 2; top: 36cqmin; left: 7cqmin; right: 7cqmin; display: grid; gap: 2.4cqmin; }
+.hero__messages.no-clock { top: 8cqmin; }
+.hero__messages:empty { display: none; }
+.heromsg { --msg: var(--accent); display: flex; align-items: center; gap: 3cqmin; padding: 2.6cqmin 3.4cqmin 2.6cqmin 2.6cqmin; border-radius: 3.6cqmin; background: rgba(18, 18, 20, 0.72); backdrop-filter: blur(10px); box-shadow: inset 0.8cqmin 0 0 var(--msg); animation: heromsg-in 0.4s ease; }
+.heromsg__icon { display: grid; place-items: center; flex: none; width: 9cqmin; height: 9cqmin; border-radius: 2.8cqmin; background: color-mix(in srgb, var(--msg) 22%, transparent); color: var(--msg); font-size: 5.4cqmin; }
+.heromsg__text { min-width: 0; flex: 1; }
+.heromsg__title { font-size: 3.5cqmin; font-weight: 600; line-height: 1.2; }
+.heromsg__detail { margin-top: 0.4cqmin; font-size: 2.7cqmin; color: #c9c9cd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.heromsg__badge { flex: none; padding: 0.9cqmin 2.4cqmin; border-radius: 99px; background: rgba(255, 255, 255, 0.12); font-size: 2.7cqmin; font-weight: 600; }
+.heromsg.is-urgent .heromsg__badge { background: #f59e0b; color: #2b1a00; }
+@keyframes heromsg-in { from { opacity: 0; transform: translateY(-6px); } }

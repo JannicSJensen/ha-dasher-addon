@@ -26,6 +26,11 @@ put("light.garage_spots", "off", { friendly_name: "Garage spots", supported_colo
 put("light.carport", "off", { friendly_name: "Carport", supported_color_modes: ["onoff"] });
 put("input_boolean.good_night", "off", { friendly_name: "Good night" });
 put("input_boolean.vacation", "on", { friendly_name: "Vacation" });
+// waste pick-ups like the RenoWeb sensors: state = days left, plus the date and a bin colour
+const dayLabel = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+put("sensor.waste_general", "1", { friendly_name: "Waste general", description: "240 L Rest/Mad - Beholder (Privat)", next_pickup_date: dayLabel(1), icon: "mdi:trash-can", icon_color: "#FFC108", unit_of_measurement: "dage" });
+put("sensor.waste_paper", "8", { friendly_name: "Waste paper", description: "240 l Pap Egenløsning (Privat)", next_pickup_date: dayLabel(8), icon: "mdi:note", icon_color: "#9E9E9E", unit_of_measurement: "dage" });
+put("sensor.waste_plastic", "0", { friendly_name: "Waste plastic", description: "370 l Plast+MDK/Papir - Egenløsning (Privat)", next_pickup_date: dayLabel(0), icon: "mdi:trash-can", icon_color: "#9E9E9E", unit_of_measurement: "dage" });
 put("sun.sun", "above_horizon", {});
 // climate helpers (groups per room) and a device thermostat that the climate page leaves out
 const thermostat = (id, name, current, target, state = "heat", extra = {}) =>

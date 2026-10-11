@@ -93,6 +93,12 @@ pages:
         #     image: living-room-on.jpg
         #   - when: { entity: sun.sun, state: below_horizon }
         #     image: living-room-night.jpg
+        messages:                       # status messages on the front page (shown only while they apply)
+          - { entity: sensor.waste_general }       # a pick-up sensor: "Empty the trash can" today and tomorrow
+          - { entity: sensor.waste_paper }
+          - { entity: sensor.waste_plastic }
+          # - { entity: sensor.waste_paper, within_days: 2, name: Paper, title: Put out the paper }
+          # - { entity: binary_sensor.garage_door, text: The garage door is open, icon: garage-open }   # any entity that is on
         buttons:
           - { icon: weather-night, name: Good night, entity: input_boolean.good_night }   # toggles, lit while on
           - { icon: palm-tree, name: Vacation, entity: input_boolean.vacation }
