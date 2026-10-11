@@ -2,9 +2,9 @@ import { h } from "../core/h.js";
 import { assetUrl } from "../core/api.js";
 import { icon } from "../core/icons.js";
 import { formatNumber, isUnavailable } from "../lib/format.js";
-import { createHeader, friendlyName, safeImage, stateLabel } from "./common.js";
+import { createHeader, friendlyName, pressable, runAction, safeImage, stateLabel } from "./common.js";
 
-/** Car tile: headline value (range), status rows and a picture. */
+/** Car tile: headline value (range), status rows and a picture. Tapping it opens the Car page (or runs `tap`). */
 export function createVehicleTile(cfg, ctx) {
   const header = createHeader({ iconName: cfg.icon ?? "car", title: cfg.name ?? "" });
   const rows = (cfg.rows ?? []).map((row) => {
@@ -15,6 +15,13 @@ export function createVehicleTile(cfg, ctx) {
   const image = cfg.image ? safeImage({ class: "vehicle__img", src: assetUrl(cfg.image) }) : null;
 
   const el = h("div", { class: "tile tile--vehicle" }, header.el, h("div", { class: "vehicle__rows" }, rows.map((r) => r.el)), image);
+
+  pressable(el, {
+    onTap: () => {
+      if (cfg.tap) return runAction(cfg.tap, ctx, cfg.entity);
+      if (ctx.evEnabled()) ctx.navigate("ev");
+    },
+  });
 
   const withUnit = (entity, decimals) => {
     if (isUnavailable(entity)) return "–";

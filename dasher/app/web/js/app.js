@@ -64,6 +64,7 @@ function makeContext(config) {
     stations: () => store.getState().music?.stations ?? [],
     musicEnabled: () => Boolean(store.getState().music?.enabled),
     lastPlayed: () => store.getState().lastPlayed,
+    evEnabled: () => Boolean(store.getState().ev?.enabled),
     navigate: (target) => (location.hash = `#/${target}`),
     /** Add and/or remove speakers of a sync group; resolves to true on success. */
     async groupRadio(leader, change) {
