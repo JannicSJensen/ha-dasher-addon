@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install and test
+        working-directory: dasher/app
+        run: |
+          npm ci
+          npm test
+
+  lint:
+    name: App linter
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Home Assistant app linter
+        uses: frenck/action-addon-linter@v2
+        with:
+          path: ./dasher
+
+  build:
+    name: Build image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the app image
+        run: docker build --build-arg BUILD_VERSION=ci --build-arg BUILD_ARCH=amd64 ./dasher

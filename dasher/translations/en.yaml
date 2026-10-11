@@ -1,0 +1,13 @@
+configuration:
+  log_level:
+    name: Log level
+    description: How much the app writes to its log.
+  read_only:
+    name: Read-only
+    description: Show states on the tablets but refuse every command from them.
+  music_assistant_url:
+    name: Music Assistant address
+    description: Address of your Music Assistant server, for example http://192.168.1.10:8095. Needed for the Discover, Albums, Artists, Podcasts and Search tabs.
+  music_assistant_token:
+    name: Music Assistant access token
+    description: A long-lived token created in Music Assistant under Settings, Profile. It is only used to read the library.

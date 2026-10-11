@@ -1,0 +1,34 @@
+name: Dasher
+version: "0.6.0"
+slug: dasher
+url: https://github.com/JannicSJensen/ha-dasher-addon
+description: Wall-tablet dashboard that serves a ready-to-use web page for tablets
+arch:
+  - aarch64
+  - amd64
+init: false
+startup: application
+boot: auto
+homeassistant_api: true
+ingress: true
+ingress_port: 8099
+ingress_stream: true
+panel_icon: mdi:tablet-dashboard
+panel_title: Dasher
+ports:
+  8099/tcp: 8099
+ports_description:
+  8099/tcp: Tablet web page
+webui: "http://[HOST]:[PORT:8099]/"
+map:
+  - type: app_config
+    read_only: false
+    path: /config
+options:
+  log_level: info
+  read_only: false
+schema:
+  log_level: list(debug|info|warning|error)
+  read_only: bool
+  music_assistant_url: url?
+  music_assistant_token: password?

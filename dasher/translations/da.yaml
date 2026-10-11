@@ -1,0 +1,13 @@
+configuration:
+  log_level:
+    name: Logniveau
+    description: Hvor meget appen skriver i sin log.
+  read_only:
+    name: Skrivebeskyttet
+    description: Vis tilstande på tabletterne, men afvis alle kommandoer fra dem.
+  music_assistant_url:
+    name: Music Assistant-adresse
+    description: Adressen på din Music Assistant-server, fx http://192.168.1.10:8095. Kræves til fanerne Udforsk, Album, Kunstnere, Podcasts og Søg.
+  music_assistant_token:
+    name: Music Assistant-adgangstoken
+    description: Et langtidstoken oprettet i Music Assistant under Indstillinger, Profil. Det bruges kun til at læse biblioteket.
