@@ -104,6 +104,7 @@ function parseMusic(raw, errors) {
     players,
     exclude,
     default_player: defaultPlayer,
+    fullscreen: r.fullscreen !== false,
     config_entry_id: r.config_entry_id != null ? String(r.config_entry_id) : null,
   };
 }

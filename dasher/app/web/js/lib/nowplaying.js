@@ -65,3 +65,28 @@ export function trackPosition(attrs = {}, state, now = Date.now()) {
   if (state === "playing" && Number.isFinite(updated)) current += (now - updated) / 1000;
   return { duration, position: Math.min(duration, Math.max(0, current)) };
 }
+
+/**
+ * When the full-screen player opens by itself: when a speaker starts playing (not on page load, not when it was
+ * dismissed since the music last stopped). `mode` is "playing" | "paused" | null. `closeSoon` asks to close it
+ * after a short grace period once nothing plays any more.
+ */
+export function screenDecision({ mode, prevMode, open, dismissed, ready, enabled }) {
+  const nextDismissed = mode ? dismissed : false;
+  return {
+    dismissed: nextDismissed,
+    shouldOpen: Boolean(enabled && ready && mode === "playing" && prevMode !== "playing" && !open && !nextDismissed),
+    closeSoon: !mode && open,
+  };
+}
+
+const REPEAT_CYCLE = ["off", "all", "one"];
+
+/** The next repeat mode in the cycle off -> all -> one. */
+export const nextRepeat = (current) => REPEAT_CYCLE[(Math.max(0, REPEAT_CYCLE.indexOf(current)) + 1) % REPEAT_CYCLE.length];
+
+/** m:ss for a number of seconds. */
+export function clock(seconds) {
+  const s = Math.max(0, Math.floor(Number(seconds) || 0));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}

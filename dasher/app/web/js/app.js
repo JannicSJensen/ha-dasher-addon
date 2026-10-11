@@ -6,6 +6,7 @@ import { collectEntities } from "./lib/entities.js";
 import { makeTranslator } from "./lib/i18n.js";
 import { createAreaPage } from "./pages/area.js";
 import { createAreasPage } from "./pages/areas.js";
+import { createNowPlayingScreen } from "./components/nowplaying-screen.js";
 import { createClimatePage } from "./pages/climate.js";
 import { createEvPage } from "./pages/ev.js";
 import { createPlexPage } from "./pages/plex.js";
@@ -36,6 +37,7 @@ let t = makeTranslator("en");
 let mounted = []; // { tile, entities: string[], last: object[] }
 let route = { kind: "page", id: null };
 let idleTimer;
+let nowScreen = null; // the full-screen player
 
 const root = document.getElementById("app");
 const sidebar = h("nav", { class: "sidebar", "aria-label": "Pages" });
@@ -69,6 +71,8 @@ function makeContext(config) {
     musicEnabled: () => Boolean(store.getState().music?.enabled),
     lastPlayed: () => store.getState().lastPlayed,
     evEnabled: () => Boolean(store.getState().ev?.enabled),
+    /** Open the full-screen player; false when nothing is playing or paused. */
+    openNowPlaying: () => Boolean(nowScreen?.open()),
     navigate: (target) => (location.hash = `#/${target}`),
     /** Add and/or remove speakers of a sync group; resolves to true on success. */
     async groupRadio(leader, change) {
@@ -317,6 +321,9 @@ function applyConfig() {
   document.documentElement.lang = config.language;
   document.documentElement.style.setProperty("--accent", config.accent);
   document.title = config.title;
+  nowScreen?.destroy();
+  nowScreen = createNowPlayingScreen(makeContext(config), { enabled: () => store.getState().music?.fullscreen !== false });
+  root.append(nowScreen.el);
   renderRoute();
   resetIdle();
 }
@@ -336,7 +343,10 @@ for (const ev of ["pointerdown", "keydown"]) document.addEventListener(ev, reset
 
 // ---- wiring -------------------------------------------------------------------
 
-store.subscribe((s) => s.entities, () => refreshTiles());
+store.subscribe((s) => s.entities, () => {
+  refreshTiles();
+  nowScreen?.update();
+});
 store.subscribe((s) => s.config, applyConfig);
 store.subscribe((s) => s.errors, () => {
   if (!store.getState().config) applyConfig();

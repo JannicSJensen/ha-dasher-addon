@@ -1,5 +1,5 @@
 name: Dasher
-version: "0.14.0"
+version: "0.15.0"
 slug: dasher
 url: https://github.com/JannicSJensen/ha-dasher-addon
 description: Wall-tablet dashboard that serves a ready-to-use web page for tablets

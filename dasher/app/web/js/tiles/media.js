@@ -110,6 +110,7 @@ export function createMediaTile(cfg, ctx) {
   pressable(el, {
     onTap: () => {
       if (cfg.tap) return runAction(cfg.tap, ctx, view.id ?? cfg.entity);
+      if ((view.mode === "playing" || view.mode === "paused") && ctx.openNowPlaying?.()) return;
       if (ctx.musicEnabled()) ctx.navigate("music");
     },
   });

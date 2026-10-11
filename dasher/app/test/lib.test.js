@@ -298,3 +298,21 @@ test("ev: the planned window from the charging sensor", () => {
   assert.equal(plannedWindow({ charging_start_time: "nonsense", charging_stop_time: "x" }), null);
   assert.equal(plannedWindow(undefined), null);
 });
+
+test("screenDecision opens when playing starts, not on load, and not after a dismissal until the music stops", async () => {
+  const { screenDecision, nextRepeat, clock } = await import("../web/js/lib/nowplaying.js");
+  const base = { prevMode: null, open: false, dismissed: false, ready: true, enabled: true };
+  assert.equal(screenDecision({ ...base, mode: "playing" }).shouldOpen, true);
+  assert.equal(screenDecision({ ...base, mode: "playing", prevMode: "playing" }).shouldOpen, false, "already playing");
+  assert.equal(screenDecision({ ...base, mode: "playing", prevMode: "paused" }).shouldOpen, true, "resumed");
+  assert.equal(screenDecision({ ...base, mode: "playing", ready: false }).shouldOpen, false, "page just loaded");
+  assert.equal(screenDecision({ ...base, mode: "playing", enabled: false }).shouldOpen, false);
+  assert.equal(screenDecision({ ...base, mode: "playing", dismissed: true }).shouldOpen, false);
+  assert.equal(screenDecision({ ...base, mode: "paused", dismissed: true }).dismissed, true, "still dismissed while paused");
+  assert.equal(screenDecision({ ...base, mode: null, dismissed: true }).dismissed, false, "music stopped");
+  assert.equal(screenDecision({ ...base, mode: null, open: true }).closeSoon, true);
+  assert.equal(screenDecision({ ...base, mode: "paused", open: true }).closeSoon, false);
+  assert.deepEqual(["off", "all", "one"].map(nextRepeat), ["all", "one", "off"]);
+  assert.equal(nextRepeat(undefined), "all");
+  assert.deepEqual([clock(75), clock(165), clock(5), clock(-3)], ["1:15", "2:45", "0:05", "0:00"]);
+});

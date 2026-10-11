@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.15.0
+
+- New **full-screen player**: it opens when a Music Assistant speaker starts playing, with big artwork, title, album/station and artist, a seekable progress bar, shuffle/previous/play-pause/next/repeat, volume and the speaker name. Close it with the arrow (it stays closed until the music has stopped and started again); the *now playing* tile opens it too. `fullscreen: false` under `music:` turns the automatic opening off.
+
 ## 0.14.0
 
 - Car page: a **Remote climate** card with a start/stop switch, the temperature (−/+) and the front and rear window heat. The FordPass entities (`ignition`, `rcctemperature`, `rccdefrostfront`, `rccdefrostrear`) are found automatically; `remote_start_entity`, `remote_temp_entity`, `defrost_front_entity` and `defrost_rear_entity` in `ev:` set others.

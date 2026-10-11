@@ -37,6 +37,7 @@ music:
   # tabs: [discover, radio, albums, artists, podcasts, search]
   # players: [media_player.kitchen, media_player.living_room]   # default: all Music Assistant players
   # default_player: media_player.living_room
+  # fullscreen: false          # do not open the full-screen player when music starts
 
 # Car page: start/stop charging, smart charging with its times, restart of the charger.
 # The EV Smart Charging and Peblar entities are found automatically; set the rest here.

@@ -171,6 +171,7 @@ const musicPayload = () => {
     title: settings.title,
     icon: settings.icon,
     default_player: settings.default_player,
+    fullscreen: settings.fullscreen,
     players: radioPlayerIds,
     tabs: availableTabs(settings, music.configured),
     library: music.configured,

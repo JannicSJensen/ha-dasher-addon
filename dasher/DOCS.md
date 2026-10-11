@@ -152,7 +152,7 @@ Shows and controls what is playing right now, and when nothing is playing, what 
 * **Playing now:** artwork, title, artist (and the radio station, if it is one), the speaker's name with moving bars, play/pause, previous/next, a volume slider and a thin progress line. If several speakers play at the same time the speaker button shows how many; tap it to switch between them. Speakers in a sync group count once, as the group leader (shown with `+2` for the members).
 * **Paused:** a paused speaker is shown while nothing else is playing.
 * **Nothing playing:** the last track that played, dimmed and marked "Last played · 2 hours ago", with its artwork. Play starts it again on a Music Assistant speaker (on other speakers it just presses play).
-* Tapping the tile opens the Music page (change with `tap`).
+* Tapping the tile opens the [full-screen player](#full-screen-player) while something plays or is paused, otherwise the Music page (change with `tap`).
 
 | Key | Description |
 | --- | --- |
@@ -364,6 +364,15 @@ Music Assistant can play on several speakers in sync. Press **Group** at the top
 * The volume slider always belongs to the speaker you chose, so each speaker keeps its own volume.
 * Which speakers can be combined is up to Music Assistant: speakers of different kinds (for example AirPlay and Chromecast) cannot join the same sync group and the error is shown on screen. Music Assistant's own group players (such as "Party") are ordinary speakers on this page and cannot be put into a sync group.
 
+### Full-screen player
+
+When a Music Assistant speaker **starts playing**, the tablet shows a full-screen player: big artwork on a blurred background, title, album or station, artist, a progress bar you can tap to seek, shuffle, previous, play/pause, next and repeat, a volume slider and the speaker's name (tap it to switch between speakers when several play; a sync group shows `+2`).
+
+* **Close** with the arrow at the top left. After that it stays away until the music has stopped and starts again. The button at the top right closes it and opens the music library.
+* It closes by itself 15 seconds after nothing plays any more, and does not open when a tablet loads a page while music is already playing.
+* Tap the *now playing* tile to open it yourself. Shuffle and repeat are shown when the speaker supports them, and the progress bar only reacts when it supports seeking.
+* Turn the automatic opening off with `fullscreen: false` under `music:` (the tile then goes to the Music page as before).
+
 ### Options
 
 ```yaml
@@ -375,6 +384,7 @@ music:                          # `radio:` still works as an alias
   players: [media_player.kitchen, media_player.living_room]   # default: every Music Assistant player
   exclude: [media_player.tv_airplay]
   default_player: media_player.living_room    # used until a speaker has been chosen on the tablet
+  fullscreen: true              # false: the full-screen player does not open by itself
   config_entry_id: 01J...       # only if the integration cannot be found automatically
 ```
 
