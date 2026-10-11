@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.0
+
+- New **Car** page: battery level with target, range, plugged-in and charging state; one button to start or stop charging; the smart charging switch with its status, planned window and the times it should charge (earliest start, ready by); and a charger restart with confirmation.
+- EV Smart Charging and Peblar entities are recognised automatically; the rest is set in a new `ev:` section of `dashboard.yaml`, whose entities also take part in entity mapping. The menu entry only appears when something can be controlled.
+
 ## 0.8.0
 
 - **Map missing entities from the tablet.** When `dashboard.yaml` uses entities that Home Assistant does not have, a warning with a *Map entities* button and a sidebar entry open a screen with suggestions and a search for each missing entity. The choices are saved in `entity-map.yaml`; `dashboard.yaml` stays unchanged.

@@ -38,6 +38,17 @@ music:
   # players: [media_player.kitchen, media_player.living_room]   # default: all Music Assistant players
   # default_player: media_player.living_room
 
+# Car page: start/stop charging, smart charging with its times, restart of the charger.
+# The EV Smart Charging and Peblar entities are found automatically; set the rest here.
+# The page only appears when something can be controlled.
+ev:
+  # enabled: false               # remove the menu entry
+  # name: My car
+  # image: car.jpg               # picture in the assets folder
+  # battery_entity: sensor.my_car_battery
+  # range_entity: sensor.my_car_range
+  # plug_entity: sensor.my_car_plug_status
+
 pages:
   - id: home
     title: Home

@@ -241,3 +241,60 @@ test("timeAgo and trackPosition", () => {
   assert.equal(trackPosition({ ...attrs, media_position: 195 }, "playing", now).position, 200, "never past the end");
   assert.equal(trackPosition({ media_position: 5 }, "playing", now), null);
 });
+
+import { batteryOf, chargeAction, hoursOf, isCharging, isPluggedIn, minutesOf, parseTimeOptions, plannedWindow, serviceFor } from "../web/js/lib/ev.js";
+
+const evGet = (states) => (id) => states[id];
+
+test("ev: battery comes from the battery sensor, else from EV Smart Charging", () => {
+  const roles = { battery_entity: "sensor.soc", smart_info_entity: "sensor.info" };
+  const info = { state: "off", attributes: { ev_soc: "55.0", ev_target_soc: "80.0" } };
+  assert.deepEqual(batteryOf(roles, evGet({ "sensor.soc": { state: "67.0" }, "sensor.info": info })), { percent: 67, target: 80 });
+  assert.deepEqual(batteryOf(roles, evGet({ "sensor.soc": { state: "unavailable" }, "sensor.info": info })), { percent: 55, target: 80 });
+  assert.deepEqual(batteryOf({}, evGet({})), { percent: null, target: null });
+  assert.equal(batteryOf({ battery_entity: "sensor.soc" }, evGet({ "sensor.soc": { state: "unknown" } })).percent, null);
+});
+
+test("ev: charging and plug state from whatever entities exist", () => {
+  assert.equal(isCharging({ smart_info_entity: "a" }, evGet({ a: { state: "on" } })), true);
+  assert.equal(isCharging({ smart_info_entity: "a" }, evGet({ a: { state: "off" } })), false);
+  assert.equal(isCharging({ charge_switch_entity: "sw" }, evGet({ sw: { state: "unavailable" } })), null);
+  assert.equal(isCharging({ charging_entity: "c", smart_info_entity: "a" }, evGet({ c: { state: "Charging" }, a: { state: "off" } })), true, "the explicit entity wins");
+  assert.equal(isCharging({}, evGet({})), null);
+
+  for (const [state, expected] of [["CONNECTED", true], ["on", true], ["DISCONNECTED", false], ["NOT_PLUGGED_IN", false], ["off", false], ["weird", null], ["unavailable", null]]) {
+    assert.equal(isPluggedIn({ plug_entity: "p" }, evGet({ p: { state } })), expected, state);
+  }
+  assert.equal(isPluggedIn({}, evGet({})), null);
+});
+
+test("ev: start and stop use the dedicated entity, else the charger switch", () => {
+  assert.deepEqual(serviceFor("button.go", "start"), { domain: "button", service: "press" });
+  assert.deepEqual(serviceFor("switch.c", "stop"), { domain: "switch", service: "turn_off" });
+  assert.deepEqual(serviceFor("automation.go", "start"), { domain: "automation", service: "trigger", data: { skip_condition: true } });
+  assert.equal(serviceFor("light.x", "start"), null);
+
+  const roles = { start_entity: "button.start", stop_entity: "button.stop", charge_switch_entity: "switch.charge" };
+  assert.deepEqual(chargeAction(roles, "start"), { id: "button.start", domain: "button", service: "press" });
+  assert.deepEqual(chargeAction({ charge_switch_entity: "switch.charge" }, "stop"), { id: "switch.charge", domain: "switch", service: "turn_off" });
+  assert.deepEqual(chargeAction({ start_entity: "button.start", charge_switch_entity: "switch.charge" }, "stop"), { id: "switch.charge", domain: "switch", service: "turn_off" });
+  assert.equal(chargeAction({}, "start"), null);
+});
+
+test("ev: time options are split into times and the off option", () => {
+  const { times, off } = parseTimeOptions(["None", "00:00", "00:15", "08:00", "08:30", "23:45"]);
+  assert.equal(off, "None");
+  assert.deepEqual(hoursOf(times), [0, 8, 23]);
+  assert.deepEqual(minutesOf(times, 8), [0, 30]);
+  assert.deepEqual(parseTimeOptions(["a", "b"]), { times: [], off: "a" });
+  assert.deepEqual(parseTimeOptions(undefined), { times: [], off: null });
+  assert.equal(parseTimeOptions(["07:05:00"]).times[0].minute, 5);
+});
+
+test("ev: the planned window from the charging sensor", () => {
+  const attrs = { charging_start_time: "2026-10-11T01:00:00+02:00", charging_stop_time: "2026-10-11T04:30:00+02:00" };
+  assert.deepEqual(plannedWindow(attrs, { timeZone: "Europe/Copenhagen" }), { start: "01:00", end: "04:30" });
+  assert.equal(plannedWindow({ charging_start_time: null, charging_stop_time: null }), null);
+  assert.equal(plannedWindow({ charging_start_time: "nonsense", charging_stop_time: "x" }), null);
+  assert.equal(plannedWindow(undefined), null);
+});

@@ -25,6 +25,17 @@ put("light.living_room_lamp", "on", { friendly_name: "Living room lamp", brightn
 put("light.garage_spots", "off", { friendly_name: "Garage spots", supported_color_modes: ["onoff"] });
 put("light.carport", "off", { friendly_name: "Carport", supported_color_modes: ["onoff"] });
 put("sun.sun", "above_horizon", {});
+const TIMES = ["None", ...Array.from({ length: 96 }, (_, i) => `${String(Math.floor(i / 4)).padStart(2, "0")}:${String((i % 4) * 15).padStart(2, "0")}`)];
+put("sensor.ev_smart_charging_status", "waiting_for_charging_to_begin", { friendly_name: "EV Smart Charging Status" });
+put("sensor.ev_smart_charging_charging", "off", { friendly_name: "EV Smart Charging Lading", ev_soc: "67.0", ev_target_soc: "80.0", charging_is_planned: true, charging_start_time: new Date(day.getTime() + 25 * 3600_000).toISOString(), charging_stop_time: new Date(day.getTime() + 28.5 * 3600_000).toISOString() });
+put("switch.ev_smart_charging_smart_charging_activated", "on", { friendly_name: "Smart ladning aktiveret" });
+put("switch.ev_smart_charging_ev_connected", "on", { friendly_name: "Elbil tilkoblet" });
+put("select.ev_smart_charging_charge_start_time", "None", { friendly_name: "Starttidspunkt", options: TIMES });
+put("select.ev_smart_charging_charge_completion_time", "08:00", { friendly_name: "Sluttidspunkt", options: TIMES });
+put("button.ev_smart_charging_manually_start_charging", "unknown", { friendly_name: "Start opladning manuelt" });
+put("button.ev_smart_charging_manually_stop_charging", "unknown", { friendly_name: "Stop opladning manuelt" });
+put("switch.peblar_ev_charger_charge", "off", { friendly_name: "Peblar EV Charger Charge" });
+put("button.peblar_ev_charger_restart", "unknown", { friendly_name: "Peblar EV Charger Genstart", device_class: "restart" });
 put("sensor.living_room_temperature", "21.4", { friendly_name: "Living room temperature", device_class: "temperature", unit_of_measurement: "°C" });
 put("binary_sensor.garage_door", "off", { friendly_name: "Garage door", device_class: "door" });
 put("scene.cozy", "unknown", {});
@@ -82,6 +93,17 @@ let registry = {
     { ei: "light.garage_spots", ai: "garage" },
     { ei: "light.carport", ai: "garage" },
     { ei: "binary_sensor.garage_door", ai: "garage" },
+    // car charging (EV Smart Charging and a Peblar charger), recognised by integration and translation key
+    { ei: "sensor.ev_smart_charging_status", pl: "ev_smart_charging", tk: "status" },
+    { ei: "sensor.ev_smart_charging_charging", pl: "ev_smart_charging", tk: "charging" },
+    { ei: "switch.ev_smart_charging_smart_charging_activated", pl: "ev_smart_charging", tk: "smart_charging_activated" },
+    { ei: "switch.ev_smart_charging_ev_connected", pl: "ev_smart_charging", tk: "ev_connected" },
+    { ei: "select.ev_smart_charging_charge_start_time", pl: "ev_smart_charging", tk: "charge_start_time", ec: 1 },
+    { ei: "select.ev_smart_charging_charge_completion_time", pl: "ev_smart_charging", tk: "charge_completion_time", ec: 1 },
+    { ei: "button.ev_smart_charging_manually_start_charging", pl: "ev_smart_charging", tk: "manually_start_charging" },
+    { ei: "button.ev_smart_charging_manually_stop_charging", pl: "ev_smart_charging", tk: "manually_stop_charging" },
+    { ei: "switch.peblar_ev_charger_charge", pl: "peblar", tk: "charge", ec: 1 },
+    { ei: "button.peblar_ev_charger_restart", pl: "peblar", ec: 1 },
   ],
 };
 if (process.env.MOCK_REGISTRY) registry = JSON.parse(fs.readFileSync(process.env.MOCK_REGISTRY, "utf8"));
@@ -183,7 +205,12 @@ function callService({ domain, service, service_data = {}, target = {} }) {
     } else if (service === "turn_off") next.state = "off";
     else if (service === "toggle") next.state = s.state === "on" ? "off" : "on";
     else if (service === "media_play_pause") next.state = s.state === "playing" ? "paused" : "playing";
-    else if (service === "media_pause") next.state = "paused";
+    else if (service === "select_option") next.state = service_data.option;
+    else if (domain === "button" && service === "press") {
+      next.state = new Date().toISOString();
+      if (id.endsWith("manually_start_charging")) patch("sensor.ev_smart_charging_charging", () => {}, "on"), patch("sensor.ev_smart_charging_status", () => {}, "charging");
+      if (id.endsWith("manually_stop_charging")) patch("sensor.ev_smart_charging_charging", () => {}, "off"), patch("sensor.ev_smart_charging_status", () => {}, "no_charging_planned");
+    } else if (service === "media_pause") next.state = "paused";
     else if (service === "media_play") next.state = "playing";
     else if (service === "media_stop") next.state = "idle";
     else if (domain === "music_assistant" && service === "play_media") {

@@ -106,6 +106,43 @@ function parseMusic(raw, errors) {
   };
 }
 
+export const EV_ROLES = [
+  "battery_entity",
+  "range_entity",
+  "plug_entity",
+  "charging_entity",
+  "charge_switch_entity",
+  "start_entity",
+  "stop_entity",
+  "smart_switch_entity",
+  "smart_status_entity",
+  "smart_info_entity",
+  "start_time_entity",
+  "ready_time_entity",
+  "restart_entity",
+];
+
+/** Normalise the optional `ev:` section (the car page). Entities not listed are found automatically. */
+function parseEv(raw, errors) {
+  const r = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+  const roles = {};
+  for (const key of EV_ROLES) {
+    if (r[key] == null) continue;
+    const id = String(r[key]);
+    if (ENTITY_RE.test(id)) roles[key] = id;
+    else errors.push(`ev.${key}: invalid entity id "${id}"`);
+  }
+  const enabled = r.enabled === false ? false : r.enabled === true ? true : "auto";
+  return {
+    enabled,
+    title: r.title != null ? String(r.title) : null,
+    icon: String(r.icon ?? "car-electric"),
+    name: r.name != null ? String(r.name) : null,
+    image: r.image != null ? String(r.image) : null,
+    roles,
+  };
+}
+
 /**
  * Parse and normalise a dashboard.yaml document.
  * Never throws: problems end up in `errors` and offending tiles are dropped.
@@ -125,6 +162,8 @@ export function parseConfig(text, { entityMap = {} } = {}) {
   // The entities as written in the file, before the user's mapping replaces some of them.
   const rawEntities = collectEntities(raw.pages);
   collectEntities(raw.areas?.overrides ?? {}, rawEntities);
+  collectEntities(raw.ev ?? {}, rawEntities);
+  for (const id of [...rawEntities]) if (!ENTITY_RE.test(id)) rawEntities.delete(id);
   const usage = describeUsage(raw);
   if (Object.keys(entityMap).length) raw = mapEntities(raw, entityMap);
 
@@ -176,6 +215,7 @@ export function parseConfig(text, { entityMap = {} } = {}) {
 
   const areas = parseAreas(raw.areas, errors);
   const music = parseMusic(raw.music ?? raw.radio, errors);
+  const ev = parseEv(raw.ev, errors);
 
   const config = {
     title: String(raw.title ?? "Dasher"),
@@ -185,11 +225,13 @@ export function parseConfig(text, { entityMap = {} } = {}) {
     idle_return: Number(raw.idle_return) > 0 ? Number(raw.idle_return) : 0,
     areas,
     music,
+    ev,
     pages,
   };
 
   const entities = collectEntities(pages);
   collectEntities(areas.overrides, entities);
+  for (const id of Object.values(ev.roles)) entities.add(id);
   for (const id of [...music.players, music.default_player]) if (id) entities.add(id);
   return { config, errors, entities, rawEntities, usage };
 }

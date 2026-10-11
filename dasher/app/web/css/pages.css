@@ -398,3 +398,84 @@
 .picker__name { grid-area: name; font-size: 14px; font-weight: 500; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .picker__id { grid-area: id; color: #a5a5aa; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; word-break: normal; }
 .picker__meta { grid-area: meta; font-size: 11.5px; color: var(--muted); }
+
+/* ---- car page ---- */
+.ev { height: 100%; overflow-y: auto; overscroll-behavior: contain; padding: 14px; scrollbar-width: none; }
+.ev::-webkit-scrollbar { display: none; }
+.ev__grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 12px; align-items: start; max-width: 1180px; margin: 0 auto; }
+.ev__col { display: grid; gap: 12px; }
+.ev__col .notice { padding: 30px 12px; }
+@media (max-width: 760px), (orientation: portrait) { .ev__grid { grid-template-columns: 1fr; } }
+
+.evcard { padding: 18px 20px; border-radius: var(--radius); background: var(--tile-bg); }
+.evcard__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.evcard__title { margin: 0 0 10px; font-size: 12.5px; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: #d0d0d3; }
+.evcard__head .evcard__title { margin: 0; }
+.evcard__status { margin: 4px 0 12px; font-size: 15px; color: #ededef; }
+.evcard__status:empty { display: none; }
+.evcard__plan { margin: -4px 0 12px; font-size: 13px; color: var(--accent); }
+.evcard__plan[hidden] { display: none; }
+.evcard .evtimes { margin-top: 12px; }
+
+.evcar { text-align: center; }
+.evcar__name { margin: 0; font-size: clamp(20px, 2.6vw, 28px); font-weight: 300; letter-spacing: 0.16em; text-transform: uppercase; }
+.evcar__img { display: block; width: 100%; max-height: 260px; margin: 16px 0; border-radius: 14px; object-fit: cover; }
+.evcar__glyph { display: grid; place-items: center; height: 170px; margin: 12px 0; font-size: 110px; color: #3d3d41; }
+.evcar__battery { margin-top: 6px; }
+.evcar__percent { margin-bottom: 8px; font-size: clamp(36px, 5vw, 54px); font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.evbar { position: relative; height: 12px; border-radius: 99px; background: #3a3a3d; }
+.evbar__fill { height: 100%; width: 0; border-radius: 99px; background: var(--accent); transition: width 0.6s ease; }
+.evbar__fill.is-low { background: #f59e0b; }
+.evbar__target { position: absolute; top: -4px; bottom: -4px; width: 3px; margin-left: -1.5px; border-radius: 2px; background: #fff; }
+.evbar__target[hidden] { display: none; }
+.evcar__target { margin-top: 8px; font-size: 12.5px; color: var(--muted); }
+.evcar__target:empty { display: none; }
+.evcar__range { margin-top: 12px; font-size: 20px; font-weight: 500; }
+.evcar__range[hidden] { display: none; }
+.evcar__chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 14px; }
+.evchip { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 999px; background: rgba(255, 255, 255, 0.07); color: #b4b4b8; font-size: 13px; }
+.evchip[hidden] { display: none; }
+.evchip .icon { font-size: 18px; }
+.evchip.is-on { color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.evchip.is-charging .icon { animation: loading 1.4s ease-in-out infinite; }
+
+.evbtn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 58px; padding: 0 20px; border-radius: 16px; background: #2b2b2e; color: #fff; font-size: 16px; font-weight: 500; transition: transform 0.12s, background 0.25s, opacity 0.25s; }
+.evbtn .icon { font-size: 26px; }
+.evbtn.is-pressed { transform: scale(0.98); }
+.evbtn:disabled { opacity: 0.4; }
+.evbtn--primary { background: var(--accent); color: #062b27; }
+.evbtn--primary.is-stop { background: #f59e0b; color: #2b1a00; }
+.evbtn.is-busy { animation: loading 1s ease-in-out infinite; }
+
+.evswitch { position: relative; flex: none; width: 62px; height: 34px; border-radius: 99px; background: #3f3f43; transition: background 0.25s; }
+.evswitch__knob { position: absolute; top: 3px; left: 3px; width: 28px; height: 28px; border-radius: 50%; background: #fff; box-shadow: 0 1px 6px rgba(0, 0, 0, 0.5); transition: transform 0.25s; }
+.evswitch.is-on { background: var(--accent); }
+.evswitch.is-on .evswitch__knob { transform: translateX(28px); }
+.evswitch:disabled { opacity: 0.4; }
+
+.evtimes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.evtime { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 0 16px; border-radius: 14px; background: #2b2b2e; text-align: left; transition: background 0.2s, transform 0.12s; }
+.evtime.is-pressed { transform: scale(0.98); background: #38383c; }
+.evtime > .icon { font-size: 26px; color: var(--accent); }
+.evtime__text { display: grid; gap: 1px; }
+.evtime__label { font-size: 12px; color: var(--muted); }
+.evtime__value { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.evtime.is-off .evtime__value { color: #8d8d92; font-weight: 500; }
+.evtime:disabled { opacity: 0.4; }
+@media (max-width: 480px) { .evtimes { grid-template-columns: 1fr; } }
+
+/* time picker and dialogs */
+.timepicker { width: min(440px, 88vw); }
+.tp__grid { display: grid; gap: 8px; margin-top: 12px; }
+.tp__grid--hours { grid-template-columns: repeat(6, 1fr); }
+.tp__grid--minutes { grid-template-columns: repeat(4, 1fr); padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+.tp__grid--minutes[hidden] { display: none; }
+.tp__grid--list { grid-template-columns: 1fr 1fr; max-height: 50vh; overflow-y: auto; }
+.tp__btn { min-height: 48px; border-radius: 12px; background: #2b2b2e; color: #fff; font-size: 17px; font-weight: 500; font-variant-numeric: tabular-nums; transition: background 0.2s, transform 0.12s; }
+.tp__btn.is-pressed { transform: scale(0.95); background: #3c3c40; }
+.tp__btn.is-chosen { background: color-mix(in srgb, var(--accent) 24%, #2b2b2e); box-shadow: inset 0 0 0 1.5px var(--accent); color: var(--accent); }
+.tp__btn--off { width: 100%; margin-top: 12px; font-size: 15px; }
+.dialog { width: min(420px, 88vw); }
+.dialog__text { margin: 10px 0 0; font-size: 14px; line-height: 1.5; color: #b4b4b8; }
+.dialog__actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+.btn--danger { background: #dc2626; color: #fff; }

@@ -6,6 +6,7 @@ import { collectEntities } from "./lib/entities.js";
 import { makeTranslator } from "./lib/i18n.js";
 import { createAreaPage } from "./pages/area.js";
 import { createAreasPage } from "./pages/areas.js";
+import { createEvPage } from "./pages/ev.js";
 import { createMappingPage } from "./pages/mapping.js";
 import { createMusicPage } from "./pages/music.js";
 import { TILE_FACTORIES } from "./tiles/index.js";
@@ -20,6 +21,7 @@ const store = new Store({
   config: null,
   areas: null,
   music: null,
+  ev: null,
   lastPlayed: {},
   errors: [],
   entities: {},
@@ -120,6 +122,8 @@ function parseRoute(config) {
   const areasOff = areas !== null && !areas.enabled; // known to be disabled, as opposed to not loaded yet
   const { music } = store.getState();
   const musicOff = music !== null && !music.enabled;
+  const { ev } = store.getState();
+  if (raw === "ev" && ev?.enabled) return { kind: "ev", id: null };
   if (raw === "entities" && store.getState().mapping.enabled) return { kind: "entities", id: null };
   if ((raw === "music" || raw === "radio") && !musicOff) return { kind: "music", id: null };
   if (raw === "areas" && !areasOff) return { kind: "areas", id: null };
@@ -155,6 +159,8 @@ function renderSidebar(config) {
     const { music } = store.getState();
     items.push({ href: "#/music", title: music.title ?? t("music"), icon: music.icon, active: route.kind === "music" });
   }
+  const { ev } = store.getState();
+  if (ev?.enabled) items.push({ href: "#/ev", title: ev.title ?? t("ev_car"), icon: ev.icon, active: route.kind === "ev" });
   const { mapping, missing } = store.getState();
   if (mapping.enabled && (missing.length || mapping.mapped)) {
     items.push({ href: "#/entities", title: t("map_entities"), icon: "swap-horizontal", active: route.kind === "entities" });
@@ -176,7 +182,7 @@ function mountSingle(page) {
 }
 
 function renderRoute() {
-  const { config, areas, music } = store.getState();
+  const { config, areas, music, ev } = store.getState();
   destroyTiles();
   document.querySelectorAll(".modal").forEach((m) => m.remove());
   route = parseRoute(config);
@@ -184,7 +190,9 @@ function renderRoute() {
   stage.dataset.page = route.kind === "page" ? route.id : route.kind;
   const ctx = makeContext(config);
 
-  if (route.kind === "entities") {
+  if (route.kind === "ev") {
+    mountSingle(createEvPage(ev, ctx));
+  } else if (route.kind === "entities") {
     mountSingle(createMappingPage(ctx));
   } else if (route.kind === "music") {
     if (music) mountSingle(createMusicPage(music, ctx));
@@ -338,6 +346,13 @@ store.subscribe((s) => s.music, () => {
   else renderSidebar(config);
 });
 
+store.subscribe((s) => s.ev, () => {
+  const { config } = store.getState();
+  if (!config) return;
+  if (route.kind === "ev" || location.hash === "#/ev") renderRoute();
+  else renderSidebar(config);
+});
+
 store.subscribe((s) => s.lastPlayed, () => refreshTiles(true));
 
 window.addEventListener("hashchange", () => {
@@ -367,6 +382,7 @@ connect({
   config: ({ config, errors }) => store.setState({ config, errors }),
   areas: (areas) => setIfChanged("areas", areas),
   music: (music) => setIfChanged("music", music),
+  ev: (ev) => setIfChanged("ev", ev),
   lastplayed: (lastPlayed) => setIfChanged("lastPlayed", lastPlayed),
   snapshot: (states) => store.setState({ entities: states }),
   state: (state) => store.setState((s) => ({ ...s, entities: { ...s.entities, [state.entity_id]: state } })),

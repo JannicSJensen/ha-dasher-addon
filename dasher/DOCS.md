@@ -165,6 +165,46 @@ When `dashboard.yaml` uses entities that your Home Assistant does not have (for 
 * The choices are saved in `entity-map.yaml` next to `dashboard.yaml`; `dashboard.yaml` itself is not changed, so you can keep sharing it. The file is plain YAML (`light.kitchen_lamp: light.my_real_lamp`) and can be edited by hand. A mapped entity counts as part of the dashboard, so tablets can use it like any other.
 * A mapping can only point to an entity of the same kind, but it can point to any entity of that kind: anyone who can reach the tablet page can change it. Turn off the app option `allow_entity_mapping` to prevent that.
 
+## Car
+
+A **Car** entry (icon of an electric car; title and icon can be changed) appears in the sidebar when there is something to control. The page is deliberately small:
+
+* **The car:** name, a picture (`image`, otherwise a symbol), the battery level with the charging target as a marker, the range, and whether the car is plugged in and charging.
+* **Charging:** one big button, **Start charging** or **Stop charging** depending on the state.
+* **Smart charging:** an on/off switch, what the smart charging is doing (e.g. "No charging planned", "Waiting for charging to begin") with the planned window, and two times you set here: **Earliest start** and **Ready by**. Tap one and pick the hour, then the minute, or **Off**.
+* **Charger:** **Restart charger**, with a confirmation first.
+* Cards whose entities do not exist are left out.
+
+### Entities
+
+The page recognises **EV Smart Charging** (HACS) and **Peblar** entities on its own, by integration and entity type, so nothing needs to be set for them: the smart charging switch, status and schedule sensor, the start/completion time selects, the manual start and stop buttons, the charger's charge switch and its restart button. Everything can be set or overridden in an `ev:` section of `dashboard.yaml`:
+
+```yaml
+ev:
+  enabled: auto               # auto (default): only when something can be controlled; true; false
+  title: Bil                  # menu title
+  icon: car-electric
+  name: Direktøren            # heading of the car card
+  image: car.jpg              # picture in the assets folder
+  battery_entity: sensor.my_car_battery          # default: the level EV Smart Charging reports
+  range_entity: sensor.my_car_range
+  plug_entity: sensor.my_car_plug_status         # on/off or connected/disconnected
+  charging_entity: sensor.my_car_charging        # default: EV Smart Charging's charging sensor
+  charge_switch_entity: switch.charger_charge    # used for start/stop when there are no dedicated entities
+  start_entity: button.start_now                 # also: automation.x, script.x, switch.x, input_button.x
+  stop_entity: button.stop_now
+  smart_switch_entity: switch.ev_smart_charging_smart_charging_activated
+  smart_status_entity: sensor.ev_smart_charging_status
+  smart_info_entity: sensor.ev_smart_charging_charging
+  start_time_entity: select.ev_smart_charging_charge_start_time
+  ready_time_entity: select.ev_smart_charging_charge_completion_time
+  restart_entity: button.charger_restart
+```
+
+* **Start/stop** uses `start_entity` / `stop_entity` (EV Smart Charging's manual buttons by default), else the charger's `charge_switch_entity`. An `automation` is triggered, a `button` or `script` is pressed, a `switch` is turned on or off.
+* A time select must have options like `08:00` (plus an "off" option such as `None`), as the EV Smart Charging ones do.
+* Entities you list here take part in [entity mapping](#missing-entities), so a wrong id can be fixed from the tablet. The discovered entities become part of the dashboard, so tablets can control them.
+
 ## Areas
 
 Every area in Home Assistant (Settings → Areas) gets a picture card on an **Areas** page, reachable from the extra entry at the bottom of the sidebar. A card shows the area name, its floor (or how many lights are on) and opens a sub-page with:

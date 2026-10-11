@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { buildAreaModel, imageSignature, scanImages } from "./areas.js";
 import { ConfigStore } from "./config.js";
 import { discoverMusicAssistant } from "./discovery.js";
+import { discoverEv, resolveEv } from "./ev.js";
 import { mappingItems, rankCandidates, validateMapping } from "./mapping.js";
 import { MusicService, availableTabs, DETAIL_TYPES } from "./music.js";
 import { NowPlayingStore } from "./nowplaying.js";
@@ -135,6 +136,8 @@ const areasPayload = () => {
 };
 
 let radioPlayerIds = [];
+let evState = { enabled: false, roles: {} };
+const evPayload = () => (evState.enabled ? evState : { enabled: false, roles: {} });
 
 /** What the Music page needs: speakers, radio stations and which tabs are usable. */
 const musicPayload = () => {
@@ -164,10 +167,15 @@ function rebuild({ refresh }) {
   });
   radioPlayerIds = radioPlayers(current.config?.music, ha.registries);
   radio.configure(current.config?.music);
-  allowed = new Set([...current.entities, ...areaModel.entities, ...radioPlayerIds]);
+  evState = resolveEv({
+    settings: current.config?.ev,
+    discovered: discoverEv({ registries: ha.registries, index: ha.entityIndex }),
+  });
+  allowed = new Set([...current.entities, ...areaModel.entities, ...radioPlayerIds, ...(evState.enabled ? Object.values(evState.roles) : [])]);
   ha.setWatched(allowed, { refresh, required: current.entities });
   broadcast("areas", areasPayload());
   broadcast("music", musicPayload());
+  broadcast("ev", evPayload());
   if (radioPlayerIds.length && (radio.stations.length === 0 || radio.error)) radio.refresh();
 }
 
@@ -296,6 +304,7 @@ function handleEvents(req, res) {
   send(res, "config", configPayload());
   send(res, "areas", areasPayload());
   send(res, "music", musicPayload());
+  send(res, "ev", evPayload());
   send(res, "lastplayed", nowPlaying.payload());
   send(res, "snapshot", Object.fromEntries(ha.states));
   clients.add(res);
