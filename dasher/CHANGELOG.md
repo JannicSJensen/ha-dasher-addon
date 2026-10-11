@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.17.1
+
+- The example front page has **Good night** and **Vacation** buttons (input booleans that toggle and light up while on) instead of the *Cozy* and *Movie* scenes.
+
 ## 0.17.0
 
 - New **Devices** page: robot vacuums (start/pause, dock, find, fan speed, battery), washing machines, dryers, dishwashers and clothes heaters (status, time left, power, remote start/stop, delayed end). Vacuums and LG ThinQ appliances are found automatically; others are listed under `devices:`.

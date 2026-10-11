@@ -94,8 +94,8 @@ pages:
         #   - when: { entity: sun.sun, state: below_horizon }
         #     image: living-room-night.jpg
         buttons:
-          - { icon: coffee, name: Cozy, tap: { action: service, service: scene.turn_on, entity: scene.cozy } }
-          - { icon: movie-open, name: Movie, tap: { action: service, service: scene.turn_on, entity: scene.movie } }
+          - { icon: weather-night, name: Good night, entity: input_boolean.good_night }   # toggles, lit while on
+          - { icon: palm-tree, name: Vacation, entity: input_boolean.vacation }
           - { icon: lightbulb-group, name: All lights, entity: light.living_room_lamp }
 
       - type: calendar                      # the next days with something planned, plus the forecast

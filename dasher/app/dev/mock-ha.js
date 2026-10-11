@@ -24,6 +24,8 @@ const put = (entity_id, state, attributes = {}) =>
 put("light.living_room_lamp", "on", { friendly_name: "Living room lamp", brightness: 180, supported_color_modes: ["brightness"] });
 put("light.garage_spots", "off", { friendly_name: "Garage spots", supported_color_modes: ["onoff"] });
 put("light.carport", "off", { friendly_name: "Carport", supported_color_modes: ["onoff"] });
+put("input_boolean.good_night", "off", { friendly_name: "Good night" });
+put("input_boolean.vacation", "on", { friendly_name: "Vacation" });
 put("sun.sun", "above_horizon", {});
 // climate helpers (groups per room) and a device thermostat that the climate page leaves out
 const thermostat = (id, name, current, target, state = "heat", extra = {}) =>
