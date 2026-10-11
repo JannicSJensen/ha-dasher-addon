@@ -7,7 +7,8 @@ import { ConfigStore } from "./config.js";
 import { discoverMusicAssistant } from "./discovery.js";
 import { discoverEv, resolveEv } from "./ev.js";
 import { resolveClimate } from "./climate.js";
-import { PlexService, plexConfigured, plexPlayers, validBrowse, validatePlay } from "./plex.js";
+import { PlexService, plexBrowsers, plexConfigured, plexPlayers, validBrowse, validatePlay } from "./plex.js";
+import { PlexStreamer } from "./plex-stream.js";
 import { mappingItems, rankCandidates, validateMapping } from "./mapping.js";
 import { MusicService, availableTabs, DETAIL_TYPES } from "./music.js";
 import { PSEUDO_IDS, buildSuggestions } from "./suggestions.js";
@@ -123,9 +124,11 @@ async function fetchPicture(picture) {
 
 const dataDir = process.env.DATA_DIR ?? (fs.existsSync("/data") ? "/data" : null);
 const calendars = new CalendarService({ ha, logger });
+const plexStreamer = new PlexStreamer({ url: options.plex_url ?? process.env.PLEX_URL, token: options.plex_token ?? process.env.PLEX_TOKEN, logger });
 const plex = new PlexService({
   ha,
   logger,
+  streamer: plexStreamer,
   fetchImage: async (path) => {
     const upstream = await fetch(haHttpBase + path, { headers: { Authorization: `Bearer ${haToken}` }, signal: AbortSignal.timeout(10_000) });
     const type = upstream.headers.get("content-type") ?? "";
@@ -194,10 +197,17 @@ function rebuild({ refresh }) {
   climateState = resolveClimate({ settings: current.config?.climate, registries: ha.registries, index: ha.entityIndex });
   {
     const settings = current.config?.plex;
-    const players = plexPlayers({ settings, registries: ha.registries });
+    const players = plexPlayers({ settings, registries: ha.registries, streaming: plexStreamer.configured });
     const enabled = Boolean(settings) && settings.enabled !== false && players.length > 0 && (settings.enabled === true || plexConfigured(ha.registries));
-    plexState = { enabled, title: settings?.title ?? null, icon: settings?.icon, players: enabled ? players.map((p) => p.id) : [] };
-    plex.configure(enabled ? players : []);
+    plexState = {
+      enabled,
+      title: settings?.title ?? null,
+      icon: settings?.icon,
+      players: enabled ? players.map((p) => p.id) : [],
+      platforms: enabled ? Object.fromEntries(players.map((p) => [p.id, p.platform])) : {},
+    };
+    plex.configure(enabled ? players : [], enabled ? plexBrowsers(ha.registries) : []);
+    plex.transcode = settings?.transcode ?? "auto";
   }
   allowed = new Set([
     ...current.entities,
@@ -503,7 +513,7 @@ async function handlePlexPlay(req, res) {
   const check = validatePlay(body ?? {}, plex.players);
   if (!check.ok) return json(res, 400, { error: check.error });
   try {
-    await plex.play(check.entityId, check.id, check.type);
+    await plex.play(check.entityId, check.id, check.type, check.player);
     logger.info(`Plex: playing ${check.id} on ${check.entityId}`);
     return json(res, 200, { ok: true });
   } catch (err) {

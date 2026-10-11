@@ -252,13 +252,30 @@ A **Media** entry in the menu shows what Plex offers on its home screen and play
 * Tap an item: **Play** (or **Resume** and **Start over** for something you have begun). Shows open as seasons and episodes, each with its own **Play**.
 * **Play on** at the top (and in every item) chooses the player. The choice is remembered on that tablet; players that are off are dimmed.
 
-It uses the **Plex integration** of Home Assistant, so no Plex address or token is needed here: the lists come from the integration's media browser (the hubs of the *Recommended* folder, for the Plex account the integration is signed in with), and playing is `media_player.play_media` with the Plex item. That works on the players the Plex integration supports: **Google Cast** devices (Chromecast, Google TV) and **Plex clients**. Other players, such as an Apple TV or a DLNA TV, cannot be told to play a Plex item this way.
+It uses the **Plex integration** of Home Assistant, so no Plex address or token is needed here: the lists come from the integration's media browser (the hubs of the *Recommended* folder, for the Plex account the integration is signed in with), and playing is `media_player.play_media` with the Plex item. That works on the players the Plex integration supports: **Google Cast** devices (Chromecast, Google TV) and **Plex clients**. Other players, such as an Apple TV or a DLNA TV, cannot be told to play a Plex item this way; for them see *Stream links* below.
+
+### Stream links (Apple TV, DLNA)
+
+Set **Plex address** (`plex_url`) and **Plex token** (`plex_token`) in the app options and Dasher can play on players that only take a link. For such a player the app asks the Plex server for the file and calls `media_player.play_media` with a stream link:
+
+* **Apple TV** (AirPlay): a direct link when the file is MP4/MOV with H.264 video and AAC/AC3/EAC3/MP3 audio, otherwise a Plex **HLS transcode** (Plex converts to H.264/AAC on the fly).
+* **DLNA** (`dlna_dmr`): the file itself, whatever it is; set `transcode: always` under `plex:` if your TV cannot play it (it then gets HLS, which many DLNA TVs do not support).
+* **Resume:** continuing something you have begun starts a transcode at the saved position (`Start over` plays from the beginning).
+* **Shows and seasons** play the first unfinished episode.
+* Apple TVs are added to the *Play on* list by default once the address and token are set. DLNA renderers and other players are only added through `players:`. Players of other kinds than Plex, Cast, Apple TV and DLNA may not accept a link.
+* The address must be the one the **players** can reach (for example `http://192.168.1.10:32400`), not a name only Home Assistant knows.
+* **The link contains your Plex token**, so it shows in the player's attributes in Home Assistant (history, logbook). The token is never sent to the tablets.
+* Playing this way does **not report progress to Plex**, so *Continue watching* does not advance and the item is not marked watched. Subtitles are not switched on.
+* Browsing (the rows) still needs the Plex integration and one Plex or Cast entity that is online.
+
+To find the token: in Plex Web open any item, choose *Get Info*, *View XML*, and copy the value of `X-Plex-Token` from the address bar.
 
 ```yaml
 plex:
   # enabled: false           # remove the menu entry
   # players: [media_player.living_room_tv]   # default: every Plex client and Cast device
   # exclude: [media_player.kitchen_speaker]  # e.g. Cast speakers that cannot show video
+  # transcode: auto          # for stream links: auto | always | never
   # title: Medier
   # icon: movie-open-outline
 ```

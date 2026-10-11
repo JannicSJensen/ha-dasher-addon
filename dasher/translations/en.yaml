@@ -14,3 +14,9 @@ configuration:
   music_assistant_token:
     name: Music Assistant access token
     description: "A long-lived token created in Music Assistant under Settings, Profile. It is only used to read the library."
+  plex_url:
+    name: Plex address
+    description: "Address of your Plex server as the players on your network reach it, for example http://192.168.1.10:32400. Only needed to play Plex on Apple TVs and DLNA players with a stream link; Cast devices and Plex clients work without it."
+  plex_token:
+    name: Plex token
+    description: "The X-Plex-Token of your Plex account (open an item in Plex Web, Get Info, View XML, and copy X-Plex-Token from the address). It is used to read file information and is part of the stream link that Home Assistant sends to the player."

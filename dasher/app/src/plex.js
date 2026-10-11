@@ -21,16 +21,38 @@ const IMAGE_CACHE_ENTRIES = 300;
 const IMAGE_CACHE_BYTES = 60 * 1024 * 1024;
 const MAX_ITEMS = 40;
 
-/** Players the Media page can use: the explicit list, else every Plex and Cast media player. */
-export function plexPlayers({ settings, registries }) {
+/** Platforms that can play a Plex item as it is; every other player needs a stream link (see plex-stream.js). */
+const NATIVE_PLATFORMS = new Set(PLEX_PLAYER_PLATFORMS);
+/** Platforms added to the list by default when stream links are available. */
+const STREAM_DEFAULT_PLATFORMS = ["apple_tv"];
+
+/**
+ * Players the Media page can use: the explicit list, else every Plex client and Cast device, and with a Plex
+ * address and token (`streaming`) also Apple TVs. Each has a `mode`: "native" or "stream".
+ */
+export function plexPlayers({ settings, registries, streaming = false }) {
   if (!settings || settings.enabled === false) return [];
   const rows = (registries?.entities ?? []).filter((e) => e?.ei && domainOf(e.ei) === "media_player" && !e.hb);
   const platform = new Map(rows.map((e) => [e.ei, e.pl]));
   // Music Assistant shows up as a Plex client, but it only plays music.
-  const found = rows.filter((e) => PLEX_PLAYER_PLATFORMS.includes(e.pl) && !/music_assistant/.test(e.ei)).map((e) => e.ei);
+  const wanted = new Set([...PLEX_PLAYER_PLATFORMS, ...(streaming ? STREAM_DEFAULT_PLATFORMS : [])]);
+  const found = rows.filter((e) => wanted.has(e.pl) && !/music_assistant/.test(e.ei)).map((e) => e.ei);
   const ids = settings.players.length ? settings.players : found;
   const hidden = new Set(settings.exclude);
-  return [...new Set(ids)].filter((id) => !hidden.has(id)).map((id) => ({ id, platform: platform.get(id) ?? null }));
+  return [...new Set(ids)]
+    .filter((id) => !hidden.has(id))
+    .map((id) => {
+      const pl = platform.get(id) ?? null;
+      return { id, platform: pl, mode: NATIVE_PLATFORMS.has(pl) ? "native" : "stream" };
+    })
+    .filter((p) => p.mode === "native" || streaming);
+}
+
+/** Every Plex client and Cast device, used to browse Plex through Home Assistant (whether or not it is a choice for playing). */
+export function plexBrowsers(registries) {
+  return (registries?.entities ?? [])
+    .filter((e) => e?.ei && domainOf(e.ei) === "media_player" && !e.hb && PLEX_PLAYER_PLATFORMS.includes(e.pl))
+    .map((e) => ({ id: e.ei, platform: e.pl }));
 }
 
 /** True when the Plex integration has entities in Home Assistant. */
@@ -112,27 +134,31 @@ export function validatePlay({ entity_id: entityId, id, type }, players) {
   if (!players.some((p) => p.id === entityId)) return { ok: false, error: "That player is not on the Media page." };
   if (typeof id !== "string" || !PLEX_ID_RE.test(id)) return { ok: false, error: "Not a Plex item." };
   if (!PLAY_TYPES.has(type)) return { ok: false, error: "That kind of item cannot be played." };
-  return { ok: true, entityId, id, type };
+  return { ok: true, entityId, id, type, player: players.find((p) => p.id === entityId) };
 }
 
 export const validBrowse = ({ id, type }) => EXPAND_TYPES.has(type) && PLEX_ID_RE.test(String(id ?? ""));
 
 export class PlexService {
-  constructor({ ha, logger, fetchImage, now = Date.now }) {
+  constructor({ ha, logger, fetchImage, streamer = null, transcode = "auto", now = Date.now }) {
     this.ha = ha;
+    this.streamer = streamer;
+    this.transcode = transcode;
     this.log = logger;
     this.fetchImage = fetchImage;
     this.now = now;
     this.players = [];
+    this.browsers = [];
     this._cache = new Map();
     this._images = new Map();
     this._imageBytes = 0;
     this._hubsLogged = false;
   }
 
-  configure(players) {
-    const changed = JSON.stringify(players) !== JSON.stringify(this.players);
+  configure(players, browsers = players) {
+    const changed = JSON.stringify([players, browsers]) !== JSON.stringify([this.players, this.browsers]);
     this.players = players;
+    this.browsers = browsers;
     if (changed) this._cache.clear();
   }
 
@@ -145,14 +171,16 @@ export class PlexService {
     return value;
   }
 
-  /** `media_player/browse_media` through the first player that is available; Plex players first. */
+  /**
+   * `media_player/browse_media` through a Plex or Cast entity: ones known to be online first, then the rest
+   * (their state may not be tracked here), until one answers.
+   */
   async _browse(type, id) {
-    const usable = this.players
-      .filter((p) => this.ha.states.get(p.id) && this.ha.states.get(p.id).state !== "unavailable")
-      .sort((a, b) => Number(b.platform === "plex") - Number(a.platform === "plex"));
-    if (!usable.length) throw new Error("No Plex or Cast player is available to browse with. Turn one on.");
+    const rank = (p) => (this.ha.states.get(p.id)?.state === "unavailable" ? 2 : this.ha.states.has(p.id) ? 0 : 1);
+    const candidates = [...this.browsers].sort((a, b) => rank(a) - rank(b) || Number(b.platform === "plex") - Number(a.platform === "plex"));
+    if (!candidates.length) throw new Error("No Plex or Cast player is available to browse with. Turn one on.");
     let lastError;
-    for (const player of usable) {
+    for (const player of candidates) {
       try {
         return await this.ha.request({
           type: "media_player/browse_media",
@@ -163,7 +191,7 @@ export class PlexService {
         lastError = err;
       }
     }
-    throw lastError;
+    throw new Error(`No Plex or Cast player is available to browse with. Turn one on. (${lastError.message})`);
   }
 
   /** The Plex server node (libraries and the "Recommended" folder), found from the root. */
@@ -217,7 +245,18 @@ export class PlexService {
     });
   }
 
-  async play(entityId, id, type) {
+  /** Play on a player: the Plex item itself on Plex clients and Cast, a stream link on everything else. */
+  async play(entityId, id, type, player = this.players.find((p) => p.id === entityId)) {
+    if (player?.mode === "stream") {
+      if (!this.streamer?.configured) throw new Error("The Plex address and token are not set in the app options.");
+      const match = PLEX_ID_RE.exec(id);
+      const stream = await this.streamer.resolve({ key: match[2], type, resume: Boolean(match[3]), platform: player.platform, transcode: this.transcode });
+      this.log.info(`Plex: streaming ${stream.title} (${stream.kind}${stream.offset ? `, from ${stream.offset}s` : ""}) to ${entityId}`);
+      const data = { media_content_id: stream.url, media_content_type: stream.mediaType };
+      if (player.platform !== "apple_tv") data.extra = { title: stream.title };
+      await this.ha.callService("media_player", "play_media", data, [entityId]);
+      return;
+    }
     await this.ha.callService("media_player", "play_media", { media_content_id: id, media_content_type: type }, [entityId]);
   }
 

@@ -162,6 +162,7 @@ function parsePlex(raw, errors) {
     icon: String(r.icon ?? "movie-open-outline"),
     players: ids("players"),
     exclude: ids("exclude"),
+    transcode: ["always", "never"].includes(r.transcode) ? r.transcode : "auto",
   };
 }
 

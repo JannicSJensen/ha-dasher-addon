@@ -6,6 +6,7 @@ import { friendlyName, pressable } from "../tiles/common.js";
 import { format } from "../lib/i18n.js";
 import { WIDE_TYPES, choosePlayer, fromStart, rememberPlayer, rememberedPlayer } from "../lib/plex.js";
 
+const PLATFORM_ICONS = { plex: "plex", cast: "cast", apple_tv: "apple", dlna_dmr: "television-play" };
 const REFRESH_MS = 5 * 60_000;
 const SECTION_KEYS = { continue: "plex_continue", recent_movies: "plex_recent_movies", recent_series: "plex_recent_series" };
 const bg = (url) => `url("${String(url).replace(/"/g, "%22")}")`;
@@ -33,7 +34,7 @@ export function createPlexPage(model, ctx) {
           const chip = h(
             "button",
             { class: `pchip${id === player ? " is-active" : ""}${online(id) ? "" : " is-offline"}`, type: "button", disabled: !online(id) },
-            icon(id.startsWith("media_player.plex") ? "plex" : "cast"),
+            icon(PLATFORM_ICONS[model.platforms?.[id]] ?? "television-play"),
             h("span", null, nameOf(id)),
           );
           pressable(chip, {

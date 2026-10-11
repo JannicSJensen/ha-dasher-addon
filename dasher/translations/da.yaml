@@ -14,3 +14,9 @@ configuration:
   music_assistant_token:
     name: Music Assistant-adgangstoken
     description: "Et langtidstoken oprettet i Music Assistant under Indstillinger, Profil. Det bruges kun til at læse biblioteket."
+  plex_url:
+    name: Plex-adresse
+    description: "Adressen på din Plex-server, som afspillerne på dit netværk når den, fx http://192.168.1.10:32400. Kun nødvendig for at afspille Plex på Apple TV og DLNA-afspillere med et streamlink; Cast-enheder og Plex-klienter virker uden."
+  plex_token:
+    name: Plex-token
+    description: "X-Plex-Token for din Plex-konto (åbn et emne i Plex Web, Hent info, Vis XML, og kopiér X-Plex-Token fra adressen). Det bruges til at læse filoplysninger og er en del af det streamlink, Home Assistant sender til afspilleren."

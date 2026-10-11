@@ -63,6 +63,7 @@ plex:
   # enabled: false           # remove the menu entry
   # players: [media_player.living_room_tv]   # default: every Plex client and Cast device
   # exclude: [media_player.kitchen_speaker]
+  # transcode: auto         # stream links (Apple TV, DLNA): auto | always | never
   # title: Media
 
 pages:

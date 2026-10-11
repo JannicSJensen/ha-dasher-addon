@@ -37,6 +37,7 @@ thermostat("climate.climate_stue_01", "climate-stue-01", 22.1, 22);
 // Plex: two players that can play Plex media (a Cast TV and a Plex client) and one that is offline
 put("media_player.living_room_tv", "idle", { friendly_name: "Living room TV", supported_features: 152127 });
 put("media_player.plex_ipad", "idle", { friendly_name: "Plex (iPad)", supported_features: 152127 });
+put("media_player.stuen_tv", "idle", { friendly_name: "Stuen TV" });
 put("media_player.plex_apple_tv", "unavailable", { friendly_name: "Plex (Apple TV)", restored: true });
 put("calendar.family", "off", { friendly_name: "Family" });
 put("calendar.privat", "off", { friendly_name: "Privat" });
@@ -117,6 +118,7 @@ let registry = {
     { ei: "climate.climate_stue_01", pl: "zwave_js" },
     { ei: "media_player.living_room_tv", pl: "cast" },
     { ei: "media_player.plex_ipad", pl: "plex" },
+    { ei: "media_player.stuen_tv", pl: "apple_tv" },
     { ei: "media_player.plex_apple_tv", pl: "plex" },
     { ei: "calendar.family" },
     { ei: "calendar.privat" },
@@ -332,7 +334,10 @@ function callService({ domain, service, service_data = {}, target = {} }) {
     else if (service === "toggle") next.state = s.state === "on" ? "off" : "on";
     else if (service === "media_play_pause") next.state = s.state === "playing" ? "paused" : "playing";
     else if (service === "select_option") next.state = service_data.option;
-    else if (domain === "media_player" && service === "play_media" && String(service_data.media_content_id).startsWith("plex://")) {
+    else if (domain === "media_player" && service === "play_media" && /^https?:\/\//.test(String(service_data.media_content_id))) {
+      next.state = "playing";
+      console.log(`[mock-ha] stream ${service_data.media_content_type} ${service_data.media_content_id} on ${id}`);
+    } else if (domain === "media_player" && service === "play_media" && String(service_data.media_content_id).startsWith("plex://")) {
       next.state = "playing";
       next.attributes.media_title = `plex ${service_data.media_content_id}`;
       console.log(`[mock-ha] plex play ${service_data.media_content_type} ${service_data.media_content_id} on ${id}`);
@@ -379,6 +384,19 @@ const server = http.createServer((req, res) => {
     const label = pictureMatch[1].split(".")[1].slice(0, 2).toUpperCase();
     res.writeHead(200, { "Content-Type": "image/svg+xml" });
     return res.end(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2e86ab"/><stop offset="1" stop-color="#e4572e"/></linearGradient></defs><rect width="300" height="300" fill="url(#g)"/><circle cx="150" cy="150" r="95" fill="rgba(0,0,0,.2)"/><circle cx="150" cy="150" r="20" fill="rgba(255,255,255,.8)"/><text x="18" y="46" font-family="Arial" font-weight="700" font-size="30" fill="rgba(255,255,255,.85)">${label}</text></svg>`);
+  }
+  // a tiny Plex server for stream links (set PLEX_URL=http://127.0.0.1:8123 PLEX_TOKEN=tok)
+  const plexMeta = url.pathname.match(/^\/library\/metadata\/(\d+)(\/allLeaves|\/children)?$/);
+  if (plexMeta) {
+    if (req.headers["x-plex-token"] !== "tok") {
+      res.writeHead(401);
+      return res.end();
+    }
+    const key = Number(plexMeta[1]);
+    const one = (k, type, title, mkv) => ({ ratingKey: String(k), type, title, viewOffset: k === 2001 ? 754000 : 0, Media: [{ container: mkv ? "mkv" : "mp4", videoCodec: mkv ? "hevc" : "h264", audioCodec: mkv ? "dts" : "aac", Part: [{ key: `/library/parts/${k}/1/file.${mkv ? "mkv" : "mp4"}`, container: mkv ? "mkv" : "mp4" }] }] });
+    const list = plexMeta[2] ? [one(key * 100 + 1, "episode", "Episode 1"), one(key * 100 + 2, "episode", "Episode 2")] : [one(key, key === 2001 ? "episode" : "movie", PLEX_TITLES[key] ?? "Title", key % 2 === 1)];
+    res.writeHead(200, { "Content-Type": "application/json" });
+    return res.end(JSON.stringify({ MediaContainer: { Metadata: list } }));
   }
   const plexImage = url.pathname.match(/^\/api\/plex_image_proxy\/([a-z0-9]+)\/(\d+)$/);
   if (plexImage) {

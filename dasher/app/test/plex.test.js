@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { parseConfig } from "../src/config.js";
 import { PlexService, buildSections, classifyHub, normalizeItem, plexConfigured, plexPlayers, splitTitle, validBrowse, validatePlay } from "../src/plex.js";
 import { choosePlayer, fromStart } from "../web/js/lib/plex.js";
+import { PlexStreamer, chooseStream, parseMetadata, pickEpisode } from "../src/plex-stream.js";
 
 const SRV = "abc123";
 const uri = (key, resume = false) => `plex://${SRV}/${key}${resume ? "?resume=1" : ""}`;
@@ -64,7 +65,13 @@ test("plexPlayers: Plex and Cast players by default, music-only clients left out
   };
   assert.deepEqual(plexPlayers({ settings: settings(), registries }).map((p) => p.id), ["media_player.living_room_tv", "media_player.plex_ipad"]);
   assert.deepEqual(plexPlayers({ settings: settings({ exclude: ["media_player.plex_ipad"] }), registries }).map((p) => p.id), ["media_player.living_room_tv"]);
-  assert.deepEqual(plexPlayers({ settings: settings({ players: ["media_player.stuen_tv"] }), registries }), [{ id: "media_player.stuen_tv", platform: "apple_tv" }]);
+  // players that cannot take a Plex item need stream links, which need the Plex address and token
+  assert.deepEqual(plexPlayers({ settings: settings({ players: ["media_player.stuen_tv"] }), registries }), []);
+  assert.deepEqual(plexPlayers({ settings: settings({ players: ["media_player.stuen_tv"] }), registries, streaming: true }), [{ id: "media_player.stuen_tv", platform: "apple_tv", mode: "stream" }]);
+  assert.deepEqual(
+    plexPlayers({ settings: settings(), registries, streaming: true }).map((p) => [p.id, p.mode]),
+    [["media_player.living_room_tv", "native"], ["media_player.plex_ipad", "native"], ["media_player.stuen_tv", "stream"]],
+  );
   assert.deepEqual(plexPlayers({ settings: settings({ enabled: false }), registries }), []);
   assert.equal(plexConfigured(registries), true);
   assert.equal(plexConfigured({ entities: [{ ei: "media_player.x", pl: "cast" }] }), false);
@@ -91,6 +98,7 @@ function fakeHa(tree) {
       ["media_player.plex_ipad", { state: "unavailable" }],
     ]),
     async request(message) {
+      if (this.states.get(message.entity_id)?.state === "unavailable") throw new Error("Entity not available");
       calls.push(message);
       const key = `${message.media_content_type ?? ""}|${message.media_content_id ?? ""}`;
       if (!(key in tree)) throw new Error(`not found: ${key}`);
@@ -169,4 +177,89 @@ test("choosePlayer prefers the remembered player while it is online", () => {
   assert.equal(choosePlayer(ids, get, null), "media_player.a");
   assert.equal(choosePlayer([], get, null), null);
   assert.equal(fromStart({ id: uri(1, true) }).id, uri(1));
+});
+
+// ---- stream links ----
+
+const meta = (over = {}) => parseMetadata({ MediaContainer: { Metadata: [{ ratingKey: "55", type: "movie", title: "Mutiny", viewOffset: 600_000, Media: [{ container: "mp4", videoCodec: "h264", audioCodec: "aac", Part: [{ key: "/library/parts/9/1/file.mp4", container: "mp4" }] }], ...over }] } });
+
+test("parseMetadata reads the file and codecs", () => {
+  const m = meta({ type: "episode", grandparentTitle: "Silo", title: "The Engineer" });
+  assert.deepEqual([m.key, m.type, m.title, m.viewOffsetS, m.container, m.videoCodec, m.partKey], ["55", "episode", "Silo - The Engineer", 600, "mp4", "h264", "/library/parts/9/1/file.mp4"]);
+  assert.equal(parseMetadata({}), null);
+});
+
+test("chooseStream: direct for compatible files, HLS for others and when resuming", () => {
+  assert.deepEqual(chooseStream(meta(), { platform: "apple_tv", resume: false }), { kind: "direct", offset: 0 });
+  assert.deepEqual(chooseStream(meta(), { platform: "apple_tv", resume: true }), { kind: "hls", offset: 600 });
+  assert.equal(chooseStream(meta({ Media: [{ container: "mkv", videoCodec: "hevc", audioCodec: "dts", Part: [{ key: "/p", container: "mkv" }] }] }), { platform: "apple_tv", resume: false }).kind, "hls");
+  const mkv = meta({ Media: [{ container: "mkv", videoCodec: "h264", audioCodec: "dts", Part: [{ key: "/p", container: "mkv" }] }] });
+  assert.equal(chooseStream(mkv, { platform: "dlna_dmr", resume: false }).kind, "direct");
+  assert.equal(chooseStream(mkv, { platform: "dlna_dmr", resume: false, transcode: "always" }).kind, "hls");
+  assert.equal(chooseStream(meta(), { platform: "apple_tv", resume: false, transcode: "always" }).kind, "hls");
+  assert.equal(chooseStream(meta({ viewOffset: 3000 }), { platform: "apple_tv", resume: true }).offset, 0, "a few seconds in is not a resume");
+});
+
+test("pickEpisode takes the first unfinished episode, else the first", () => {
+  const json = (list) => ({ MediaContainer: { Metadata: list } });
+  assert.equal(pickEpisode(json([{ type: "episode", ratingKey: 1, viewCount: 1 }, { type: "episode", ratingKey: 2 }, { type: "episode", ratingKey: 3 }])), "2");
+  assert.equal(pickEpisode(json([{ type: "episode", ratingKey: 1, viewCount: 1 }, { type: "episode", ratingKey: 2, viewCount: 1 }])), "1");
+  assert.equal(pickEpisode(json([])), null);
+});
+
+function fakePlex() {
+  const requests = [];
+  const fetchImpl = async (url, options) => {
+    requests.push({ url: String(url), token: options.headers["X-Plex-Token"] });
+    const path = new URL(url).pathname;
+    const body = path.endsWith("/allLeaves") ? { MediaContainer: { Metadata: [{ type: "episode", ratingKey: 77 }] } } : { MediaContainer: { Metadata: [{ ratingKey: path.split("/").pop(), type: "movie", title: "Mutiny", viewOffset: 600_000, Media: [{ container: "mp4", videoCodec: "h264", audioCodec: "aac", Part: [{ key: "/library/parts/9/1/file.mp4", container: "mp4" }] }] }] } };
+    return { ok: true, json: async () => body };
+  };
+  return { requests, streamer: new PlexStreamer({ url: "http://plex:32400/", token: "tok", fetchImpl, logger: silent, clientId: "cid" }) };
+}
+
+test("PlexStreamer builds a direct link and an HLS link", async () => {
+  const { streamer, requests } = fakePlex();
+  const direct = await streamer.resolve({ key: "55", type: "movie", resume: false, platform: "apple_tv" });
+  assert.equal(direct.kind, "direct");
+  assert.equal(direct.url, "http://plex:32400/library/parts/9/1/file.mp4?X-Plex-Token=tok");
+  assert.equal(direct.mediaType, "video");
+  assert.equal(requests[0].token, "tok");
+  const hls = await streamer.resolve({ key: "55", type: "movie", resume: true, platform: "dlna_dmr" });
+  assert.equal(hls.kind, "hls");
+  assert.equal(hls.mediaType, "application/x-mpegURL");
+  const url = new URL(hls.url);
+  assert.equal(url.pathname, "/video/:/transcode/universal/start.m3u8");
+  assert.equal(url.searchParams.get("path"), "/library/metadata/55");
+  assert.equal(url.searchParams.get("offset"), "600");
+  assert.equal(url.searchParams.get("X-Plex-Token"), "tok");
+  const show = await streamer.resolve({ key: "10", type: "show", resume: false, platform: "apple_tv" });
+  assert.ok(requests.some((r) => r.url.endsWith("/library/metadata/10/allLeaves")));
+  assert.ok(requests.some((r) => r.url.endsWith("/library/metadata/77")));
+  assert.equal(show.kind, "direct");
+});
+
+test("PlexStreamer needs an address and a token", async () => {
+  const bare = new PlexStreamer({ url: "", token: "", logger: silent });
+  assert.equal(bare.configured, false);
+  await assert.rejects(() => bare.resolve({ key: "1", type: "movie", platform: "apple_tv" }), /not set/);
+});
+
+test("PlexService.play sends a stream link to stream players and the Plex item to native ones", async () => {
+  const ha = fakeHa(tree);
+  const { streamer } = fakePlex();
+  const service = new PlexService({ ha, logger: silent, fetchImage: async () => null, streamer });
+  const players = [{ id: "media_player.tv", platform: "cast", mode: "native" }, { id: "media_player.apple", platform: "apple_tv", mode: "stream" }, { id: "media_player.dlna", platform: "dlna_dmr", mode: "stream" }];
+  service.configure(players);
+  await service.play("media_player.tv", uri(55), "movie");
+  assert.equal(ha.calls.at(-1).data.media_content_id, uri(55));
+  await service.play("media_player.apple", uri(55), "movie");
+  assert.deepEqual(ha.calls.at(-1).data, { media_content_id: "http://plex:32400/library/parts/9/1/file.mp4?X-Plex-Token=tok", media_content_type: "video" });
+  await service.play("media_player.dlna", uri(55, true), "movie");
+  const dlna = ha.calls.at(-1).data;
+  assert.equal(dlna.media_content_type, "application/x-mpegURL");
+  assert.deepEqual(dlna.extra, { title: "Mutiny" });
+  const noStream = new PlexService({ ha, logger: silent, fetchImage: async () => null });
+  noStream.configure(players);
+  await assert.rejects(() => noStream.play("media_player.apple", uri(55), "movie"), /not set/);
 });

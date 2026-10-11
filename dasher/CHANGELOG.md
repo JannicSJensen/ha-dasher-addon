@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.13.0
+
+- The Media page can play on **Apple TVs and DLNA players** with stream links. New app options **Plex address** and **Plex token** (optional); with them Apple TVs join the *Play on* list, and DLNA players and others can be added with `players:`. Direct links for compatible files, Plex HLS transcodes otherwise and when resuming; `plex: transcode: auto | always | never`. Plex is not told about the progress when played this way.
+- Browsing the Plex rows now works through any Plex or Cast entity, also ones that are not in the *Play on* list.
+
 ## 0.12.0
 
 - New **Media** page for Plex, through Home Assistant's Plex integration: continue watching, recently added movies and recently added series, with posters; items play on a Google Cast device or a Plex client chosen at the top, shows open as seasons and episodes, and continued items offer *Resume* or *Start over*. Configure with `plex:` in `dashboard.yaml`.

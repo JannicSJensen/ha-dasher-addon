@@ -1,5 +1,5 @@
 name: Dasher
-version: "0.12.0"
+version: "0.13.0"
 slug: dasher
 url: https://github.com/JannicSJensen/ha-dasher-addon
 description: Wall-tablet dashboard that serves a ready-to-use web page for tablets
@@ -35,3 +35,5 @@ schema:
   allow_entity_mapping: bool
   music_assistant_url: url?
   music_assistant_token: password?
+  plex_url: url?
+  plex_token: password?
