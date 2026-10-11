@@ -1,0 +1,135 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { collectEntities, parseConfig } from "../src/config.js";
+
+const base = `
+pages:
+  - title: Home Page
+    tiles:
+      - type: toggle
+        entity: light.kitchen
+      - type: hero
+        backgrounds:
+          - when: { entity: sun.sun, state: below_horizon }
+            image: night.jpg
+        buttons:
+          - icon: coffee
+            tap: { action: service, service: scene.turn_on, entity: scene.cozy, data: { entity_id: light.ignored } }
+          - icon: lamp
+            entity: light.lamp
+      - type: vehicle
+        entity: sensor.range
+        rows:
+          - { icon: battery, entity: sensor.battery, label_entity: sensor.state }
+`;
+
+test("parses pages, slugs ids and applies defaults", () => {
+  const { config, errors } = parseConfig(base);
+  assert.deepEqual(errors, []);
+  assert.equal(config.pages[0].id, "home-page");
+  assert.equal(config.pages[0].columns, 4);
+  assert.equal(config.pages[0].tiles[0].w, 1);
+  assert.equal(config.pages[0].tiles[0].col, null);
+});
+
+test("collects entities from nested keys but not from service data", () => {
+  const { entities } = parseConfig(base);
+  assert.deepEqual(
+    [...entities].sort(),
+    ["light.kitchen", "light.lamp", "scene.cozy", "sensor.battery", "sensor.range", "sensor.state", "sun.sun"],
+  );
+});
+
+test("unknown tile types and bad entity ids are reported and dropped", () => {
+  const { config, errors } = parseConfig(`
+pages:
+  - id: a
+    tiles:
+      - { type: nope }
+      - { type: toggle, entity: "Light.Bad Id" }
+      - { type: toggle, entity: light.ok }
+`);
+  assert.equal(errors.length, 2);
+  assert.equal(config.pages[0].tiles.length, 1);
+});
+
+test("invalid YAML and missing pages never throw", () => {
+  assert.equal(parseConfig("pages: [").config, null);
+  assert.equal(parseConfig("title: x").config, null);
+  assert.equal(parseConfig("").config, null);
+});
+
+test("duplicate page ids are made unique", () => {
+  const { config } = parseConfig("pages:\n  - { id: a }\n  - { id: a }\n");
+  assert.notEqual(config.pages[0].id, config.pages[1].id);
+});
+
+test("collectEntities handles `entities` lists", () => {
+  assert.deepEqual([...collectEntities({ entities: ["light.a", "light.b"] })], ["light.a", "light.b"]);
+});
+
+test("app version in config.yaml matches package.json", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { default: YAML } = await import("yaml");
+  const addon = YAML.parse(readFileSync(new URL("../../config.yaml", import.meta.url), "utf8"));
+  const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
+  assert.equal(addon.version, pkg.version);
+});
+
+test("areas section: defaults, validation and override entities", () => {
+  const defaults = parseConfig("pages:\n  - id: a\n").config.areas;
+  assert.equal(defaults.enabled, true);
+  assert.deepEqual(defaults.domains, ["light", "fan", "cover", "media_player"]);
+
+  const { config, errors, entities } = parseConfig(`
+pages:
+  - id: a
+areas:
+  enabled: true
+  title: Rum
+  hide: [hjem]
+  domains: [light, lock]
+  overrides:
+    stuen:
+      name: Stue
+      temperature_entity: sensor.t
+      humidity_entity: "bad id"
+      window_entities: [binary_sensor.w, nope]
+`);
+  assert.equal(config.areas.title, "Rum");
+  assert.deepEqual(config.areas.domains, ["light"]);
+  assert.equal(errors.length, 3);
+  assert.deepEqual([...entities].sort(), ["binary_sensor.w", "sensor.t"]);
+  assert.equal(parseConfig("pages:\n  - id: a\nareas:\n  enabled: false\n").config.areas.enabled, false);
+});
+
+test("radio section: defaults, validation and entities", () => {
+  const defaults = parseConfig("pages:\n  - id: a\n").config.music;
+  assert.equal(defaults.enabled, true);
+  assert.deepEqual(defaults.players, []);
+
+  const { config, errors, entities } = parseConfig(`
+pages:
+  - id: a
+radio:
+  title: Radio
+  players: [media_player.a, light.nope]
+  exclude: media_player.skip
+  default_player: sensor.bad
+`);
+  assert.equal(errors.length, 2);
+  assert.deepEqual(config.music.players, ["media_player.a"]);
+  assert.deepEqual(config.music.exclude, ["media_player.skip"]);
+  assert.equal(config.music.default_player, null);
+  assert.deepEqual([...entities], ["media_player.a"]);
+});
+
+test("music section: `radio:` is an alias, tabs are validated", () => {
+  const alias = parseConfig("pages:\n  - id: a\nradio:\n  title: Radio\n").config.music;
+  assert.equal(alias.title, "Radio");
+  assert.deepEqual(alias.tabs, ["discover", "radio", "albums", "artists", "podcasts", "search"]);
+
+  const { config, errors } = parseConfig("pages:\n  - id: a\nmusic:\n  tabs: [albums, albums, nope, search]\n");
+  assert.deepEqual(config.music.tabs, ["albums", "search"]);
+  assert.equal(errors.length, 1);
+});

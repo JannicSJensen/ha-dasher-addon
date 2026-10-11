@@ -1,0 +1,21 @@
+{
+  "name": "dasher-addon",
+  "version": "0.6.0",
+  "private": true,
+  "type": "module",
+  "description": "Tablet dashboard server for Home Assistant",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node dev/mock-ha.js & node dev/mock-ma.js & HA_URL=http://127.0.0.1:8123 HA_TOKEN=dev MA_URL=http://127.0.0.1:8095 MA_TOKEN=dev-token CONFIG_DIR=./dev/config DATA_DIR=./dev/data node src/index.js",
+    "test": "node --test test/"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@mdi/js": "^7.4.47",
+    "ws": "^8.18.0",
+    "yaml": "^2.5.0"
+  }
+}
