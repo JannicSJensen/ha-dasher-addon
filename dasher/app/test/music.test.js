@@ -246,3 +246,13 @@ test("validPlayUri and availableTabs", () => {
   assert.deepEqual(availableTabs({ tabs: ["discover", "radio", "albums", "search"] }, true), ["discover", "radio", "albums", "search"]);
   assert.deepEqual(availableTabs(undefined, true), ["discover", "radio", "albums", "artists", "podcasts", "search"]);
 });
+
+test("MAClient reports what is still missing for browsing", () => {
+  assert.equal(new MAClient({ url: "", token: "" }).missing, "both");
+  assert.equal(new MAClient({ url: "", token: "t" }).missing, "url");
+  assert.equal(new MAClient({ url: BASE, token: "" }).missing, "token");
+  const client = new MAClient({ url: BASE, token: "t" });
+  assert.equal(client.missing, null);
+  client.baseUrl = "";
+  assert.equal(client.configured, false);
+});

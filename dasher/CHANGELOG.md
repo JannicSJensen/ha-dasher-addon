@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.0
+
+- The Music Assistant address is found automatically when Music Assistant runs as a Home Assistant app (new `hassio_api` permission, read-only use). `music_assistant_url` is only needed otherwise; the access token is still required for the browsing tabs.
+- The music page says exactly what is missing (address, token or both) instead of a general hint.
+
 ## 0.6.0
 
 - The `media` tile is now a "Now playing" tile: it follows whichever speaker plays (`entities: music` or a list), controls it (play/pause, previous/next, volume, progress), lets you switch between speakers that play at the same time, and shows the last played track, with artwork, when nothing is playing.

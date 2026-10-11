@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildAreaModel, imageSignature, scanImages } from "./areas.js";
 import { ConfigStore } from "./config.js";
+import { discoverMusicAssistant } from "./discovery.js";
 import { MusicService, availableTabs, DETAIL_TYPES } from "./music.js";
 import { NowPlayingStore } from "./nowplaying.js";
 import { RadioService, radioPlayers, validateGroupRequest } from "./radio.js";
@@ -78,6 +79,23 @@ const music = new MusicService({
   token: options.music_assistant_token ?? process.env.MA_TOKEN,
 });
 
+// When no address is set and Music Assistant runs as a Home Assistant app, find it through the Supervisor.
+let discoveryTimer = null;
+async function discoverMusic() {
+  if (music.client.baseUrl || !supervisorToken) return;
+  const found = await discoverMusicAssistant({ token: supervisorToken, log: logger });
+  if (!found) return;
+  music.client.baseUrl = found.url;
+  clearInterval(discoveryTimer);
+  logger.info(`Music Assistant found as app ${found.slug} at ${found.url}`);
+  broadcast("music", musicPayload());
+}
+if (!music.client.baseUrl && supervisorToken) {
+  discoverMusic();
+  discoveryTimer = setInterval(discoverMusic, 60_000);
+  discoveryTimer.unref?.();
+}
+
 // ---- now playing memory -----------------------------------------------------------
 
 /** Fetch an artwork picture of a media player: HA-relative paths with the token, absolute URLs without. */
@@ -127,6 +145,7 @@ const musicPayload = () => {
     players: radioPlayerIds,
     tabs: availableTabs(settings, music.configured),
     library: music.configured,
+    library_missing: music.client.missing,
     ...radio.payload(),
   };
 };

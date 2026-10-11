@@ -133,3 +133,17 @@ test("music section: `radio:` is an alias, tabs are validated", () => {
   assert.deepEqual(config.music.tabs, ["albums", "search"]);
   assert.equal(errors.length, 1);
 });
+
+test("every app option has a translation in each language, and the YAML files parse", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { default: YAML } = await import("yaml");
+  const read = (file) => YAML.parse(readFileSync(new URL(file, import.meta.url), "utf8"));
+  const addon = read("../../config.yaml");
+  assert.ok(addon.hassio_api, "needed to find Music Assistant as an app");
+  for (const lang of ["en", "da"]) {
+    const texts = read(`../../translations/${lang}.yaml`).configuration;
+    for (const option of Object.keys(addon.schema)) {
+      assert.ok(texts[option]?.name && texts[option]?.description, `${lang}: ${option}`);
+    }
+  }
+});

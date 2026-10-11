@@ -19,8 +19,8 @@ If the file has a mistake, the page shows what is wrong instead of failing silen
 | --- | --- | --- |
 | `log_level` | `info` | `debug`, `info`, `warning` or `error`. |
 | `read_only` | `false` | Show states but refuse every command from tablets. |
-| `music_assistant_url` | empty | Address of your Music Assistant server, e.g. `http://192.168.1.10:8095`. Needed for the browsing tabs of the [Music page](#music). |
-| `music_assistant_token` | empty | A long-lived access token from Music Assistant (*Settings → Profile → Long-lived access tokens*). Only used to read the library. |
+| `music_assistant_url` | empty | Address of your Music Assistant server, e.g. `http://192.168.1.10:8095`. **Leave it empty when Music Assistant runs as a Home Assistant app**: Dasher then finds it through the Supervisor (and keeps looking if Music Assistant starts later). Only needed for the browsing tabs of the [Music page](#music). |
+| `music_assistant_token` | empty | A long-lived access token from Music Assistant (*Settings → Profile → Long-lived access tokens*). Needed for the browsing tabs, also when Music Assistant runs as an app. Only used to read the library. |
 
 ## Security
 
@@ -205,7 +205,7 @@ One button with the logo for every radio station in your Music Assistant library
 
 ### Discover, Albums, Artists, Podcasts and Search
 
-These tabs read your library through Music Assistant's own API (Home Assistant's integration cannot list podcast episodes or Discover recommendations), so they need two [app options](#app-options): `music_assistant_url` and `music_assistant_token`. Without them only the Radio tab is shown. To create the token open Music Assistant → *Settings → Profile → Long-lived access tokens → Create token*, and paste it into the app options. The add-on uses it only to read; playback always goes through Home Assistant.
+These tabs read your library through Music Assistant's own API (Home Assistant's integration cannot list podcast episodes or Discover recommendations), so they need [app options](#app-options): `music_assistant_token`, and `music_assistant_url` unless Music Assistant runs as a Home Assistant app (then Dasher finds the address itself; the log says "Music Assistant found as app ... at ..."). Without them only the Radio tab is shown, with a note about what is missing. To create the token open Music Assistant → *Settings → Profile → Long-lived access tokens → Create token*, and paste it into the app options. The add-on uses it only to read; playback always goes through Home Assistant.
 
 * **Discover** shows the recommendation rows of Music Assistant (recently played, random albums, continue listening, ...), each a row of covers you can scroll sideways.
 * **Albums**, **Artists**, **Podcasts** (and **Playlists**, off by default) are grids of covers. Sort by A–Z, newest or random, show only favourites, or type in the filter box. More covers load as you scroll.

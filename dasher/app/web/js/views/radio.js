@@ -49,7 +49,7 @@ export function createRadioView({ model, ctx, panel }) {
     "div",
     { class: "view view--radio" },
     empty ?? h("div", { class: "radio__stations" }, tiles.map((x) => x.el)),
-    model.library ? null : h("p", { class: "view__hint" }, t("library_hint")),
+    model.library ? null : h("p", { class: "view__hint" }, t(model.library_missing === "token" ? "library_hint_token" : "library_hint")),
   );
 
   async function playStation(station) {

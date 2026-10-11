@@ -22,6 +22,13 @@ export class MAClient {
     return Boolean(this.baseUrl && this.token);
   }
 
+  /** What is still needed for browsing: "url", "token", "both" or null. */
+  get missing() {
+    if (!this.baseUrl && !this.token) return "both";
+    if (!this.baseUrl) return "url";
+    return this.token ? null : "token";
+  }
+
   /** Run a command and return its result. Errors carry a message that is safe to show. */
   async call(command, args = {}) {
     if (!this.configured) throw new MAError("Music Assistant address and token are not configured.", 503);

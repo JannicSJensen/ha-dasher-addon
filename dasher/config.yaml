@@ -1,5 +1,5 @@
 name: Dasher
-version: "0.6.0"
+version: "0.7.0"
 slug: dasher
 url: https://github.com/JannicSJensen/ha-dasher-addon
 description: Wall-tablet dashboard that serves a ready-to-use web page for tablets
@@ -10,6 +10,7 @@ init: false
 startup: application
 boot: auto
 homeassistant_api: true
+hassio_api: true
 ingress: true
 ingress_port: 8099
 ingress_stream: true
