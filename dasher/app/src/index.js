@@ -8,6 +8,7 @@ import { discoverMusicAssistant } from "./discovery.js";
 import { discoverEv, resolveEv } from "./ev.js";
 import { mappingItems, rankCandidates, validateMapping } from "./mapping.js";
 import { MusicService, availableTabs, DETAIL_TYPES } from "./music.js";
+import { PSEUDO_IDS, buildSuggestions } from "./suggestions.js";
 import { CalendarService, calendarScope, parseWindow } from "./calendar.js";
 import { NowPlayingStore } from "./nowplaying.js";
 import { RadioService, radioPlayers, validateGroupRequest } from "./radio.js";
@@ -386,11 +387,15 @@ async function handleMappingGet(res, p, params) {
   if (!MAPPING_ENABLED) return json(res, 403, { error: "Entity mapping is switched off." });
   const state = mappingState();
   if (p === "/api/entities/mapping") {
-    return json(res, 200, { connected: ha.connected, items: mappingItems(state) });
+    return json(res, 200, {
+      connected: ha.connected,
+      items: mappingItems(state),
+      suggestions: buildSuggestions({ config: configStore.current.config, index: ha.entityIndex }),
+    });
   }
   if (p === "/api/entities/candidates") {
     const from = params.get("for");
-    if (!state.rawEntities.has(from)) return json(res, 400, { error: "That entity is not used in dashboard.yaml." });
+    if (!state.rawEntities.has(from) && !PSEUDO_IDS.has(from)) return json(res, 400, { error: "That entity is not used in dashboard.yaml." });
     const q = String(params.get("q") ?? "").trim().slice(0, 80);
     return json(res, 200, { items: rankCandidates({ index: ha.entityIndex, registries: ha.registries, from, usage: state.usage.get(from) ?? [], q }) });
   }

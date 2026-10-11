@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.10.2
+
+- The *Map entities* screen now also lists features your `dashboard.yaml` does not use yet (the `calendar` tile and the electricity price in the car tile). Pick the entities there and copy the ready-made YAML into `dashboard.yaml`.
+
 ## 0.10.1
 
 - An unedited `dashboard.yaml` from an older version is now replaced by the new example when the app starts (a backup is saved as `dashboard.yaml.bak`), so new tiles appear without editing anything. Edited files are never touched.

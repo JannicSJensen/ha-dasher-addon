@@ -479,3 +479,17 @@
 .dialog__text { margin: 10px 0 0; font-size: 14px; line-height: 1.5; color: #b4b4b8; }
 .dialog__actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
 .btn--danger { background: #dc2626; color: #fff; }
+
+/* ---- suggestions on the mapping screen ---- */
+.mapsuggest { margin-top: 28px; }
+.mapsuggest[hidden] { display: none; }
+.mapsuggest__title { font-size: 18px; font-weight: 500; }
+.mapsuggest .maprow { margin-top: 8px; }
+.mapsuggest__name { font-size: 15px; font-weight: 600; }
+.mapsuggest__field { display: grid; gap: 8px; }
+.picker__list--short { max-height: 34vh; min-height: 0; }
+.snippet { margin: 0; padding: 12px 14px; border-radius: 12px; background: #0d0d0e; color: #d7d7da; font: 12.5px/1.5 ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-all; -webkit-user-select: text; user-select: text; }
+.btn[disabled] { opacity: 0.45; }
+.modal__sheet:has(.picker) { overflow-y: auto; }
+.mapping__ok { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: 14px; color: #d7d7da; }
+.mapping__ok .icon { font-size: 22px; color: var(--accent); }
