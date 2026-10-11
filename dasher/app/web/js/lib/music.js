@@ -4,6 +4,7 @@ export const TAB_ICONS = {
   albums: "album",
   artists: "account-music",
   podcasts: "podcast",
+  party: "party-popper",
   playlists: "playlist-music",
   search: "magnify",
 };

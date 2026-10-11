@@ -347,6 +347,8 @@ One button with the logo for every radio station in your Music Assistant library
 
 ### Discover, Albums, Artists, Podcasts and Search
 
+(The [Party tab](#party) uses the same token.)
+
 These tabs read your library through Music Assistant's own API (Home Assistant's integration cannot list podcast episodes or Discover recommendations), so they need [app options](#app-options): `music_assistant_token`, and `music_assistant_url` unless Music Assistant runs as a Home Assistant app (then Dasher finds the address itself; the log says "Music Assistant found as app ... at ..."). Without them only the Radio tab is shown, with a note about what is missing. To create the token open Music Assistant → *Settings → Profile → Long-lived access tokens → Create token*, and paste it into the app options. The add-on uses it only to read; playback always goes through Home Assistant.
 
 * **Discover** shows the recommendation rows of Music Assistant (recently played, random albums, continue listening, ...), each a row of covers you can scroll sideways.
@@ -354,6 +356,15 @@ These tabs read your library through Music Assistant's own API (Home Assistant's
 * **Search** searches the library and the connected music services for artists, albums, tracks, playlists and podcasts. The last search is remembered when you switch tabs.
 * Tap a cover to open it: an album or playlist lists its tracks, an artist its albums and tracks, a podcast its episodes (with played and resume information). The round play button on a cover plays it straight away.
 * In an opened album, playlist or podcast, tapping a track or episode plays the whole thing starting there. The **+** at the end of a row, and **Add to queue** in the header, add to the end of the speaker's queue instead of replacing it.
+
+### Party
+
+The **Party** tab is the host dashboard of Music Assistant's [Party plugin](https://music-assistant.io/plugins/party/) (*Settings → Plugins → Add a plugin → Party* in Music Assistant). It shows:
+
+* the **QR code** guests scan to add songs from their phones (with the party name and text you set in the plugin, and whether it is *Venue* or *Silent disco* mode), and
+* the **live queue** of the party player: what plays now with its progress, and what is up next. Songs guests requested are marked with a person symbol, boosted ones with a rocket. It refreshes every few seconds.
+
+It reads through the Music Assistant token like the other library tabs and changes nothing; guests add and boost songs on their own phones. If the plugin is not enabled the tab says so; if guest access is switched off in the plugin the QR code is replaced by a note. **The QR code contains the join link, so anyone who can open the tablet page can see it**, which is the point of a party; keep the port on your own network. The guests' phones must be able to reach Music Assistant (or use its remote access).
 
 ### Playing on several speakers
 
@@ -380,7 +391,7 @@ music:                          # `radio:` still works as an alias
   enabled: true                 # false removes the menu entry
   title: Music
   icon: music
-  tabs: [discover, radio, albums, artists, podcasts, search]   # order and choice; also: playlists
+  tabs: [discover, radio, albums, artists, podcasts, party, search]   # order and choice; also: playlists
   players: [media_player.kitchen, media_player.living_room]   # default: every Music Assistant player
   exclude: [media_player.tv_airplay]
   default_player: media_player.living_room    # used until a speaker has been chosen on the tablet

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.16.0
+
+- New **Party** tab on the Music page for Music Assistant's Party plugin: the guest QR code (with the party name and text) and the live queue of the party player, with songs requested or boosted by guests marked. It appears with the other library tabs (add `party` to `tabs:` if you list them yourself) and says so if the plugin is not enabled.
+
 ## 0.15.0
 
 - New **full-screen player**: it opens when a Music Assistant speaker starts playing, with big artwork, title, album/station and artist, a seekable progress bar, shuffle/previous/play-pause/next/repeat, volume and the speaker name. Close it with the arrow (it stays closed until the music has stopped and started again); the *now playing* tile opens it too. `fullscreen: false` under `music:` turns the automatic opening off.

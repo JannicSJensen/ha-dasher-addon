@@ -34,7 +34,7 @@ areas:
 music:
   # enabled: false
   # title: Music
-  # tabs: [discover, radio, albums, artists, podcasts, search]
+  # tabs: [discover, radio, albums, artists, podcasts, party, search]
   # players: [media_player.kitchen, media_player.living_room]   # default: all Music Assistant players
   # default_player: media_player.living_room
   # fullscreen: false          # do not open the full-screen player when music starts

@@ -7,6 +7,7 @@ import { createDetailView } from "../views/detail.js";
 import { createDiscoverView } from "../views/discover.js";
 import { createLibraryView } from "../views/library.js";
 import { createRadioView } from "../views/radio.js";
+import { createPartyView } from "../views/party.js";
 import { createSearchView } from "../views/search.js";
 import { pressable } from "../tiles/common.js";
 
@@ -70,6 +71,7 @@ export function createMusicPage(model, ctx) {
     if (tab === "discover") return createDiscoverView({ ctx, actions });
     if (LIBRARY_TABS.has(tab)) return createLibraryView({ tab, ctx, actions, scroller: content });
     if (tab === "search") return createSearchView({ ctx, actions });
+    if (tab === "party") return createPartyView({ ctx });
     return createRadioView({ model, ctx, panel });
   }
 

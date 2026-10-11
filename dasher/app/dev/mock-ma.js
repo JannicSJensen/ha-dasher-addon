@@ -86,7 +86,19 @@ const ROWS = [
   { item_id: "favorite_tracks", provider: "library", name: "Favourite tracks", pick: () => tracks.slice(0, 10) },
 ];
 
+// The Party plugin: a join link, its settings and a queue with guest requests (set MA_PARTY=0 to simulate the plugin missing).
+const queueItem = (track, i, extra = {}) => ({ queue_item_id: `qi${i}`, name: track.name, duration: track.duration ?? 200, media_item: track, extra_attributes: extra });
+const partyQueue = () => tracks.slice(0, 9).map((t, i) => queueItem(t, i, i === 2 ? { party_guest: true } : i === 4 ? { party_guest: true, party_boosted: true } : {}));
+const partyCommands = process.env.MA_PARTY === "0" ? {} : {
+  "party/url": () => `http://127.0.0.1:${PORT}/#/party-guest?code=MOCKJOINCODE`,
+  "party/config": () => ({ mode: "venue", party_name: "Friday party", qr_text: "Scan to add songs", request_badge_color: "#2dd4bf", boost_badge_color: "#f59e0b" }),
+  "party/player": () => "media_player.living_room",
+  "player_queues/get": () => ({ queue_id: "media_player.living_room", state: "playing", current_index: 1, elapsed_time: 73 }),
+  "player_queues/items": (a) => partyQueue().slice(Number(a.offset ?? 0), Number(a.offset ?? 0) + Number(a.limit ?? 30)),
+};
+
 const commands = {
+  ...partyCommands,
   "music/albums/library_items": (a) => libraryItems("album", a),
   "music/artists/library_items": (a) => libraryItems("artist", a),
   "music/podcasts/library_items": (a) => libraryItems("podcast", a),

@@ -557,6 +557,13 @@ async function handleMusicGet(res, p, params) {
       }));
     }
     if (p === "/api/music/discover") return json(res, 200, await music.discover());
+    if (p === "/api/music/party") return json(res, 200, await music.party());
+    if (p === "/api/music/party/qr") {
+      const qr = await music.partyQr();
+      if (!qr) return json(res, 404, { error: "Guest access is switched off in the Party plugin." });
+      res.writeHead(200, { "Content-Type": qr.type, "Content-Length": qr.body.length, "Cache-Control": "no-store" });
+      return res.end(qr.body);
+    }
     if (p === "/api/music/search") return json(res, 200, await music.search(params.get("q")));
     if (p === "/api/music/item") {
       if (!DETAIL_TYPES.has(params.get("type"))) return json(res, 400, { error: "Unknown item type." });

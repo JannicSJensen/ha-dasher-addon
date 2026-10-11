@@ -612,3 +612,35 @@
 .npscreen.is-unavailable { opacity: 0.8; }
 .npscreen__text { flex: none; }
 @media (max-height: 560px) { .npscreen__play { width: 64px; height: 64px; font-size: 34px; } .npscreen__btn { width: 46px; height: 46px; font-size: 26px; } }
+
+/* ---- Party tab ---- */
+.view--party { display: grid; grid-template-columns: minmax(240px, 340px) minmax(0, 1fr); gap: 18px; align-items: start; padding: 4px 2px 16px; }
+@media (max-width: 760px), (orientation: portrait) { .view--party { grid-template-columns: 1fr; } }
+.party__qr { display: grid; justify-items: center; gap: 12px; padding: 18px; border-radius: var(--radius); background: var(--tile-bg); text-align: center; }
+.party__name { margin: 0; font-size: 22px; font-weight: 600; }
+.party__code { width: min(100%, 300px); padding: 8px; border-radius: 16px; background: #fff; }
+.party__code img { display: block; width: 100%; height: auto; }
+.party__scan { margin: 0; font-size: 15px; color: #d7d7da; }
+.party__off { display: grid; justify-items: center; gap: 8px; color: var(--muted); }
+.party__off .icon { font-size: 56px; }
+.party__mode { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); font-size: 13px; color: #d0d0d3; }
+.party__mode .icon { font-size: 18px; color: var(--accent); }
+.party__queue { display: grid; gap: 10px; min-width: 0; }
+.party__title { margin: 8px 0 0; font-size: 12.5px; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: #d0d0d3; }
+.partynow { display: flex; gap: 16px; align-items: center; padding: 14px; border-radius: var(--radius); background: var(--tile-bg); }
+.partynow__art, .partyrow__art { flex: none; display: grid; place-items: center; background: #2a2a2d center / cover no-repeat; color: #55555a; }
+.partynow__art { width: 96px; height: 96px; border-radius: 12px; font-size: 40px; }
+.partynow__text { min-width: 0; flex: 1; }
+.partynow__title { font-size: 20px; font-weight: 600; overflow-wrap: anywhere; }
+.partynow__artist { margin-top: 2px; font-size: 15px; color: var(--muted); }
+.partynow__bar { margin-top: 10px; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.12); overflow: hidden; }
+.partynow__bar i { display: block; height: 100%; background: var(--accent); transition: width 1s linear; }
+.partylist { display: grid; gap: 6px; }
+.partyrow { display: flex; align-items: center; gap: 12px; padding: 8px 12px 8px 8px; border-radius: 12px; background: rgba(255, 255, 255, 0.04); }
+.partyrow__art { width: 48px; height: 48px; border-radius: 8px; font-size: 22px; }
+.partyrow__text { min-width: 0; flex: 1; }
+.partyrow__title { font-size: 14.5px; font-weight: 500; overflow-wrap: anywhere; }
+.partyrow__artist { font-size: 12.5px; color: var(--muted); }
+.partyrow__time { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.partybadge { display: inline-grid; place-items: center; width: 22px; height: 22px; margin-left: 8px; border-radius: 50%; background: var(--accent); color: #05221f; font-size: 14px; vertical-align: middle; }
+.partybadge--boost { background: #f59e0b; color: #2b1a00; }

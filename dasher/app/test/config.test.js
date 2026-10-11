@@ -127,7 +127,7 @@ radio:
 test("music section: `radio:` is an alias, tabs are validated", () => {
   const alias = parseConfig("pages:\n  - id: a\nradio:\n  title: Radio\n").config.music;
   assert.equal(alias.title, "Radio");
-  assert.deepEqual(alias.tabs, ["discover", "radio", "albums", "artists", "podcasts", "search"]);
+  assert.deepEqual(alias.tabs, ["discover", "radio", "albums", "artists", "podcasts", "party", "search"]);
 
   const { config, errors } = parseConfig("pages:\n  - id: a\nmusic:\n  tabs: [albums, albums, nope, search]\n");
   assert.deepEqual(config.music.tabs, ["albums", "search"]);

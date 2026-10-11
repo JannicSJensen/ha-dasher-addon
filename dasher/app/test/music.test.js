@@ -244,7 +244,7 @@ test("validPlayUri and availableTabs", () => {
   assert.equal(validPlayUri(5), false);
   assert.deepEqual(availableTabs({ tabs: ["discover", "radio", "albums", "search"] }, false), ["radio"]);
   assert.deepEqual(availableTabs({ tabs: ["discover", "radio", "albums", "search"] }, true), ["discover", "radio", "albums", "search"]);
-  assert.deepEqual(availableTabs(undefined, true), ["discover", "radio", "albums", "artists", "podcasts", "search"]);
+  assert.deepEqual(availableTabs(undefined, true), ["discover", "radio", "albums", "artists", "podcasts", "party", "search"]);
 });
 
 test("MAClient reports what is still missing for browsing", () => {
