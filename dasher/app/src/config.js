@@ -4,6 +4,7 @@ import YAML from "yaml";
 import { AREA_DOMAINS, DEFAULT_AREA_DOMAINS } from "./areas.js";
 import { DEFAULT_TABS, MUSIC_TABS } from "./music.js";
 import { collectEntities, describeUsage, mapEntities } from "../web/js/lib/entities.js";
+import { STOCK_EXAMPLE_HASHES, hashDashboard } from "./stock-examples.js";
 import { MAP_FILE, parseEntityMap, serializeEntityMap } from "./mapping.js";
 
 export { collectEntities };
@@ -254,9 +255,25 @@ export class ConfigStore {
   seedIfMissing(examplePath) {
     fs.mkdirSync(this.assetsDir, { recursive: true });
     for (const sub of ["areas", "entities"]) fs.mkdirSync(path.join(this.assetsDir, sub), { recursive: true });
+    const example = fs.readFileSync(examplePath, "utf8");
+    // Always keep a current copy of the example next to the dashboard, to compare or copy from.
+    try {
+      fs.writeFileSync(path.join(this.dir, "dashboard.example.yaml"), example);
+    } catch (err) {
+      this.log.warn(`Could not write dashboard.example.yaml: ${err.message}`);
+    }
     if (!fs.existsSync(this.file)) {
-      fs.copyFileSync(examplePath, this.file);
+      fs.writeFileSync(this.file, example);
       this.log.info(`Created example configuration at ${this.file}`);
+      return;
+    }
+    // An untouched dashboard from an older version follows the app's updates; an edited one is never changed.
+    const existing = fs.readFileSync(this.file, "utf8");
+    const hash = hashDashboard(existing);
+    if (hash !== hashDashboard(example) && STOCK_EXAMPLE_HASHES.has(hash)) {
+      fs.writeFileSync(`${this.file}.bak`, existing);
+      fs.writeFileSync(this.file, example);
+      this.log.info(`dashboard.yaml was the unedited example of an older version and has been updated (old copy: dashboard.yaml.bak)`);
     }
   }
 

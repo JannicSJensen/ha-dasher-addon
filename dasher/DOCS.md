@@ -29,6 +29,8 @@ The tablet page needs no login. Anyone who can reach port 8099 can use the entit
 
 ## `dashboard.yaml`
 
+The first start creates `dashboard.yaml` from the example. **Your file is never changed by an update**, with one exception: if it is still exactly the unedited example of an older version, it is replaced by the new example (the old copy is saved as `dashboard.yaml.bak`). Every start also writes the current example to `dashboard.example.yaml` next to it, so you can compare and copy new tiles from it.
+
 ```yaml
 title: Home
 language: en          # en | da

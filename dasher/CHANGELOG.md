@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.10.1
+
+- An unedited `dashboard.yaml` from an older version is now replaced by the new example when the app starts (a backup is saved as `dashboard.yaml.bak`), so new tiles appear without editing anything. Edited files are never touched.
+- The current example is written to `dashboard.example.yaml` in the configuration folder on every start, to compare or copy from.
+
 ## 0.10.0
 
 - New **`calendar`** tile: an agenda of the next days with events from your Home Assistant calendars, coloured per calendar, with the daily forecast for each day. It replaces the electricity price tile on the example front page (the `price` tile is still available).
