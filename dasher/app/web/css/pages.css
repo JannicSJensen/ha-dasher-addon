@@ -493,3 +493,29 @@
 .modal__sheet:has(.picker) { overflow-y: auto; }
 .mapping__ok { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: 14px; color: #d7d7da; }
 .mapping__ok .icon { font-size: 22px; color: var(--accent); }
+
+/* ---- climate overview ---- */
+.climate-page { height: 100%; overflow-y: auto; overscroll-behavior: contain; padding: 18px 18px 24px; scrollbar-width: none; }
+.climate-page::-webkit-scrollbar { display: none; }
+.climate-page__summary { margin: 6px 0 16px; font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.clgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
+.clcard { --heat: #ff8a3d; position: relative; display: flex; flex-direction: column; gap: 6px; padding: 16px 16px 14px; border-radius: var(--radius); background: var(--tile-bg); overflow: hidden; transition: background 0.4s, opacity 0.3s; }
+.clcard::before { content: ""; position: absolute; inset: 0; background: radial-gradient(90% 70% at 85% 0%, color-mix(in srgb, var(--heat) 28%, transparent), transparent 70%); opacity: 0; transition: opacity 0.5s; pointer-events: none; }
+.clcard.is-heating::before { opacity: 1; }
+.clcard.is-cooling { --heat: #4fc3f7; }
+.clcard.is-cooling::before { opacity: 1; }
+.clcard.is-unavailable { opacity: 0.5; }
+.clcard__top { position: relative; display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 500; }
+.clcard__top .icon { font-size: 22px; color: var(--muted); transition: color 0.4s; }
+.clcard.is-heating .clcard__top .icon, .clcard.is-cooling .clcard__top .icon { color: var(--heat); }
+.clcard__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.clcard__temp { position: relative; margin-top: 4px; font-size: 44px; font-weight: 700; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.clcard__status { position: relative; font-size: 13px; color: var(--muted); }
+.clcard__controls { position: relative; display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.clcard__target { flex: 1; text-align: center; font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.clbtn { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 14px; background: rgba(10, 10, 11, 0.7); color: #fff; font-size: 22px; transition: background 0.2s, transform 0.12s; }
+.clbtn.is-pressed { transform: scale(0.94); }
+.clbtn[disabled] { opacity: 0.4; }
+.clbtn[hidden], .clcard__target[hidden] { display: none; }
+.clcard:not(.is-off):not(.is-unavailable) .clbtn--power { color: var(--accent); background: color-mix(in srgb, var(--accent) 20%, #0a0a0b); }
+.clcard__controls .clbtn--power { margin-left: auto; }

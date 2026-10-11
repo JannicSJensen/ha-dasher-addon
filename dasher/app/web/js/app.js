@@ -6,6 +6,7 @@ import { collectEntities } from "./lib/entities.js";
 import { makeTranslator } from "./lib/i18n.js";
 import { createAreaPage } from "./pages/area.js";
 import { createAreasPage } from "./pages/areas.js";
+import { createClimatePage } from "./pages/climate.js";
 import { createEvPage } from "./pages/ev.js";
 import { createMappingPage } from "./pages/mapping.js";
 import { createMusicPage } from "./pages/music.js";
@@ -22,6 +23,7 @@ const store = new Store({
   areas: null,
   music: null,
   ev: null,
+  climate: null,
   lastPlayed: {},
   errors: [],
   entities: {},
@@ -123,8 +125,9 @@ function parseRoute(config) {
   const areasOff = areas !== null && !areas.enabled; // known to be disabled, as opposed to not loaded yet
   const { music } = store.getState();
   const musicOff = music !== null && !music.enabled;
-  const { ev } = store.getState();
+  const { ev, climate } = store.getState();
   if (raw === "ev" && ev?.enabled) return { kind: "ev", id: null };
+  if (raw === "climate" && climate?.enabled) return { kind: "climate", id: null };
   if (raw === "entities" && store.getState().mapping.enabled) return { kind: "entities", id: null };
   if ((raw === "music" || raw === "radio") && !musicOff) return { kind: "music", id: null };
   if (raw === "areas" && !areasOff) return { kind: "areas", id: null };
@@ -147,6 +150,8 @@ function renderSidebar(config) {
     icon: page.icon,
     active: route.kind === "page" && route.id === page.id,
   }));
+  const { climate } = store.getState();
+  if (climate?.enabled) items.push({ href: "#/climate", title: climate.title ?? t("climate"), icon: climate.icon, active: route.kind === "climate" });
   if (areasEnabled()) {
     const { areas } = store.getState();
     items.push({
@@ -183,7 +188,7 @@ function mountSingle(page) {
 }
 
 function renderRoute() {
-  const { config, areas, music, ev } = store.getState();
+  const { config, areas, music, ev, climate } = store.getState();
   destroyTiles();
   document.querySelectorAll(".modal").forEach((m) => m.remove());
   route = parseRoute(config);
@@ -191,7 +196,9 @@ function renderRoute() {
   stage.dataset.page = route.kind === "page" ? route.id : route.kind;
   const ctx = makeContext(config);
 
-  if (route.kind === "ev") {
+  if (route.kind === "climate") {
+    mountSingle(createClimatePage(climate, ctx));
+  } else if (route.kind === "ev") {
     mountSingle(createEvPage(ev, ctx));
   } else if (route.kind === "entities") {
     mountSingle(createMappingPage(ctx));
@@ -354,6 +361,13 @@ store.subscribe((s) => s.ev, () => {
   else renderSidebar(config);
 });
 
+store.subscribe((s) => s.climate, () => {
+  const { config } = store.getState();
+  if (!config) return;
+  if (route.kind === "climate" || location.hash === "#/climate") renderRoute();
+  else renderSidebar(config);
+});
+
 store.subscribe((s) => s.lastPlayed, () => refreshTiles(true));
 
 window.addEventListener("hashchange", () => {
@@ -384,6 +398,7 @@ connect({
   areas: (areas) => setIfChanged("areas", areas),
   music: (music) => setIfChanged("music", music),
   ev: (ev) => setIfChanged("ev", ev),
+  climate: (climate) => setIfChanged("climate", climate),
   lastplayed: (lastPlayed) => setIfChanged("lastPlayed", lastPlayed),
   snapshot: (states) => store.setState({ entities: states }),
   state: (state) => store.setState((s) => ({ ...s, entities: { ...s.entities, [state.entity_id]: state } })),

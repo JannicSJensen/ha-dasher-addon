@@ -56,5 +56,6 @@ export function describeUsage(config) {
   }
   for (const id of collectEntities(config?.areas?.overrides ?? {})) add(id, "areas");
   for (const id of collectEntities(config?.ev ?? {})) add(id, "car page");
+  for (const id of collectEntities(config?.climate ?? {})) add(id, "climate page");
   return usage;
 }

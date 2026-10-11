@@ -145,6 +145,30 @@ function parseEv(raw, errors) {
   };
 }
 
+/** Normalise the optional `climate:` section (the climate overview page). */
+function parseClimate(raw, errors) {
+  const r = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+  const ids = (key) => {
+    const out = [];
+    for (const id of toList(r[key])) {
+      if (ENTITY_RE.test(id) && id.startsWith("climate.")) out.push(id);
+      else errors.push(`climate.${key}: "${id}" is not a climate entity id`);
+    }
+    return out;
+  };
+  const source = r.source === "all" ? "all" : "helpers";
+  if (r.source != null && !["all", "helpers"].includes(r.source)) errors.push(`climate.source must be "helpers" or "all"`);
+  return {
+    enabled: r.enabled === false ? false : r.enabled === true ? true : "auto",
+    title: r.title != null ? String(r.title) : null,
+    icon: String(r.icon ?? "home-thermometer-outline"),
+    source,
+    entities: ids("entities"),
+    exclude: ids("exclude"),
+    platforms: toList(r.platforms).filter((p) => /^[a-z0-9_]+$/.test(p)),
+  };
+}
+
 /**
  * Parse and normalise a dashboard.yaml document.
  * Never throws: problems end up in `errors` and offending tiles are dropped.
@@ -165,6 +189,7 @@ export function parseConfig(text, { entityMap = {} } = {}) {
   const rawEntities = collectEntities(raw.pages);
   collectEntities(raw.areas?.overrides ?? {}, rawEntities);
   collectEntities(raw.ev ?? {}, rawEntities);
+  collectEntities(raw.climate ?? {}, rawEntities);
   for (const id of [...rawEntities]) if (!ENTITY_RE.test(id)) rawEntities.delete(id);
   const usage = describeUsage(raw);
   if (Object.keys(entityMap).length) raw = mapEntities(raw, entityMap);
@@ -218,6 +243,7 @@ export function parseConfig(text, { entityMap = {} } = {}) {
   const areas = parseAreas(raw.areas, errors);
   const music = parseMusic(raw.music ?? raw.radio, errors);
   const ev = parseEv(raw.ev, errors);
+  const climate = parseClimate(raw.climate, errors);
 
   const config = {
     title: String(raw.title ?? "Dasher"),
@@ -228,12 +254,14 @@ export function parseConfig(text, { entityMap = {} } = {}) {
     areas,
     music,
     ev,
+    climate,
     pages,
   };
 
   const entities = collectEntities(pages);
   collectEntities(areas.overrides, entities);
   for (const id of Object.values(ev.roles)) entities.add(id);
+  for (const id of climate.entities) entities.add(id);
   for (const id of [...music.players, music.default_player]) if (id) entities.add(id);
   return { config, errors, entities, rawEntities, usage };
 }

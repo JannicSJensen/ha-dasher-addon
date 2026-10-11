@@ -6,6 +6,7 @@ import { buildAreaModel, imageSignature, scanImages } from "./areas.js";
 import { ConfigStore } from "./config.js";
 import { discoverMusicAssistant } from "./discovery.js";
 import { discoverEv, resolveEv } from "./ev.js";
+import { resolveClimate } from "./climate.js";
 import { mappingItems, rankCandidates, validateMapping } from "./mapping.js";
 import { MusicService, availableTabs, DETAIL_TYPES } from "./music.js";
 import { PSEUDO_IDS, buildSuggestions } from "./suggestions.js";
@@ -140,6 +141,8 @@ const areasPayload = () => {
 
 let radioPlayerIds = [];
 let evState = { enabled: false, roles: {} };
+let climateState = { enabled: false, entities: [] };
+const climatePayload = () => (climateState.enabled ? climateState : { enabled: false, entities: [] });
 const evPayload = () => (evState.enabled ? evState : { enabled: false, roles: {} });
 
 /** What the Music page needs: speakers, radio stations and which tabs are usable. */
@@ -174,11 +177,19 @@ function rebuild({ refresh }) {
     settings: current.config?.ev,
     discovered: discoverEv({ registries: ha.registries, index: ha.entityIndex }),
   });
-  allowed = new Set([...current.entities, ...areaModel.entities, ...radioPlayerIds, ...(evState.enabled ? Object.values(evState.roles) : [])]);
+  climateState = resolveClimate({ settings: current.config?.climate, registries: ha.registries, index: ha.entityIndex });
+  allowed = new Set([
+    ...current.entities,
+    ...areaModel.entities,
+    ...radioPlayerIds,
+    ...(evState.enabled ? Object.values(evState.roles) : []),
+    ...(climateState.enabled ? climateState.entities : []),
+  ]);
   ha.setWatched(allowed, { refresh, required: current.entities });
   broadcast("areas", areasPayload());
   broadcast("music", musicPayload());
   broadcast("ev", evPayload());
+  broadcast("climate", climatePayload());
   if (radioPlayerIds.length && (radio.stations.length === 0 || radio.error)) radio.refresh();
 }
 
@@ -308,6 +319,7 @@ function handleEvents(req, res) {
   send(res, "areas", areasPayload());
   send(res, "music", musicPayload());
   send(res, "ev", evPayload());
+  send(res, "climate", climatePayload());
   send(res, "lastplayed", nowPlaying.payload());
   send(res, "snapshot", Object.fromEntries(ha.states));
   clients.add(res);

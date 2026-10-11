@@ -25,7 +25,7 @@ If the file has a mistake, the page shows what is wrong instead of failing silen
 
 ## Security
 
-The tablet page needs no login. Anyone who can reach port 8099 can use the entities that appear in `dashboard.yaml` **and the entities of the area pages** (lights, fans, covers and media players in your areas by default; set `areas.enabled: false` or narrow `areas.domains` to restrict this), and the Music Assistant players of the music page (play/pause, volume, grouping, and starting radio stations or music from your library), and nothing else: the server rejects any other entity, any service outside a fixed allow-list (lights, switches, fans, covers, scenes, scripts, media players, climate and similar; never locks, alarms or `homeassistant.restart`), and any attempt to retarget a call through `data`. Anyone who can reach the port can also browse your Music Assistant library through the add-on; the access token itself never leaves the add-on, and the add-on only reads with it. Keep the port on your trusted LAN, remove the port mapping under *Network* if you only use the sidebar entry, or enable `read_only`.
+The tablet page needs no login. Anyone who can reach port 8099 can use the entities that appear in `dashboard.yaml` **and the entities of the area pages and the climate page** (lights, fans, covers and media players in your areas by default; set `areas.enabled: false` or narrow `areas.domains` to restrict this), and the Music Assistant players of the music page (play/pause, volume, grouping, and starting radio stations or music from your library), and nothing else: the server rejects any other entity, any service outside a fixed allow-list (lights, switches, fans, covers, scenes, scripts, media players, climate and similar; never locks, alarms or `homeassistant.restart`), and any attempt to retarget a call through `data`. Anyone who can reach the port can also browse your Music Assistant library through the add-on; the access token itself never leaves the add-on, and the add-on only reads with it. Keep the port on your trusted LAN, remove the port mapping under *Network* if you only use the sidebar entry, or enable `read_only`.
 
 ## `dashboard.yaml`
 
@@ -222,6 +222,27 @@ ev:
 * **Start/stop** uses `start_entity` / `stop_entity` (EV Smart Charging's manual buttons by default), else the charger's `charge_switch_entity`. An `automation` is triggered, a `button` or `script` is pressed, a `switch` is turned on or off.
 * A time select must have options like `08:00` (plus an "off" option such as `None`), as the EV Smart Charging ones do.
 * Entities you list here take part in [entity mapping](#missing-entities), so a wrong id can be fixed from the tablet. The discovered entities become part of the dashboard, so tablets can control them.
+
+## Climate
+
+A **Climate** entry in the menu gives an overview of the heating: one card per room with the temperature, whether it is heating, the setpoint with **−** / **+** buttons and a power button. A summary at the top shows how many are on and the average temperature.
+
+By default it lists your **climate helpers** (Settings > Devices & services > Helpers: climate groups and generic thermostats), not every thermostat of every device, so rooms are not listed several times. Configure it in a `climate:` section of `dashboard.yaml`:
+
+```yaml
+climate:
+  # enabled: false        # remove the menu entry
+  # source: helpers       # helpers (default) | all (every climate entity)
+  # entities: [climate.stue, climate.kontor]   # or choose exactly which ones
+  # exclude: [climate.bryggers]
+  # platforms: [better_thermostat]             # more integrations to count as helpers
+  # title: Klima
+  # icon: home-thermometer-outline
+```
+
+* Without a `climate:` section the page appears on its own when climate helpers exist.
+* `entities` wins over `source`, and its entities take part in entity mapping.
+* A change of the setpoint is sent half a second after the last tap. Cards of entities that are unavailable are dimmed.
 
 ## Areas
 

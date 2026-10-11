@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.11.0
+
+- New **Climate** page: an overview of the heating with a card per room (temperature, heating state, setpoint with −/+ and a power button). It lists your climate helpers by default instead of every thermostat; `climate:` in `dashboard.yaml` chooses `source`, `entities` or `exclude`.
+- The example dashboard no longer has the *Garage* page (it only held demo entities); an unedited `dashboard.yaml` is updated automatically, edited ones are left alone.
+
 ## 0.10.3
 
 - Car page: "plugged in" no longer sticks to *on*. When a FordPass car is present, its plug sensor is used (and its battery level and range), instead of EV Smart Charging's *EV connected* switch, which can say "on" while the car is unplugged. Set `plug_entity` in the `ev:` section to use another entity.

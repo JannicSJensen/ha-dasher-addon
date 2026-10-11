@@ -11,9 +11,10 @@ This repository contains the **Dasher** app (add-on) for Home Assistant: a dark,
 * **Now playing tile:** follows whichever speaker is playing, with controls, volume and progress; when everything is stopped it shows the last track that played (remembered by the app).
 * **Music page:** swipeable tabs for Discover, Radio, Albums, Artists, Podcasts (with episodes) and Search, a speaker picker with Music Assistant grouping and a now-playing bar. Browsing uses Music Assistant's API with a read-only token in the app options; playback goes through Home Assistant.
 * **Car page:** battery and range, start/stop charging, smart charging with its times, and a charger restart; EV Smart Charging and Peblar are recognised automatically.
+* **Climate page:** a card per room with temperature, setpoint and power, built from your climate helpers.
 * **Missing entities:** when `dashboard.yaml` uses entities your Home Assistant does not have, a screen on the tablet suggests and lets you pick the right ones; the choices are kept in `entity-map.yaml`.
 * Vanilla JavaScript front end, one small Node.js server, no build step.
-* Commands from tablets are restricted to the entities in `dashboard.yaml`, the area pages and the music page, and to a fixed list of services.
+* Commands from tablets are restricted to the entities in `dashboard.yaml`, the area pages, the climate page and the music page, and to a fixed list of services.
 
 ## Install
 

@@ -18,7 +18,7 @@ export function connect(handlers) {
         retry = setTimeout(open, 3000);
       }
     };
-    for (const event of ["hello", "status", "config", "areas", "music", "ev", "lastplayed", "snapshot", "state"]) {
+    for (const event of ["hello", "status", "config", "areas", "music", "ev", "climate", "lastplayed", "snapshot", "state"]) {
       source.addEventListener(event, (e) => handlers[event]?.(JSON.parse(e.data)));
     }
   };

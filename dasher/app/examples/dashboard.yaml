@@ -49,6 +49,14 @@ ev:
   # range_entity: sensor.my_car_range
   # plug_entity: sensor.my_car_plug_status
 
+# The Climate page in the menu: a card per room with the temperature, the setpoint and a power button.
+# It lists your climate helpers (Settings > Devices & services > Helpers), not every thermostat.
+climate:
+  # source: helpers          # helpers | all
+  # entities: [climate.living_room, climate.office]   # or pick them yourself
+  # exclude: [climate.bathroom]
+  # title: Climate
+
 pages:
   - id: home
     title: Home
@@ -117,38 +125,3 @@ pages:
         entity: light.living_room_lamp
         # image_on: lamp-on.png
         # image_off: lamp-off.png
-
-  - id: garage
-    title: Garage
-    icon: garage
-    columns: 4
-    rows: 2
-    tiles:
-      - type: hero
-        col: 1
-        row: 1
-        w: 2
-        h: 2
-        # image: garage.jpg
-
-      - type: toggle
-        col: 3
-        row: 1
-        name: Garage spots
-        area: Garage
-        entity: light.garage_spots
-
-      - type: toggle
-        col: 3
-        row: 2
-        name: Carport
-        area: Carport
-        entity: light.carport
-
-      - type: climate
-        col: 4
-        row: 1
-        h: 2
-        name: Heat pump
-        entity: climate.heat_pump
-        # image: heatpump.png
