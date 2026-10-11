@@ -115,6 +115,19 @@ Electricity price with a colour-coded 24 hour timeline.
 | `thresholds` | `{ low, high }` in the sensor's own unit. Default: the cheapest and most expensive third of the day. |
 | `name`, `subtitle`, `icon` | Header. |
 
+#### `calendar`
+An agenda: the next days that have something planned, like the calendar card in Home Assistant. Each day shows the weekday, date and (optionally) the forecast; each event has a coloured bar for its calendar and its time. Events that are over for today disappear, days without events are skipped, and all-day events read "All day" (or "All day, ends today" for the last day of a longer one). The list scrolls if it is longer than the tile. It refreshes every five minutes.
+
+| Key | Description |
+| --- | --- |
+| `entities` | Calendars to show, e.g. `[calendar.family, calendar.privat]`. Leave it out to show every calendar Home Assistant has. |
+| `colors` | One colour per calendar, in the order of `entities` (e.g. `["#38bdf8", "#fb923c"]`). Otherwise a default palette is used. |
+| `weather_entity` | A `weather.*` entity. Its daily forecast gives each day a temperature and icon; left out, no weather is shown. |
+| `days` | How many days ahead to look (1-31, default 7). |
+| `name`, `icon` | Title (default "Calendar") and icon. |
+
+The tile reads calendars through the add-on, so tablets need no login to see them. List only the calendars you want on show.
+
 #### `vehicle`
 
 | Key | Description |

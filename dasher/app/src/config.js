@@ -16,6 +16,7 @@ export const TILE_TYPES = new Set([
   "media",
   "climate",
   "buttons",
+  "calendar",
 ]);
 
 const ENTITY_RE = /^[a-z0-9_]+\.[a-z0-9_]+$/;

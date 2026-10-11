@@ -25,6 +25,9 @@ put("light.living_room_lamp", "on", { friendly_name: "Living room lamp", brightn
 put("light.garage_spots", "off", { friendly_name: "Garage spots", supported_color_modes: ["onoff"] });
 put("light.carport", "off", { friendly_name: "Carport", supported_color_modes: ["onoff"] });
 put("sun.sun", "above_horizon", {});
+put("calendar.family", "off", { friendly_name: "Family" });
+put("calendar.privat", "off", { friendly_name: "Privat" });
+put("weather.forecast_home", "cloudy", { friendly_name: "Forecast Home", temperature: 11 });
 const TIMES = ["None", ...Array.from({ length: 96 }, (_, i) => `${String(Math.floor(i / 4)).padStart(2, "0")}:${String((i % 4) * 15).padStart(2, "0")}`)];
 put("sensor.ev_smart_charging_status", "waiting_for_charging_to_begin", { friendly_name: "EV Smart Charging Status" });
 put("sensor.ev_smart_charging_charging", "off", { friendly_name: "EV Smart Charging Lading", ev_soc: "67.0", ev_target_soc: "80.0", charging_is_planned: true, charging_start_time: new Date(day.getTime() + 25 * 3600_000).toISOString(), charging_stop_time: new Date(day.getTime() + 28.5 * 3600_000).toISOString() });
@@ -93,6 +96,9 @@ let registry = {
     { ei: "light.garage_spots", ai: "garage" },
     { ei: "light.carport", ai: "garage" },
     { ei: "binary_sensor.garage_door", ai: "garage" },
+    { ei: "calendar.family" },
+    { ei: "calendar.privat" },
+    { ei: "weather.forecast_home" },
     // car charging (EV Smart Charging and a Peblar charger), recognised by integration and translation key
     { ei: "sensor.ev_smart_charging_status", pl: "ev_smart_charging", tk: "status" },
     { ei: "sensor.ev_smart_charging_charging", pl: "ev_smart_charging", tk: "charging" },
@@ -107,6 +113,34 @@ let registry = {
   ],
 };
 if (process.env.MOCK_REGISTRY) registry = JSON.parse(fs.readFileSync(process.env.MOCK_REGISTRY, "utf8"));
+
+// Calendar events and a daily forecast relative to today, in the same shapes Home Assistant returns.
+const isoLocal = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const atDay = (offset, h, m = 0) => {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  d.setHours(h, m, 0, 0);
+  return d;
+};
+function calendarEvents(id) {
+  const timed = (summary, offset, [h1, m1], [h2, m2]) => ({ summary, start: atDay(offset, h1, m1).toISOString(), end: atDay(offset, h2, m2).toISOString(), description: null, location: null });
+  const allDay = (summary, from, to) => ({ summary, start: isoLocal(atDay(from, 0)), end: isoLocal(atDay(to, 0)), description: null, location: null });
+  if (id === "calendar.family") {
+    return [
+      allDay("Have i gave hos mormor og morfar", -1, 1),
+      timed("Already over today", 0, [6, 0], [7, 0]),
+      timed("Arbejdstid", 1, [9, 45], [16, 0]),
+      timed("Kat arbejde Holbæk", 2, [9, 0], [18, 15]),
+      timed("Arbejdstid", 2, [9, 45], [16, 0]),
+      timed("Arbejdstid", 3, [12, 0], [19, 15]),
+    ];
+  }
+  return [timed("Tandlæge", 3, [14, 30], [15, 15]), allDay("Ferie", 5, 8)];
+}
+function forecastDays() {
+  const conditions = ["cloudy", "partlycloudy", "rainy", "sunny", "lightning-rainy", "snowy", "fog"];
+  return Array.from({ length: 7 }, (_, i) => ({ datetime: atDay(i, 12).toISOString().replace(/^.{10}/, isoLocal(atDay(i, 12))), temperature: 11 + (i % 3) * 2, condition: conditions[i % conditions.length] }));
+}
 
 // Music Assistant: radio stations (logos are served by this mock at /imageproxy).
 const STATIONS = [
@@ -281,6 +315,14 @@ wss.on("connection", (ws) => {
     if (msg.type === "call_service" && msg.domain === "music_assistant" && msg.service === "get_library") {
       const items = STATIONS.map(({ _color, _label, ...item }) => item);
       return reply({ context: {}, response: { items, limit: msg.service_data.limit, offset: 0, order_by: "name", media_type: "radio" } });
+    }
+    if (msg.type === "call_service" && msg.domain === "calendar" && msg.service === "get_events") {
+      const wanted = msg.target?.entity_id ?? [];
+      return reply({ context: {}, response: Object.fromEntries(wanted.map((id) => [id, { events: calendarEvents(id) }])) });
+    }
+    if (msg.type === "call_service" && msg.domain === "weather" && msg.service === "get_forecasts") {
+      const id = [msg.target?.entity_id].flat()[0];
+      return reply({ context: {}, response: { [id]: { forecast: forecastDays() } } });
     }
     if (msg.type === "call_service") {
       callService(msg);

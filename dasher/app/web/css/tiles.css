@@ -271,3 +271,24 @@
 .tile--area .photo__img { filter: brightness(0.55) saturate(0.8); }
 .tile--area.is-on .photo__img { filter: none; }
 .tile--area:not(.is-on) .photo__text { opacity: 1; }
+
+/* ---- calendar (agenda) ---- */
+.tile--calendar { display: flex; flex-direction: column; }
+.cal__head { display: flex; align-items: center; gap: 2.4cqmin; margin: 6cqmin 6.5cqmin 0; font-size: 5.6cqmin; font-weight: 500; color: var(--muted); }
+.cal__head .icon { font-size: 6.6cqmin; color: var(--accent); }
+.cal__list { flex: 1; min-height: 0; margin: 3.5cqmin 0 0; padding: 0 6.5cqmin 5cqmin; overflow-y: auto; scrollbar-width: none; overscroll-behavior: contain; }
+.cal__list::-webkit-scrollbar { display: none; }
+.cal__empty { margin-top: 12cqmin; text-align: center; font-size: 5.4cqmin; color: var(--muted); }
+.cal__day { display: flex; gap: 3.5cqmin; padding: 2.4cqmin 0; }
+.cal__date { flex: none; width: 17cqmin; display: flex; flex-direction: column; align-items: center; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.cal__weekday { font-size: 5.2cqmin; color: var(--muted); text-transform: capitalize; }
+.cal__num { font-size: 9.6cqmin; font-weight: 500; }
+.cal__month { font-size: 4cqmin; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.cal__weather { margin-top: 0.8cqmin; display: flex; align-items: center; gap: 0.8cqmin; font-size: 4.4cqmin; color: #d7d7da; }
+.cal__weather .icon { font-size: 5.4cqmin; }
+.cal__date.is-today .cal__num { color: var(--accent); }
+.cal__events { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2.8cqmin; }
+.cal__event { padding: 0.4cqmin 0 0.4cqmin 3.2cqmin; border-left: 0.9cqmin solid var(--cal, var(--accent)); min-width: 0; }
+.cal__title { font-size: 5.3cqmin; font-weight: 600; line-height: 1.25; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.cal__time { display: flex; align-items: center; gap: 1.4cqmin; margin-top: 0.8cqmin; font-size: 4.2cqmin; color: var(--muted); font-variant-numeric: tabular-nums; }
+.cal__time .icon { font-size: 4.6cqmin; flex: none; }

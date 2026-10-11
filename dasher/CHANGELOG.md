@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.10.0
+
+- New **`calendar`** tile: an agenda of the next days with events from your Home Assistant calendars, coloured per calendar, with the daily forecast for each day. It replaces the electricity price tile on the example front page (the `price` tile is still available).
+
 ## 0.9.0
 
 - New **Car** page: battery level with target, range, plugged-in and charging state; one button to start or stop charging; the smart charging switch with its status, planned window and the times it should charge (earliest start, ready by); and a charger restart with confirmation.

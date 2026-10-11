@@ -81,12 +81,13 @@ export class HAClient extends EventEmitter {
   }
 
   /** Call an action that returns data (supports_response) and resolve with that data. */
-  async callServiceWithResponse(domain, service, data) {
+  async callServiceWithResponse(domain, service, data, target) {
     const result = await this.request({
       type: "call_service",
       domain,
       service,
       service_data: data,
+      ...(target ? { target } : {}),
       return_response: true,
     });
     return result?.response ?? null;

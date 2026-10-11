@@ -70,15 +70,23 @@ pages:
           - { icon: movie-open, name: Movie, tap: { action: service, service: scene.turn_on, entity: scene.movie } }
           - { icon: lightbulb-group, name: All lights, entity: light.living_room_lamp }
 
-      - type: price
+      - type: calendar                      # the next days with something planned, plus the forecast
         col: 3
         row: 1
-        name: Electricity
-        entity: sensor.electricity_price      # needs a price list attribute, e.g. raw_today
-        # attribute: raw_today                # auto-detected when omitted
-        multiplier: 100                       # convert kr -> øre
-        unit: øre
-        decimals: 0
+        # entities: [calendar.family, calendar.work]   # default: every calendar
+        # colors: ["#38bdf8", "#fb923c"]               # one colour per calendar, in the order above
+        weather_entity: weather.forecast_home          # optional: daily temperature and icon
+        days: 7                                        # how far ahead to look
+
+      # An electricity price tile with a colour-coded 24h timeline:
+      # - type: price
+      #   col: 3
+      #   row: 1
+      #   name: Electricity
+      #   entity: sensor.electricity_price      # needs a price list attribute, e.g. raw_today
+      #   multiplier: 100                       # convert kr -> øre
+      #   unit: øre
+      #   decimals: 0
 
       - type: media                  # "now playing": follows whichever speaker plays, else shows the last track
         col: 4

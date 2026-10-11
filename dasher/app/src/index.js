@@ -8,6 +8,7 @@ import { discoverMusicAssistant } from "./discovery.js";
 import { discoverEv, resolveEv } from "./ev.js";
 import { mappingItems, rankCandidates, validateMapping } from "./mapping.js";
 import { MusicService, availableTabs, DETAIL_TYPES } from "./music.js";
+import { CalendarService, calendarScope, parseWindow } from "./calendar.js";
 import { NowPlayingStore } from "./nowplaying.js";
 import { RadioService, radioPlayers, validateGroupRequest } from "./radio.js";
 import { HAClient } from "./ha-client.js";
@@ -118,6 +119,7 @@ async function fetchPicture(picture) {
 }
 
 const dataDir = process.env.DATA_DIR ?? (fs.existsSync("/data") ? "/data" : null);
+const calendars = new CalendarService({ ha, logger });
 const nowPlaying = new NowPlayingStore({ dir: dataDir, logger, fetchPicture });
 nowPlaying.on("change", () => broadcast("lastplayed", nowPlaying.payload()));
 
@@ -425,6 +427,26 @@ const sendImage = (res, image) => {
   res.end(image.body);
 };
 
+async function handleCalendar(res, params) {
+  const scope = calendarScope(configStore.current.config, [...ha.entityIndex.keys()]);
+  const window = parseWindow(params.get("start"), params.get("end"));
+  if (!window) return json(res, 400, { error: "Invalid time window." });
+  const asked = params.get("entities");
+  const ids = !asked || asked === "all" ? [...scope.calendars] : asked.split(",").filter((id) => scope.calendars.has(id));
+  const weatherId = params.get("weather");
+  try {
+    const [events, forecast] = await Promise.all([
+      calendars.events(ids, window),
+      weatherId && scope.weather.has(weatherId) ? calendars.forecast(weatherId) : {},
+    ]);
+    const names = Object.fromEntries(ids.map((id) => [id, ha.entityIndex.get(id)?.name ?? ha.states.get(id)?.attributes?.friendly_name ?? id]));
+    return json(res, 200, { calendars: names, events, forecast });
+  } catch (err) {
+    logger.warn(`Calendar request failed: ${err.message}`);
+    return json(res, 502, { error: err.message });
+  }
+}
+
 async function handleMusicGet(res, p, params) {
   if (!music.configured) return json(res, 503, { error: "Music Assistant address and token are not set in the add-on options." });
   try {
@@ -507,6 +529,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "GET" || req.method === "HEAD") {
       if (p === "/api/events") return handleEvents(req, res);
       if (p === "/api/config") return json(res, 200, configPayload());
+      if (p === "/api/calendar") return await handleCalendar(res, url.searchParams);
       if (p === "/api/proxy") return await proxyImage(res, url.searchParams.get("path"));
       if (p.startsWith("/api/entities/")) return await handleMappingGet(res, p, url.searchParams);
       if (p.startsWith("/api/nowplaying/art/")) return handleNowPlayingArt(res, p.slice("/api/nowplaying/art/".length));
