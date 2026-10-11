@@ -133,8 +133,16 @@ export function createNowPlayingScreen(ctx, { enabled = () => true } = {}) {
   for (const slider of [progress, volumeRow]) slider.addEventListener("pointerdown", (e) => e.stopPropagation());
 
   // ---- open / close ----------------------------------------------------------------------
-  function open() {
-    if (isOpen) return true;
+  /** Opens the player; `preferId` (a speaker) is shown first when it is playing or paused. */
+  function open(preferId = null) {
+    if (preferId) {
+      const leader = groupOf(preferId, getState).leader;
+      current = getState(leader) ? leader : preferId;
+    }
+    if (isOpen) {
+      paint();
+      return true;
+    }
     if (!choose()) return false;
     isOpen = true;
     clearTimeout(closeTimer);

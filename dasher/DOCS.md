@@ -429,7 +429,7 @@ When a Music Assistant speaker **starts playing**, the tablet shows a full-scree
 
 * **Close** with the arrow at the top left. After that it stays away until the music has stopped and starts again. The button at the top right closes it and opens the music library.
 * It closes by itself 15 seconds after nothing plays any more, and does not open when a tablet loads a page while music is already playing.
-* Tap the *now playing* tile to open it yourself. Shuffle and repeat are shown when the speaker supports them, and the progress bar only reacts when it supports seeking.
+* Tap the *now playing* tile, or the **picture or title in the bar at the bottom of the Music page**, to open it yourself, also after you closed it (the speaker you chose there is shown). Shuffle and repeat are shown when the speaker supports them, and the progress bar only reacts when it supports seeking.
 * Turn the automatic opening off with `fullscreen: false` under `music:` (the tile then goes to the Music page as before).
 
 ### Options

@@ -67,9 +67,14 @@ export function createPlayerPanel({ model, ctx }) {
   );
 
   // ---- now playing bar ------------------------------------------------------
-  const art = h("div", { class: "np__art" });
+  const art = h("div", { class: "np__art" }, h("span", { class: "np__expand" }, icon("arrow-expand")));
   const title = h("div", { class: "np__title" });
   const sub = h("div", { class: "np__sub" });
+  // The picture and the title open the full-screen player (again, if it was closed).
+  const openFull = () => {
+    if (!bar.classList.contains("is-openable")) return;
+    ctx.openNowPlaying?.(selected ?? target());
+  };
   const playIcon = icon("play");
   const play = h("button", { class: "np__play", type: "button", "aria-label": "Play/Pause" }, playIcon);
   pressable(play, { onTap: () => target() && ctx.call("media_player", "media_play_pause", target()) });
@@ -94,14 +99,18 @@ export function createPlayerPanel({ model, ctx }) {
       if (selected) ctx.call("media_player", "volume_set", selected, { volume_level: v / 100 });
     },
   });
+  const textBox = h("div", { class: "np__text" }, title, sub);
   const bar = h(
     "footer",
     { class: "np" },
     art,
-    h("div", { class: "np__text" }, title, sub),
+    textBox,
     play,
     h("div", { class: "np__volume", title: t("volume") }, volIcon, h("div", { class: "np__slider" }, volume.el), volValue),
   );
+
+  pressable(art, { onTap: openFull });
+  pressable(textBox, { onTap: openFull });
 
   // ---- selection and groups --------------------------------------------------------
   function select(id) {
@@ -231,6 +240,7 @@ export function createPlayerPanel({ model, ctx }) {
     sub.textContent = [lead, where].filter(Boolean).join(" · ");
     setIcon(playIcon, playing ? "pause" : "play");
     play.disabled = (idle && !showPending) || !control;
+    bar.classList.toggle("is-openable", !idle && !showPending);
 
     const level = Number(own?.attributes?.volume_level);
     const hasVolume = Number.isFinite(level);

@@ -74,7 +74,7 @@ function makeContext(config) {
     lastPlayed: () => store.getState().lastPlayed,
     evEnabled: () => Boolean(store.getState().ev?.enabled),
     /** Open the full-screen player; false when nothing is playing or paused. */
-    openNowPlaying: () => Boolean(nowScreen?.open()),
+    openNowPlaying: (speaker) => Boolean(nowScreen?.open(speaker)),
     navigate: (target) => (location.hash = `#/${target}`),
     /** Add and/or remove speakers of a sync group; resolves to true on success. */
     async groupRadio(leader, change) {

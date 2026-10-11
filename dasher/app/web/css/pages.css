@@ -682,3 +682,10 @@
 .devspeed.is-active { background: color-mix(in srgb, var(--accent) 24%, #1f1f21); color: var(--accent); box-shadow: inset 0 0 0 1.5px var(--accent); }
 .devspeeds[hidden] { display: none; }
 .devcard .evtemp { margin-top: 0; }
+
+/* now-playing bar: picture and title open the full-screen player */
+.np__art { position: relative; }
+.np__expand { position: absolute; right: 3px; bottom: 3px; display: none; place-items: center; width: 20px; height: 20px; border-radius: 6px; background: rgba(0, 0, 0, 0.6); color: #fff; font-size: 14px; }
+.np.is-openable .np__expand { display: grid; }
+.np.is-openable .np__art, .np.is-openable .np__text { cursor: pointer; }
+.np__art.is-pressed, .np__text.is-pressed { opacity: 0.8; }

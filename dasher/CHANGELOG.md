@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.18.1
+
+- The picture and title in the Music page's now-playing bar open the full-screen player (marked with a small expand symbol), so it can be brought back after it was closed. It shows the speaker chosen in the bar.
+
 ## 0.18.0
 
 - **Status messages** on the front page: the hero tile takes `messages:`, cards that only show while they apply. Waste pick-up sensors (RenoWeb and others with a `next_pickup_date`) show "Empty the trash can" today and tomorrow (`within_days` changes that); any entity can also show a message while a condition holds. The example front page has three pick-up messages.
