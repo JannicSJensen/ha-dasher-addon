@@ -2,6 +2,7 @@ import { h } from "../core/h.js";
 import { assetUrl } from "../core/api.js";
 import { icon } from "../core/icons.js";
 import { formatNumber, isUnavailable } from "../lib/format.js";
+import { createPriceParts } from "./pricechart.js";
 import { createHeader, friendlyName, pressable, runAction, safeImage, stateLabel } from "./common.js";
 
 /** Car tile: headline value (range), status rows and a picture. Tapping it opens the Car page (or runs `tap`). */
@@ -14,7 +15,17 @@ export function createVehicleTile(cfg, ctx) {
   });
   const image = cfg.image ? safeImage({ class: "vehicle__img", src: assetUrl(cfg.image) }) : null;
 
-  const el = h("div", { class: "tile tile--vehicle" }, header.el, h("div", { class: "vehicle__rows" }, rows.map((r) => r.el)), image);
+  // Optional electricity price (current price, range and the 24h timeline) at the bottom of the tile.
+  const price = cfg.price?.entity ? createPriceParts(cfg.price, ctx) : null;
+
+  const el = h(
+    "div",
+    { class: `tile tile--vehicle${price ? " has-price" : ""}` },
+    header.el,
+    h("div", { class: "vehicle__rows" }, rows.map((r) => r.el)),
+    image,
+    price ? h("div", { class: "vehicle__price" }, price.body, price.chart) : null,
+  );
 
   pressable(el, {
     onTap: () => {
@@ -47,6 +58,10 @@ export function createVehicleTile(cfg, ctx) {
         row.value.textContent = withUnit(entity, row.cfg.decimals ?? 1);
         row.label.textContent = status ? stateLabel(ctx, status) : (row.cfg.label ?? "");
       }
+      price?.update();
+    },
+    destroy() {
+      price?.destroy();
     },
   };
 }

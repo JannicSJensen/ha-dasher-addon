@@ -78,7 +78,7 @@ pages:
         weather_entity: weather.forecast_home          # optional: daily temperature and icon
         days: 7                                        # how far ahead to look
 
-      # An electricity price tile with a colour-coded 24h timeline:
+      # The electricity price can also be a tile of its own:
       # - type: price
       #   col: 3
       #   row: 1
@@ -100,6 +100,11 @@ pages:
         icon: car-electric
         entity: sensor.car_range
         # image: car.png
+        price:                                # optional: today's electricity price and 24h timeline at the bottom
+          entity: sensor.electricity_price    # needs a price list attribute, e.g. raw_today
+          multiplier: 100                     # convert kr -> øre
+          unit: øre
+          decimals: 0
         rows:
           - { icon: battery-charging, entity: sensor.car_battery, label_entity: sensor.car_charging_state }
           - { icon: gas-station, entity: sensor.car_fuel_level, label: fuel }

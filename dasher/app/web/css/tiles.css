@@ -130,6 +130,16 @@
 .vehicle__row { display: flex; align-items: center; gap: 2.4cqmin; font-size: 4.7cqmin; }
 .vehicle__row .icon { font-size: 5.2cqmin; color: var(--muted); }
 .vehicle__row-label { color: var(--muted); text-transform: lowercase; }
+.tile--vehicle.has-price { display: flex; flex-direction: column; }
+.vehicle__price { position: relative; z-index: 2; margin: auto 6.5cqmin 6cqmin; }
+.vehicle__price .price__body { margin-top: 0; align-items: flex-end; }
+.vehicle__price .price__value { font-size: 9cqmin; }
+.vehicle__price .price__unit { font-size: 4.8cqmin; }
+.vehicle__price .price__slot { font-size: 4.2cqmin; }
+.vehicle__price .price__range-label { font-size: 4.4cqmin; }
+.vehicle__price .price__range { font-size: 4.6cqmin; }
+.vehicle__price .price__chart { margin-top: 4cqmin; }
+.tile--vehicle.has-price .vehicle__img { bottom: 38cqmin; height: 26%; }
 .vehicle__img { position: absolute; left: 50%; bottom: 3cqmin; width: 88%; height: 48%; transform: translateX(-50%); object-fit: contain; object-position: center bottom; }
 
 /* ---- media / now playing ---- */

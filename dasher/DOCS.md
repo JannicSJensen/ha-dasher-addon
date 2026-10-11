@@ -134,6 +134,7 @@ The tile reads calendars through the add-on, so tablets need no login to see the
 | --- | --- |
 | `entity` | Headline value, usually the range. |
 | `name`, `icon`, `image` | Header and picture. |
+| `price` | Optional electricity price at the bottom of the tile: today's price, its range and the colour-coded 24 hour timeline. Takes the same keys as the `price` tile below (`entity`, `attribute`, `multiplier`, `unit`, `decimals`, `range_decimals`, `thresholds`). |
 | `tap` | Tap action. By default the tile opens the Car page when it is available; use `none` to turn that off (see Actions). |
 | `rows` | List of `{ icon, entity, label, label_entity, decimals }`. `label_entity`'s state is shown after the value (e.g. charging status), otherwise `label`. |
 

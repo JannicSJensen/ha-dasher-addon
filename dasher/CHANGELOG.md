@@ -3,6 +3,7 @@
 ## 0.10.0
 
 - New **`calendar`** tile: an agenda of the next days with events from your Home Assistant calendars, coloured per calendar, with the daily forecast for each day. It replaces the electricity price tile on the example front page (the `price` tile is still available).
+- The `vehicle` tile can show the electricity price and its 24 hour timeline (new `price:` option), so the car and the price share one tile.
 - Tapping the `vehicle` tile opens the Car page (configurable with `tap`).
 
 ## 0.9.0
