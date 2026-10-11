@@ -1,0 +1,130 @@
+# Dasher dashboard configuration.
+# Edit this file and save: connected tablets reload automatically.
+#
+# Images: put files in the "assets" folder next to this file and refer to them
+# by name (e.g. image: living-room.jpg). Full https:// URLs work too.
+# Icons: any Material Design Icon, see https://pictogrammers.com/library/mdi/
+# Replace every entity id below with your own entities.
+
+title: Home
+language: en          # en | da  (UI texts)
+# locale: en-GB       # number/date formatting, defaults to the language
+accent: "#2dd4bf"
+idle_return: 120      # seconds of inactivity before returning to the first page (0 = off)
+
+# Every page is a grid. A tile is placed with col/row (1-based) and spans w x h cells.
+columns: 4
+rows: 2
+gap: 8
+
+# Area pages: adds a menu entry that lists every area in Home Assistant as a picture.
+# Tapping one opens the area with its lights, players, temperature, humidity and windows.
+# Pictures: put <area_id>.jpg (or the area name, e.g. living-room.jpg) in assets/areas/.
+areas:
+  # enabled: false          # remove the menu entry completely
+  # title: Areas
+  # hide: [home]            # area ids or names to leave out
+  # domains: [light, fan, cover, media_player]   # also: switch, input_boolean
+  # overrides:
+  #   living_room: { name: Lounge, icon: mdi:sofa, image: lounge.jpg, temperature_entity: sensor.lounge_temperature }
+
+# Music page: radio stations, discover, albums, artists, podcasts and search from Music Assistant,
+# played on its speakers. Appears automatically when the Music Assistant integration is installed.
+# Everything except Radio also needs music_assistant_url and music_assistant_token in the add-on options.
+music:
+  # enabled: false
+  # title: Music
+  # tabs: [discover, radio, albums, artists, podcasts, search]
+  # players: [media_player.kitchen, media_player.living_room]   # default: all Music Assistant players
+  # default_player: media_player.living_room
+
+pages:
+  - id: home
+    title: Home
+    icon: home
+    tiles:
+      - type: hero
+        col: 1
+        row: 1
+        w: 2
+        h: 2
+        # image: living-room.jpg          # fallback background (file in the assets folder)
+        # backgrounds:                    # first matching entry wins
+        #   - when: { entity: light.living_room_lamp, state: "on" }
+        #     image: living-room-on.jpg
+        #   - when: { entity: sun.sun, state: below_horizon }
+        #     image: living-room-night.jpg
+        buttons:
+          - { icon: coffee, name: Cozy, tap: { action: service, service: scene.turn_on, entity: scene.cozy } }
+          - { icon: movie-open, name: Movie, tap: { action: service, service: scene.turn_on, entity: scene.movie } }
+          - { icon: lightbulb-group, name: All lights, entity: light.living_room_lamp }
+
+      - type: price
+        col: 3
+        row: 1
+        name: Electricity
+        entity: sensor.electricity_price      # needs a price list attribute, e.g. raw_today
+        # attribute: raw_today                # auto-detected when omitted
+        multiplier: 100                       # convert kr -> øre
+        unit: øre
+        decimals: 0
+
+      - type: media                  # "now playing": follows whichever speaker plays, else shows the last track
+        col: 4
+        row: 1
+        entities: music                # every Music Assistant speaker; or a list: [media_player.a, media_player.b]
+
+      - type: vehicle
+        col: 3
+        row: 2
+        name: Car
+        icon: car-electric
+        entity: sensor.car_range
+        # image: car.png
+        rows:
+          - { icon: battery-charging, entity: sensor.car_battery, label_entity: sensor.car_charging_state }
+          - { icon: gas-station, entity: sensor.car_fuel_level, label: fuel }
+
+      - type: toggle
+        col: 4
+        row: 2
+        name: All lights
+        area: Indoor
+        entity: light.living_room_lamp
+        # image_on: lamp-on.png
+        # image_off: lamp-off.png
+
+  - id: garage
+    title: Garage
+    icon: garage
+    columns: 4
+    rows: 2
+    tiles:
+      - type: hero
+        col: 1
+        row: 1
+        w: 2
+        h: 2
+        # image: garage.jpg
+
+      - type: toggle
+        col: 3
+        row: 1
+        name: Garage spots
+        area: Garage
+        entity: light.garage_spots
+
+      - type: toggle
+        col: 3
+        row: 2
+        name: Carport
+        area: Carport
+        entity: light.carport
+
+      - type: climate
+        col: 4
+        row: 1
+        h: 2
+        name: Heat pump
+        entity: climate.heat_pump
+        # image: heatpump.png
