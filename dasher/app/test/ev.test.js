@@ -96,3 +96,25 @@ test("discoverEv prefers the car's own FordPass entities over EV Smart Charging'
   assert.equal(discoverEv({ registries }).plug_entity, "switch.ev_smart_charging_ev_connected");
   assert.equal(discoverEv({ registries }).battery_entity, undefined);
 });
+
+test("discoverEv finds the FordPass remote climate entities", () => {
+  const regs = {
+    entities: [
+      entry("switch.fordpass_x_ignition", "fordpass", "ignition"),
+      entry("number.fordpass_x_rcctemperature", "fordpass", undefined),
+      entry("switch.fordpass_x_rccdefrostfront", "fordpass", "rccdefrostfront"),
+      entry("switch.fordpass_x_rccdefrostrear", "fordpass", "rccdefrostrear"),
+      entry("sensor.fordpass_x_ignition", "fordpass", "ignition"),
+      entry("switch.other_ignition", "other", "ignition"),
+    ],
+  };
+  const found = discoverEv({ registries: regs });
+  assert.equal(found.remote_start_entity, "switch.fordpass_x_ignition");
+  assert.equal(found.remote_temp_entity, "number.fordpass_x_rcctemperature");
+  assert.equal(found.defrost_front_entity, "switch.fordpass_x_rccdefrostfront");
+  assert.equal(found.defrost_rear_entity, "switch.fordpass_x_rccdefrostrear");
+  // remote start alone makes the page useful
+  assert.equal(resolveEv({ settings: parseConfig("pages:\n  - id: a\n    tiles: []\nev: {}\n").config.ev, discovered: found }).enabled, true);
+  const explicit = parseConfig("pages:\n  - id: a\n    tiles: []\nev:\n  remote_temp_entity: number.my_temp\n").config.ev;
+  assert.equal(resolveEv({ settings: explicit, discovered: found }).roles.remote_temp_entity, "number.my_temp");
+});

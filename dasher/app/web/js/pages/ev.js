@@ -4,6 +4,7 @@ import { icon, setIcon } from "../core/icons.js";
 import { confirmDialog, openTimePicker } from "../components/dialogs.js";
 import { formatNumber, isUnavailable } from "../lib/format.js";
 import { batteryOf, chargeAction, isCharging, isPluggedIn, plannedWindow } from "../lib/ev.js";
+import { stepTarget } from "../lib/climate.js";
 import { format, translateState } from "../lib/i18n.js";
 import { pressable } from "../tiles/common.js";
 
@@ -107,6 +108,70 @@ export function createEvPage(model, ctx) {
       )
     : null;
 
+  // ---- remote climate (start the car's heating / cooling, set the temperature, window heaters) ----------
+  const hasClimate = ["remote_start_entity", "remote_temp_entity", "defrost_front_entity", "defrost_rear_entity"].some((r) => roles[r]);
+  const climateSwitch = roles.remote_start_entity
+    ? h("button", { class: "evswitch", type: "button", role: "switch", "aria-checked": "false", "aria-label": t("ev_climate") }, h("span", { class: "evswitch__knob" }))
+    : null;
+  if (climateSwitch) pressable(climateSwitch, { onTap: () => call(roles.remote_start_entity, "toggle") });
+  const climateStatus = h("div", { class: "evcard__status" });
+
+  let pendingTemp = null;
+  let tempTimer = null;
+  const tempValue = h("span", { class: "evtemp__value" });
+  const tempRange = () => {
+    const a = getState(roles.remote_temp_entity)?.attributes ?? {};
+    return { step: Number(a.step) || 0.5, min: Number(a.min ?? 15), max: Number(a.max ?? 30) };
+  };
+  const nudgeTemp = (direction) => {
+    const state = getState(roles.remote_temp_entity);
+    if (isUnavailable(state)) return;
+    pendingTemp = stepTarget(pendingTemp ?? Number(state.state), direction, tempRange());
+    paintTemp();
+    clearTimeout(tempTimer);
+    tempTimer = setTimeout(() => {
+      const value = pendingTemp;
+      tempTimer = null;
+      call(roles.remote_temp_entity, "set_value", { value });
+    }, 600);
+  };
+  const tempButton = (iconName, direction, label) => {
+    const b = h("button", { class: "clbtn", type: "button", "aria-label": label }, icon(iconName));
+    pressable(b, { onTap: () => nudgeTemp(direction) });
+    return b;
+  };
+  const tempMinus = tempButton("minus", -1, "−");
+  const tempPlus = tempButton("plus", 1, "+");
+  const tempRow = roles.remote_temp_entity
+    ? h("div", { class: "evtemp" }, h("span", { class: "evtemp__label" }, t("ev_temperature")), h("div", { class: "evtemp__control" }, tempMinus, tempValue, tempPlus))
+    : null;
+  function paintTemp() {
+    const state = getState(roles.remote_temp_entity);
+    const shown = pendingTemp ?? (isUnavailable(state) ? null : Number(state.state));
+    tempValue.textContent = shown != null && Number.isFinite(shown) ? `${formatNumber(shown, { locale: ctx.locale, decimals: 1 })}°` : "–";
+  }
+
+  const heaters = [
+    ["defrost_front_entity", "car-defrost-front", "ev_defrost_front"],
+    ["defrost_rear_entity", "car-defrost-rear", "ev_defrost_rear"],
+  ]
+    .filter(([role]) => roles[role])
+    .map(([role, iconName, label]) => {
+      const el = h("button", { class: "evtoggle", type: "button", "aria-pressed": "false" }, icon(iconName), h("span", null, t(label)));
+      pressable(el, { onTap: () => call(roles[role], "toggle") });
+      return { role, el };
+    });
+  const climateCard = hasClimate
+    ? h(
+        "section",
+        { class: "evcard" },
+        h("div", { class: "evcard__head" }, h("h3", { class: "evcard__title" }, t("ev_climate")), climateSwitch),
+        climateStatus,
+        tempRow,
+        heaters.length ? h("div", { class: "evtoggles" }, heaters.map((x) => x.el)) : null,
+      )
+    : null;
+
   // ---- charger -----------------------------------------------------------------------------
   const restart = roles.restart_entity
     ? h("button", { class: "evbtn", type: "button" }, icon("restart"), h("span", null, t("ev_restart")))
@@ -131,7 +196,7 @@ export function createEvPage(model, ctx) {
   }
   const chargerCard = restart ? h("section", { class: "evcard" }, h("h3", { class: "evcard__title" }, t("ev_charger")), restart) : null;
 
-  const nothing = !chargeCard && !smartCard && !chargerCard
+  const nothing = !chargeCard && !smartCard && !chargerCard && !climateCard
     ? h("div", { class: "notice" }, icon("car-electric"), h("h2", null, t("ev_nothing")), h("p", null, t("ev_nothing_hint")))
     : null;
 
@@ -142,7 +207,7 @@ export function createEvPage(model, ctx) {
       "div",
       { class: "ev__inner" },
       h("h1", { class: "radio__title ev__title" }, model.title ?? t("ev_car")),
-      h("div", { class: "ev__grid" }, car, h("div", { class: "ev__col" }, chargeCard, smartCard, chargerCard, nothing)),
+      h("div", { class: "ev__grid" }, car, h("div", { class: "ev__col" }, chargeCard, climateCard, smartCard, chargerCard, nothing)),
     ),
   );
 
@@ -204,6 +269,28 @@ export function createEvPage(model, ctx) {
         row.el.disabled = isUnavailable(state);
       }
     }
+    if (climateCard) {
+      if (climateSwitch) {
+        const state = getState(roles.remote_start_entity);
+        const on = state?.state === "on";
+        climateSwitch.classList.toggle("is-on", on);
+        climateSwitch.setAttribute("aria-checked", String(on));
+        climateSwitch.disabled = isUnavailable(state);
+        climateStatus.textContent = isUnavailable(state) ? t("unavailable") : t(on ? "ev_climate_on" : "ev_climate_off");
+      }
+      if (tempRow) {
+        const state = getState(roles.remote_temp_entity);
+        if (pendingTemp !== null && !tempTimer && Number(state?.state) === pendingTemp) pendingTemp = null;
+        tempMinus.disabled = tempPlus.disabled = isUnavailable(state);
+        paintTemp();
+      }
+      for (const { role, el } of heaters) {
+        const state = getState(roles[role]);
+        el.classList.toggle("is-on", state?.state === "on");
+        el.setAttribute("aria-pressed", String(state?.state === "on"));
+        el.disabled = isUnavailable(state);
+      }
+    }
     // A button reports "unknown" until it has been pressed once, so only "unavailable" disables it.
     if (restart) restart.disabled = !getState(roles.restart_entity) || getState(roles.restart_entity).state === "unavailable";
   }
@@ -214,6 +301,7 @@ export function createEvPage(model, ctx) {
     update,
     destroy() {
       clearTimeout(busyTimer);
+      clearTimeout(tempTimer);
     },
   };
 }

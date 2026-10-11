@@ -122,6 +122,10 @@ export const EV_ROLES = [
   "start_time_entity",
   "ready_time_entity",
   "restart_entity",
+  "remote_start_entity",
+  "remote_temp_entity",
+  "defrost_front_entity",
+  "defrost_rear_entity",
 ];
 
 /** Normalise the optional `ev:` section (the car page). Entities not listed are found automatically. */

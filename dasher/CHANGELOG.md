@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.14.0
+
+- Car page: a **Remote climate** card with a start/stop switch, the temperature (−/+) and the front and rear window heat. The FordPass entities (`ignition`, `rcctemperature`, `rccdefrostfront`, `rccdefrostrear`) are found automatically; `remote_start_entity`, `remote_temp_entity`, `defrost_front_entity` and `defrost_rear_entity` in `ev:` set others.
+
 ## 0.13.0
 
 - The Media page can play on **Apple TVs and DLNA players** with stream links. New app options **Plex address** and **Plex token** (optional); with them Apple TVs join the *Play on* list, and DLNA players and others can be added with `players:`. Direct links for compatible files, Plex HLS transcodes otherwise and when resuming; `plex: transcode: auto | always | never`. Plex is not told about the progress when played this way.

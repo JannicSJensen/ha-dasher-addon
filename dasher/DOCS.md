@@ -190,6 +190,7 @@ A **Car** entry (icon of an electric car; title and icon can be changed) appears
 * **The car:** name, a picture (`image`, otherwise a symbol), the battery level with the charging target as a marker, the range, and whether the car is plugged in and charging.
 * **Charging:** one big button, **Start charging** or **Stop charging** depending on the state.
 * **Smart charging:** an on/off switch, what the smart charging is doing (e.g. "No charging planned", "Waiting for charging to begin") with the planned window, and two times you set here: **Earliest start** and **Ready by**. Tap one and pick the hour, then the minute, or **Off**.
+* **Remote climate:** a switch to start or stop the car's heating/cooling, a temperature with −/+, and buttons for the front and rear window heat. Shown when the car integration offers them.
 * **Charger:** **Restart charger**, with a confirmation first.
 * Cards whose entities do not exist are left out.
 
@@ -217,6 +218,10 @@ ev:
   start_time_entity: select.ev_smart_charging_charge_start_time
   ready_time_entity: select.ev_smart_charging_charge_completion_time
   restart_entity: button.charger_restart
+  remote_start_entity: switch.my_car_remote_start        # default: FordPass "ignition" switch
+  remote_temp_entity: number.my_car_climate_temperature  # default: FordPass "rcctemperature"
+  defrost_front_entity: switch.my_car_front_defrost
+  defrost_rear_entity: switch.my_car_rear_defrost
 ```
 
 * **Start/stop** uses `start_entity` / `stop_entity` (EV Smart Charging's manual buttons by default), else the charger's `charge_switch_entity`. An `automation` is triggered, a `button` or `script` is pressed, a `switch` is turned on or off.

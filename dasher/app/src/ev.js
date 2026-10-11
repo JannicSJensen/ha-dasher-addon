@@ -21,6 +21,10 @@ const RULES = {
   battery_entity: (e) => e.pl === "fordpass" && e.tk === "soc",
   range_entity: (e) => e.pl === "fordpass" && e.tk === "elveh",
   plug_entity: [(e) => e.pl === "fordpass" && e.tk === "elvehplug", (e) => e.pl === "ev_smart_charging" && e.tk === "ev_connected"],
+  remote_start_entity: (e) => e.pl === "fordpass" && (e.tk === "ignition" || /_ignition$/.test(e.ei)) && domainOf(e.ei) === "switch",
+  remote_temp_entity: (e) => e.pl === "fordpass" && (e.tk === "rcctemperature" || /_rcctemperature$/.test(e.ei)) && domainOf(e.ei) === "number",
+  defrost_front_entity: (e) => e.pl === "fordpass" && (e.tk === "rccdefrostfront" || /_rccdefrostfront$/.test(e.ei)) && domainOf(e.ei) === "switch",
+  defrost_rear_entity: (e) => e.pl === "fordpass" && (e.tk === "rccdefrostrear" || /_rccdefrostrear$/.test(e.ei)) && domainOf(e.ei) === "switch",
   charge_switch_entity: (e) => CHARGER_PLATFORMS.has(e.pl) && domainOf(e.ei) === "switch" && e.tk === "charge",
   restart_entity: (e, index) =>
     CHARGER_PLATFORMS.has(e.pl) && domainOf(e.ei) === "button" && (index.get(e.ei)?.deviceClass === "restart" || RESTART_WORDS.test(e.ei)),
@@ -44,7 +48,7 @@ export function discoverEv({ registries, index = new Map() }) {
 }
 
 /** Roles that make the page useful by themselves; without any of them it stays hidden in `auto` mode. */
-const CONTROL_ROLES = ["start_entity", "stop_entity", "charge_switch_entity", "smart_switch_entity", "start_time_entity", "ready_time_entity", "restart_entity"];
+const CONTROL_ROLES = ["start_entity", "stop_entity", "charge_switch_entity", "smart_switch_entity", "start_time_entity", "ready_time_entity", "restart_entity", "remote_start_entity"];
 
 /**
  * The car page as the tablets get it: explicit settings win over discovered entities.

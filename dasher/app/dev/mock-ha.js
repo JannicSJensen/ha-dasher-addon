@@ -39,6 +39,11 @@ put("media_player.living_room_tv", "idle", { friendly_name: "Living room TV", su
 put("media_player.plex_ipad", "idle", { friendly_name: "Plex (iPad)", supported_features: 152127 });
 put("media_player.stuen_tv", "idle", { friendly_name: "Stuen TV" });
 put("media_player.plex_apple_tv", "unavailable", { friendly_name: "Plex (Apple TV)", restored: true });
+// the car's remote climate (FordPass)
+put("switch.fordpass_x_ignition", "off", { friendly_name: "RC: Start" });
+put("number.fordpass_x_rcctemperature", "22.0", { friendly_name: "RC: Temperature", min: 15.5, max: 30.5, step: 0.5, mode: "box", unit_of_measurement: "°C" });
+put("switch.fordpass_x_rccdefrostfront", "off", { friendly_name: "RC: Front" });
+put("switch.fordpass_x_rccdefrostrear", "off", { friendly_name: "RC: Rear" });
 put("calendar.family", "off", { friendly_name: "Family" });
 put("calendar.privat", "off", { friendly_name: "Privat" });
 put("weather.forecast_home", "cloudy", { friendly_name: "Forecast Home", temperature: 11 });
@@ -120,6 +125,10 @@ let registry = {
     { ei: "media_player.plex_ipad", pl: "plex" },
     { ei: "media_player.stuen_tv", pl: "apple_tv" },
     { ei: "media_player.plex_apple_tv", pl: "plex" },
+    { ei: "switch.fordpass_x_ignition", pl: "fordpass", tk: "ignition" },
+    { ei: "number.fordpass_x_rcctemperature", pl: "fordpass", tk: "rcctemperature" },
+    { ei: "switch.fordpass_x_rccdefrostfront", pl: "fordpass", tk: "rccdefrostfront" },
+    { ei: "switch.fordpass_x_rccdefrostrear", pl: "fordpass", tk: "rccdefrostrear" },
     { ei: "calendar.family" },
     { ei: "calendar.privat" },
     { ei: "weather.forecast_home" },
