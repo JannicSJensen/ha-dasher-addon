@@ -7,6 +7,7 @@ import { ConfigStore } from "./config.js";
 import { discoverMusicAssistant } from "./discovery.js";
 import { discoverEv, resolveEv } from "./ev.js";
 import { resolveClimate } from "./climate.js";
+import { deviceEntities, discoverDevices, resolveDevices } from "./devices.js";
 import { PlexService, plexBrowsers, plexConfigured, plexPlayers, validBrowse, validatePlay } from "./plex.js";
 import { PlexStreamer } from "./plex-stream.js";
 import { mappingItems, rankCandidates, validateMapping } from "./mapping.js";
@@ -158,6 +159,8 @@ let radioPlayerIds = [];
 let evState = { enabled: false, roles: {} };
 let plexState = { enabled: false, players: [] };
 const plexPayload = () => (plexState.enabled ? plexState : { enabled: false, players: [] });
+let devicesState = { enabled: false, vacuums: [], appliances: [] };
+const devicesPayload = () => (devicesState.enabled ? devicesState : { enabled: false, vacuums: [], appliances: [] });
 let climateState = { enabled: false, entities: [] };
 const climatePayload = () => (climateState.enabled ? climateState : { enabled: false, entities: [] });
 const evPayload = () => (evState.enabled ? evState : { enabled: false, roles: {} });
@@ -210,8 +213,10 @@ function rebuild({ refresh }) {
     plex.configure(enabled ? players : [], enabled ? plexBrowsers(ha.registries) : []);
     plex.transcode = settings?.transcode ?? "auto";
   }
+  devicesState = resolveDevices({ settings: current.config?.devices, discovered: discoverDevices({ registries: ha.registries, index: ha.entityIndex }) });
   allowed = new Set([
     ...current.entities,
+    ...(devicesState.enabled ? deviceEntities(devicesState) : []),
     ...areaModel.entities,
     ...radioPlayerIds,
     ...(evState.enabled ? Object.values(evState.roles) : []),
@@ -224,6 +229,7 @@ function rebuild({ refresh }) {
   broadcast("ev", evPayload());
   broadcast("climate", climatePayload());
   broadcast("plex", plexPayload());
+  broadcast("devices", devicesPayload());
   if (radioPlayerIds.length && (radio.stations.length === 0 || radio.error)) radio.refresh();
 }
 
@@ -355,6 +361,7 @@ function handleEvents(req, res) {
   send(res, "ev", evPayload());
   send(res, "climate", climatePayload());
   send(res, "plex", plexPayload());
+  send(res, "devices", devicesPayload());
   send(res, "lastplayed", nowPlaying.payload());
   send(res, "snapshot", Object.fromEntries(ha.states));
   clients.add(res);

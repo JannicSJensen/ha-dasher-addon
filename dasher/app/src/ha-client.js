@@ -214,7 +214,7 @@ export class HAClient extends EventEmitter {
       this.registries = {
         areas,
         floors,
-        devices: devices.map((d) => ({ id: d.id, area_id: d.area_id, disabled_by: d.disabled_by })),
+        devices: devices.map((d) => ({ id: d.id, area_id: d.area_id, disabled_by: d.disabled_by, name: d.name, name_by_user: d.name_by_user })),
         entities: entities?.entities ?? [],
       };
     } catch (err) {

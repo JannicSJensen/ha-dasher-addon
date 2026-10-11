@@ -44,6 +44,20 @@ put("switch.fordpass_x_ignition", "off", { friendly_name: "RC: Start" });
 put("number.fordpass_x_rcctemperature", "22.0", { friendly_name: "RC: Temperature", min: 15.5, max: 30.5, step: 0.5, mode: "box", unit_of_measurement: "°C" });
 put("switch.fordpass_x_rccdefrostfront", "off", { friendly_name: "RC: Front" });
 put("switch.fordpass_x_rccdefrostrear", "off", { friendly_name: "RC: Rear" });
+// vacuums and LG ThinQ-like appliances (washer running, dishwasher idle, dryer offline)
+put("vacuum.robbie", "docked", { friendly_name: "Robbie", supported_features: 31676, battery_level: 80, fan_speed: "standard", fan_speed_list: ["silent", "standard", "strong", "turbo"] });
+put("vacuum.overlord", "cleaning", { friendly_name: "Overlord", supported_features: 31676, battery_level: 54, fan_speed: "strong", fan_speed_list: ["silent", "standard", "strong", "turbo"] });
+put("vacuum.roborock_old", "unavailable", { friendly_name: "roborock.vacuum.s5" });
+const appliance = (slug, status, extra = {}) => {
+  put(`sensor.${slug}_current_status`, status, { options: ["running", "end", "power_off", "pause", "spinning"], device_class: "enum", friendly_name: `${slug} status` });
+  put(`sensor.${slug}_remaining_time`, extra.remaining ?? "unknown", { device_class: "timestamp", friendly_name: `${slug} remaining` });
+  put(`switch.${slug}_power`, extra.power ?? "on", { friendly_name: `${slug} power` });
+  put(`select.${slug}_operation`, "unknown", { options: ["start", "stop", "power_off", "wake_up"], friendly_name: `${slug} operation` });
+  put(`number.${slug}_delay_ends_in`, "0", { min: 0, max: 19, step: 1, unit_of_measurement: "h", friendly_name: `${slug} delay` });
+};
+appliance("vaskemaskine", "running", { remaining: new Date(Date.now() + 47 * 60_000).toISOString() });
+appliance("opvaskemaskine", "end", { power: "on" });
+appliance("torretumbler", "unavailable", { power: "unavailable" });
 put("calendar.family", "off", { friendly_name: "Family" });
 put("calendar.privat", "off", { friendly_name: "Privat" });
 put("weather.forecast_home", "cloudy", { friendly_name: "Forecast Home", temperature: 11 });
@@ -106,7 +120,11 @@ let registry = {
     { floor_id: "ground", name: "Ground floor", level: 0 },
     { floor_id: "upstairs", name: "Upstairs", level: 1 },
   ],
-  devices: [],
+  devices: [
+    { id: "dev-wash", name: "Vaskemaskine" },
+    { id: "dev-dish", name: "Opvaskemaskine" },
+    { id: "dev-dry", name: "Tørretumbler" },
+  ],
   entities: [
     { ei: "light.living_room_lamp", ai: "living_room" },
     { ei: "media_player.living_room", ai: "living_room", pl: "music_assistant" },
@@ -129,6 +147,24 @@ let registry = {
     { ei: "number.fordpass_x_rcctemperature", pl: "fordpass", tk: "rcctemperature" },
     { ei: "switch.fordpass_x_rccdefrostfront", pl: "fordpass", tk: "rccdefrostfront" },
     { ei: "switch.fordpass_x_rccdefrostrear", pl: "fordpass", tk: "rccdefrostrear" },
+    { ei: "sensor.vaskemaskine_current_status", di: "dev-wash", pl: "lg_thinq", tk: "current_state" },
+    { ei: "sensor.vaskemaskine_remaining_time", di: "dev-wash", pl: "lg_thinq", tk: "remaining_time" },
+    { ei: "switch.vaskemaskine_power", di: "dev-wash", pl: "lg_thinq", tk: "operation_power" },
+    { ei: "select.vaskemaskine_operation", di: "dev-wash", pl: "lg_thinq", tk: "operation_mode" },
+    { ei: "number.vaskemaskine_delay_ends_in", di: "dev-wash", pl: "lg_thinq", tk: "delay_ends_in" },
+    { ei: "sensor.opvaskemaskine_current_status", di: "dev-dish", pl: "lg_thinq", tk: "current_state" },
+    { ei: "sensor.opvaskemaskine_remaining_time", di: "dev-dish", pl: "lg_thinq", tk: "remaining_time" },
+    { ei: "switch.opvaskemaskine_power", di: "dev-dish", pl: "lg_thinq", tk: "operation_power" },
+    { ei: "select.opvaskemaskine_operation", di: "dev-dish", pl: "lg_thinq", tk: "operation_mode" },
+    { ei: "number.opvaskemaskine_delay_ends_in", di: "dev-dish", pl: "lg_thinq", tk: "delay_ends_in" },
+    { ei: "sensor.torretumbler_current_status", di: "dev-dry", pl: "lg_thinq", tk: "current_state" },
+    { ei: "sensor.torretumbler_remaining_time", di: "dev-dry", pl: "lg_thinq", tk: "remaining_time" },
+    { ei: "switch.torretumbler_power", di: "dev-dry", pl: "lg_thinq", tk: "operation_power" },
+    { ei: "select.torretumbler_operation", di: "dev-dry", pl: "lg_thinq", tk: "operation_mode" },
+    { ei: "number.torretumbler_delay_ends_in", di: "dev-dry", pl: "lg_thinq", tk: "delay_ends_in" },
+    { ei: "vacuum.robbie", pl: "dreame_vacuum" },
+    { ei: "vacuum.overlord", pl: "dreame_vacuum" },
+    { ei: "vacuum.roborock_old", pl: "roborock" },
     { ei: "calendar.family" },
     { ei: "calendar.privat" },
     { ei: "weather.forecast_home" },
@@ -342,7 +378,10 @@ function callService({ domain, service, service_data = {}, target = {} }) {
     } else if (service === "turn_off") next.state = "off";
     else if (service === "toggle") next.state = s.state === "on" ? "off" : "on";
     else if (service === "media_play_pause") next.state = s.state === "playing" ? "paused" : "playing";
-    else if (service === "select_option") next.state = service_data.option;
+    else if (service === "select_option") {
+      next.state = service_data.option;
+      if (id.endsWith("_operation")) patch(`sensor.${id.replace(/^select\./, "").replace(/_operation$/, "")}_current_status`, () => {}, service_data.option === "start" ? "running" : "end");
+    }
     else if (domain === "media_player" && service === "play_media" && /^https?:\/\//.test(String(service_data.media_content_id))) {
       next.state = "playing";
       console.log(`[mock-ha] stream ${service_data.media_content_type} ${service_data.media_content_id} on ${id}`);

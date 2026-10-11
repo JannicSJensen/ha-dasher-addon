@@ -67,6 +67,16 @@ plex:
   # transcode: auto         # stream links (Apple TV, DLNA): auto | always | never
   # title: Media
 
+# The Devices page: robot vacuums, washing machines, dryers, dishwashers and clothes heaters.
+# Vacuums and LG ThinQ appliances are found automatically; list anything else under appliances.
+devices:
+  # enabled: false
+  # vacuums: [vacuum.robbie]                 # default: every vacuum
+  # exclude: [vacuum.old_robot]
+  # appliances:
+  #   - { kind: dishwasher, name: Dishwasher, status_entity: sensor.dishwasher_status, remaining_entity: sensor.dishwasher_remaining, power_entity: switch.dishwasher }
+  #   - { kind: heater, name: Clothes heater, power_entity: switch.clothes_rack }   # kind: washer | dryer | dishwasher | heater
+
 pages:
   - id: home
     title: Home

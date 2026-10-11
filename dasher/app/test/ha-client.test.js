@@ -85,7 +85,7 @@ test("loads registries and device classes, and reports only explicitly required 
       ]);
     }
     if (msg.type === "config/area_registry/list") return reply(ws, msg, [{ area_id: "a", name: "A" }]);
-    if (msg.type === "config/device_registry/list") return reply(ws, msg, [{ id: "d1", area_id: "a", disabled_by: null, name: "ignored" }]);
+    if (msg.type === "config/device_registry/list") return reply(ws, msg, [{ id: "d1", area_id: "a", disabled_by: null, name: "Kitchen", manufacturer: "ignored" }]);
     if (msg.type === "config/entity_registry/list_for_display") return reply(ws, msg, { entity_categories: {}, entities: [{ ei: "light.a", ai: "a" }] });
     if (msg.type === "config/floor_registry/list") return ws.send(JSON.stringify({ id: msg.id, type: "result", success: false, error: { message: "nope" } }));
     reply(ws, msg, null);
@@ -104,7 +104,7 @@ test("loads registries and device classes, and reports only explicitly required 
   await snapshot;
 
   assert.deepEqual(reg.areas, [{ area_id: "a", name: "A" }]);
-  assert.deepEqual(reg.devices, [{ id: "d1", area_id: "a", disabled_by: null }]);
+  assert.deepEqual(reg.devices, [{ id: "d1", area_id: "a", disabled_by: null, name: "Kitchen", name_by_user: undefined }]);
   assert.deepEqual(reg.floors, []);
   assert.deepEqual(reg.entities, [{ ei: "light.a", ai: "a" }]);
   assert.equal(client.deviceClasses.get("sensor.t"), "temperature");

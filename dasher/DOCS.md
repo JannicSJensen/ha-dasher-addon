@@ -29,7 +29,7 @@ Changes to the options take effect when the app is restarted.
 
 ## Security
 
-The tablet page needs no login. Anyone who can reach port 8099 can use the entities that appear in `dashboard.yaml` **and the entities of the area pages and the climate page** (lights, fans, covers and media players in your areas by default; set `areas.enabled: false` or narrow `areas.domains` to restrict this), the Music Assistant players of the music page (play/pause, volume, grouping, and starting radio stations or music from your library) and the players of the media page (starting Plex items on them), and nothing else: the server rejects any other entity, any service outside a fixed allow-list (lights, switches, fans, covers, scenes, scripts, media players, climate and similar; never locks, alarms or `homeassistant.restart`), and any attempt to retarget a call through `data`.
+The tablet page needs no login. Anyone who can reach port 8099 can use the entities that appear in `dashboard.yaml` **and the entities of the area pages, the climate page and the devices page** (lights, fans, covers and media players in your areas by default; set `areas.enabled: false` or narrow `areas.domains` to restrict this), the Music Assistant players of the music page (play/pause, volume, grouping, and starting radio stations or music from your library) and the players of the media page (starting Plex items on them), and nothing else: the server rejects any other entity, any service outside a fixed allow-list (lights, switches, fans, covers, scenes, scripts, media players, climate and similar; never locks, alarms or `homeassistant.restart`), and any attempt to retarget a call through `data`.
 
 Anyone who can reach the port can also browse your Music Assistant library and the Plex home screen (titles and posters) through the add-on. The Music Assistant and Plex tokens never leave the add-on, with one exception: the Plex stream link sent to an Apple TV or DLNA player contains the Plex token (see [Stream links](#stream-links-apple-tv-dlna)). Keep the port on your trusted LAN, remove the port mapping under *Network* if you only use the sidebar entry, or enable `read_only`.
 
@@ -295,6 +295,38 @@ plex:
 * Browsing needs one player that is not `unavailable` (any Cast device, or a Plex client that is on); otherwise the page says so.
 * A row is missing when Plex has no matching hub for it; the app log lists the hubs it found (`Plex: hubs ...`).
 * Lists are cached for a minute, posters through the app for the session. Tablets can browse the titles and posters of your Plex home screen and start playback, so keep the port on your trusted network.
+
+## Devices
+
+A **Devices** entry in the menu collects the household machines, in sections for **Vacuums**, **Dishwashers**, **Dryers and clothes heaters** and **Washing machines**:
+
+* **Vacuum cards:** name, battery, status (cleaning, docked, returning, paused, error with its message), a main button (*Start*, *Pause* or *Resume*), **Dock** and **Find**, and the fan speed as chips when the vacuum has them. Every `vacuum` entity is listed; ones that are unavailable are dimmed.
+* **Appliance cards** (washer, dryer, dishwasher): name and status, the time left while it runs, a power switch, **Start**/**Stop** (when the appliance has a remote operation, as LG ThinQ's *Operation* select) and the **delayed end** in hours with −/+.
+* **Clothes heaters** are simple cards with a power switch (a `switch`, or a `climate` entity), listed with the dryers.
+
+**LG ThinQ** washers, dryers and dishwashers are found by their device and need no setup (the kind comes from the device name: *vask/wash*, *tørre/dryer*, *opvask/dish*). Everything else is listed in the `devices:` section:
+
+```yaml
+devices:
+  # enabled: false                           # remove the menu entry
+  # title: Enheder
+  # vacuums: [vacuum.robbie, vacuum.overlord]   # default: every vacuum
+  # exclude: [vacuum.old_robot]                # also removes a found appliance by any of its entities
+  appliances:
+    - kind: dishwasher                       # washer | dryer | dishwasher | heater
+      name: Opvaskemaskine
+      status_entity: sensor.dishwasher_status        # state is shown; running/rinsing/drying/... count as active
+      remaining_entity: sensor.dishwasher_remaining  # a timestamp sensor or minutes
+      power_entity: switch.dishwasher
+      operation_entity: select.dishwasher_operation  # a select with the options start and stop
+      delay_entity: number.dishwasher_delay          # hours
+    - { kind: heater, name: Tøjvarmer, power_entity: switch.clothes_rack }
+```
+
+* An appliance needs at least a `status_entity` or a `power_entity`; the other entities are optional and their controls are left out when they are missing.
+* An appliance in the list replaces a found one that uses the same entities.
+* Starting a washing machine remotely only works when the machine allows it (LG: *remote start* enabled and a programme chosen on the machine).
+* The page appears on its own when there is a vacuum or an appliance. It uses the entities of the page only; their entities take part in entity mapping.
 
 ## Areas
 

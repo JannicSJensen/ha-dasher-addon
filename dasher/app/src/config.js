@@ -5,6 +5,7 @@ import { AREA_DOMAINS, DEFAULT_AREA_DOMAINS } from "./areas.js";
 import { DEFAULT_TABS, MUSIC_TABS } from "./music.js";
 import { collectEntities, describeUsage, mapEntities } from "../web/js/lib/entities.js";
 import { STOCK_EXAMPLE_HASHES, hashDashboard } from "./stock-examples.js";
+import { APPLIANCE_KINDS, APPLIANCE_ROLES } from "./devices.js";
 import { MAP_FILE, parseEntityMap, serializeEntityMap } from "./mapping.js";
 
 export { collectEntities };
@@ -150,6 +151,46 @@ function parseEv(raw, errors) {
   };
 }
 
+/** Normalise the optional `devices:` section (vacuums, washing machines, dryers, dishwashers, clothes heaters). */
+function parseDevices(raw, errors) {
+  const r = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+  const ids = (key, domain) => {
+    const out = [];
+    for (const id of toList(r[key])) {
+      if (ENTITY_RE.test(id) && (!domain || id.startsWith(`${domain}.`))) out.push(id);
+      else errors.push(`devices.${key}: "${id}" is not ${domain ? `a ${domain} ` : "an "}entity id`);
+    }
+    return out;
+  };
+  const appliances = [];
+  for (const [i, a] of (Array.isArray(r.appliances) ? r.appliances : []).entries()) {
+    const where = `devices.appliances[${i}]`;
+    if (!a || typeof a !== "object" || !APPLIANCE_KINDS.includes(a.kind)) {
+      errors.push(`${where}: kind must be one of ${APPLIANCE_KINDS.join(", ")}.`);
+      continue;
+    }
+    const roles = {};
+    for (const role of APPLIANCE_ROLES) {
+      if (a[role] == null) continue;
+      if (ENTITY_RE.test(String(a[role]))) roles[role] = String(a[role]);
+      else errors.push(`${where}.${role}: invalid entity id "${a[role]}"`);
+    }
+    if (!roles.status_entity && !roles.power_entity) {
+      errors.push(`${where}: needs a status_entity or a power_entity.`);
+      continue;
+    }
+    appliances.push({ kind: a.kind, name: a.name != null ? String(a.name) : null, roles });
+  }
+  return {
+    enabled: r.enabled === false ? false : r.enabled === true ? true : "auto",
+    title: r.title != null ? String(r.title) : null,
+    icon: String(r.icon ?? "washing-machine"),
+    vacuums: ids("vacuums", "vacuum"),
+    exclude: ids("exclude"),
+    appliances,
+  };
+}
+
 /** Normalise the optional `plex:` section (the Media page). */
 function parsePlex(raw, errors) {
   const r = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
@@ -217,6 +258,8 @@ export function parseConfig(text, { entityMap = {} } = {}) {
   collectEntities(raw.ev ?? {}, rawEntities);
   collectEntities(raw.climate ?? {}, rawEntities);
   for (const id of toList(raw.plex?.players)) rawEntities.add(id);
+  for (const id of toList(raw.devices?.vacuums)) rawEntities.add(id);
+  collectEntities(raw.devices?.appliances ?? [], rawEntities);
   for (const id of [...rawEntities]) if (!ENTITY_RE.test(id)) rawEntities.delete(id);
   const usage = describeUsage(raw);
   if (Object.keys(entityMap).length) raw = mapEntities(raw, entityMap);
@@ -272,6 +315,7 @@ export function parseConfig(text, { entityMap = {} } = {}) {
   const ev = parseEv(raw.ev, errors);
   const climate = parseClimate(raw.climate, errors);
   const plex = parsePlex(raw.plex, errors);
+  const devices = parseDevices(raw.devices, errors);
 
   const config = {
     title: String(raw.title ?? "Dasher"),
@@ -284,6 +328,7 @@ export function parseConfig(text, { entityMap = {} } = {}) {
     ev,
     climate,
     plex,
+    devices,
     pages,
   };
 
@@ -292,6 +337,8 @@ export function parseConfig(text, { entityMap = {} } = {}) {
   for (const id of Object.values(ev.roles)) entities.add(id);
   for (const id of climate.entities) entities.add(id);
   for (const id of plex.players) entities.add(id);
+  for (const id of devices.vacuums) entities.add(id);
+  for (const a of devices.appliances) for (const id of Object.values(a.roles)) entities.add(id);
   for (const id of [...music.players, music.default_player]) if (id) entities.add(id);
   return { config, errors, entities, rawEntities, usage };
 }

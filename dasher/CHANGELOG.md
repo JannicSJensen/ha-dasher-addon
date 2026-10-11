@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.17.0
+
+- New **Devices** page: robot vacuums (start/pause, dock, find, fan speed, battery), washing machines, dryers, dishwashers and clothes heaters (status, time left, power, remote start/stop, delayed end). Vacuums and LG ThinQ appliances are found automatically; others are listed under `devices:`.
+- The device registry names are now read from Home Assistant (needed to name the appliances).
+
 ## 0.16.0
 
 - New **Party** tab on the Music page for Music Assistant's Party plugin: the guest QR code (with the party name and text) and the live queue of the party player, with songs requested or boosted by guests marked. It appears with the other library tabs (add `party` to `tabs:` if you list them yourself) and says so if the plugin is not enabled.

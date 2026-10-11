@@ -18,7 +18,7 @@ const ALLOWED_SERVICES = {
   input_select: ["select_option", "select_next", "select_previous"],
   number: ["set_value"],
   select: ["select_option", "select_next", "select_previous"],
-  vacuum: ["start", "pause", "stop", "return_to_base", "locate"],
+  vacuum: ["start", "pause", "stop", "return_to_base", "locate", "set_fan_speed", "turn_on", "turn_off"],
   media_player: [
     "media_play",
     "media_pause",
