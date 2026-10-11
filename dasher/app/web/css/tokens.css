@@ -1,0 +1,21 @@
+@font-face { font-family: "Poppins"; font-weight: 300; font-display: swap; src: url("../fonts/poppins-latin-300-normal.woff2") format("woff2"); }
+@font-face { font-family: "Poppins"; font-weight: 400; font-display: swap; src: url("../fonts/poppins-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "Poppins"; font-weight: 500; font-display: swap; src: url("../fonts/poppins-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "Poppins"; font-weight: 600; font-display: swap; src: url("../fonts/poppins-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Poppins"; font-weight: 700; font-display: swap; src: url("../fonts/poppins-latin-700-normal.woff2") format("woff2"); }
+
+:root {
+  --accent: #2dd4bf;
+  --bg: #0d0f10;
+  --sidebar-bg: #000;
+  --tile-bg: linear-gradient(160deg, #2a2a2c 0%, #1c1c1e 100%);
+  --tile-bg-active: linear-gradient(160deg, #38383b 0%, #222224 100%);
+  --chip-bg: #141415;
+  --text: #fff;
+  --muted: #8d8d92;
+  --radius: 18px;
+  --price-low: #1fb8a6;
+  --price-mid: #6b4f3a;
+  --price-high: #f08a24;
+  --font: "Poppins", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
