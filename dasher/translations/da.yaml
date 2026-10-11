@@ -5,6 +5,9 @@ configuration:
   read_only:
     name: Skrivebeskyttet
     description: "Vis tilstande på tabletterne, men afvis alle kommandoer fra dem."
+  allow_entity_mapping:
+    name: Tillad tilknytning af manglende entiteter
+    description: "Lader dashboardet på en tablet tilknytte entiteter fra dashboard.yaml, som din Home Assistant ikke har, til entiteter den har (gemmes i entity-map.yaml). Slå fra for at forbyde ændringer fra tabletterne."
   music_assistant_url:
     name: Music Assistant-adresse
     description: "Adressen på din Music Assistant-server, fx http://192.168.1.10:8095. Lad feltet stå tomt, når Music Assistant kører som Home Assistant-app: Dasher finder den så selv. Ellers kræves den til fanerne Udforsk, Album, Kunstnere, Podcasts og Søg."

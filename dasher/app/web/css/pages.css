@@ -363,3 +363,38 @@
 .btn.is-pressed { transform: scale(0.96); }
 .btn--primary { background: var(--accent); color: #062b27; }
 @media (max-width: 640px) { .detail__top { flex-direction: column; } .detail__art { width: 60%; } }
+
+/* ---- entity mapping ---- */
+.mapping { height: 100%; overflow-y: auto; overscroll-behavior: contain; padding: 18px 18px 24px; scrollbar-width: none; }
+.mapping::-webkit-scrollbar { display: none; }
+.mapping__hint { max-width: 70ch; margin: 8px 0 14px; font-size: 13px; line-height: 1.55; color: #b4b4b8; }
+.mapping__summary { font-size: 13px; font-weight: 600; color: #fbbf24; }
+.maplist { display: grid; gap: 10px; margin-top: 12px; }
+.maprow { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 14px; background: var(--tile-bg); }
+.maprow.is-missing { box-shadow: inset 0 0 0 1.5px rgba(251, 191, 36, 0.55); }
+.maprow.is-mapped { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--accent) 55%, transparent); }
+.maprow__main { min-width: 0; }
+.maprow__id, .picker__id, .maprow__to code { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size: 13px; color: #fff; -webkit-user-select: text; user-select: text; word-break: break-all; }
+.maprow__tiles { margin-top: 4px; font-size: 12px; color: var(--muted); }
+.maprow__to { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 6px; font-size: 13px; color: #d7d7da; }
+.maprow__to .icon { color: var(--accent); font-size: 18px; }
+.maprow__to code { color: var(--accent); }
+.maprow__status { padding: 4px 12px; border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; }
+.maprow__status--missing { background: rgba(251, 191, 36, 0.16); color: #fbbf24; }
+.maprow__status--mapped { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); }
+.maprow__status--ok { background: rgba(255, 255, 255, 0.08); color: #a5a5aa; }
+@media (max-width: 640px) { .maprow { grid-template-columns: 1fr auto; } .maprow .btn { grid-column: 1 / -1; justify-content: center; } }
+
+.modal__sheet:has(.picker) { width: min(560px, 94vw); max-height: 88vh; display: flex; flex-direction: column; }
+.picker { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+.picker__tiles { font-size: 12px; color: var(--muted); }
+.picker__search { min-height: 46px; }
+.picker__sub { font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); min-height: 1em; }
+.picker__list { display: grid; gap: 6px; overflow-y: auto; min-height: 120px; max-height: 46vh; padding-right: 2px; scrollbar-width: thin; }
+.picker__item { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name check" "id check" "meta check"; align-items: center; gap: 2px 10px; padding: 10px 14px; border-radius: 12px; background: #2a2a2d; text-align: left; }
+.picker__item.is-pressed { background: #38383c; }
+.picker__item.is-chosen { box-shadow: inset 0 0 0 1.5px var(--accent); }
+.picker__item > .icon { grid-area: check; color: var(--accent); font-size: 22px; }
+.picker__name { grid-area: name; font-size: 14px; font-weight: 500; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.picker__id { grid-area: id; color: #a5a5aa; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; word-break: normal; }
+.picker__meta { grid-area: meta; font-size: 11.5px; color: var(--muted); }

@@ -147,3 +147,91 @@ test("every app option has a translation in each language, and the YAML files pa
     }
   }
 });
+
+import { describeUsage, mapEntities } from "../web/js/lib/entities.js";
+
+test("mapEntities replaces ids by key, leaves service data and other strings alone", () => {
+  const config = {
+    pages: [
+      {
+        tiles: [
+          { type: "toggle", entity: "light.a", name: "light.a" },
+          { type: "vehicle", entity: "sensor.r", rows: [{ entity: "sensor.b", label_entity: "sensor.s", icon: "x" }] },
+          { type: "hero", buttons: [{ tap: { action: "service", entity: "scene.c", data: { entity_id: "light.a" } } }], backgrounds: [{ when: { entity: "sun.sun", state: "x" } }] },
+          { type: "buttons", entities: ["light.a", "light.z"], window_entities: ["binary_sensor.w"], players: "music" },
+        ],
+      },
+    ],
+  };
+  const mapped = mapEntities(config, { "light.a": "light.new", "sensor.s": "sensor.s2", "binary_sensor.w": "binary_sensor.w2" });
+  const [toggle, vehicle, hero, buttons] = mapped.pages[0].tiles;
+  assert.equal(toggle.entity, "light.new");
+  assert.equal(toggle.name, "light.a", "only entity keys are touched");
+  assert.equal(vehicle.rows[0].label_entity, "sensor.s2");
+  assert.equal(vehicle.rows[0].entity, "sensor.b");
+  assert.equal(hero.buttons[0].tap.data.entity_id, "light.a", "service data is left as it is");
+  assert.equal(hero.backgrounds[0].when.entity, "sun.sun");
+  assert.deepEqual(buttons.entities, ["light.new", "light.z"]);
+  assert.deepEqual(buttons.window_entities, ["binary_sensor.w2"]);
+  assert.equal(config.pages[0].tiles[0].entity, "light.a", "the input is not modified");
+  assert.deepEqual(mapEntities(config, {}).pages[0].tiles[0], config.pages[0].tiles[0]);
+  assert.equal(mapEntities({ entity: "toString" }, {}).entity, "toString", "prototype keys are not ids");
+});
+
+test("describeUsage lists where an entity is used", () => {
+  const usage = describeUsage({
+    pages: [
+      { title: "Home", tiles: [{ type: "toggle", name: "Lamp", entity: "light.a" }, { type: "media", entities: ["media_player.a", "light.a"] }] },
+      { id: "garage", tiles: [{ type: "climate", entity: "climate.hp" }] },
+    ],
+    areas: { overrides: { stue: { temperature_entity: "sensor.t" } } },
+  });
+  assert.deepEqual(usage.get("light.a"), ["Home: Lamp", "Home: media"]);
+  assert.deepEqual(usage.get("climate.hp"), ["garage: climate"]);
+  assert.deepEqual(usage.get("sensor.t"), ["areas"]);
+});
+
+test("parseConfig applies the entity map but remembers the entities as written", () => {
+  const yaml = "pages:\n  - id: a\n    tiles:\n      - { type: toggle, name: Lamp, entity: light.missing }\n      - { type: toggle, entity: light.ok }\n";
+  const { config, entities, rawEntities, usage } = parseConfig(yaml, { entityMap: { "light.missing": "light.real" } });
+  assert.equal(config.pages[0].tiles[0].entity, "light.real");
+  assert.equal(config.pages[0].tiles[1].entity, "light.ok");
+  assert.deepEqual([...entities].sort(), ["light.ok", "light.real"]);
+  assert.deepEqual([...rawEntities].sort(), ["light.missing", "light.ok"]);
+  assert.deepEqual(usage.get("light.missing"), ["a: Lamp"]);
+});
+
+test("ConfigStore saves the mapping next to dashboard.yaml and reloads with it", async () => {
+  const fs = await import("node:fs");
+  const os = await import("node:os");
+  const path = await import("node:path");
+  const { ConfigStore } = await import("../src/config.js");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "dasher-map-"));
+  try {
+    fs.writeFileSync(path.join(dir, "dashboard.yaml"), "pages:\n  - id: a\n    tiles:\n      - { type: toggle, entity: light.missing }\n");
+    let changes = 0;
+    const store = new ConfigStore({ dir, logger: { info() {}, warn() {}, error() {}, debug() {} }, onChange: () => changes++ });
+    store.load();
+    assert.deepEqual([...store.current.entities], ["light.missing"]);
+
+    store.saveEntityMap({ "light.missing": "light.real" });
+    assert.equal(changes, 1);
+    assert.deepEqual([...store.current.entities], ["light.real"]);
+    assert.deepEqual([...store.current.rawEntities], ["light.missing"]);
+    assert.match(fs.readFileSync(path.join(dir, "entity-map.yaml"), "utf8"), /light\.missing: light\.real/);
+    assert.ok(!fs.existsSync(path.join(dir, "entity-map.yaml.tmp")));
+
+    // a fresh store picks the mapping up from disk, an unparsable file is ignored
+    const other = new ConfigStore({ dir, logger: { info() {}, warn() {}, error() {}, debug() {} } });
+    other.load();
+    assert.deepEqual([...other.current.entities], ["light.real"]);
+
+    store.saveEntityMap({});
+    assert.deepEqual([...store.current.entities], ["light.missing"]);
+    fs.writeFileSync(path.join(dir, "entity-map.yaml"), "{{{");
+    other.load();
+    assert.deepEqual([...other.current.entities], ["light.missing"]);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});

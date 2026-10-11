@@ -74,6 +74,14 @@ export async function getJson(path, { signal } = {}) {
   return body;
 }
 
+/** PUT a JSON body to an endpoint of the add-on; throws with the server's message. */
+export async function putJson(path, body) {
+  const response = await fetch(`./${path}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error ?? `Request failed (${response.status})`);
+  return data;
+}
+
 export async function playMusic(entityId, request) {
   const response = await fetch("./api/music/play", {
     method: "POST",

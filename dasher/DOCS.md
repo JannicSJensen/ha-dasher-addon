@@ -19,6 +19,7 @@ If the file has a mistake, the page shows what is wrong instead of failing silen
 | --- | --- | --- |
 | `log_level` | `info` | `debug`, `info`, `warning` or `error`. |
 | `read_only` | `false` | Show states but refuse every command from tablets. |
+| `allow_entity_mapping` | `true` | Lets people at a tablet [map missing entities](#missing-entities) to entities of your Home Assistant. Turn off to forbid it. Always off in read-only mode. |
 | `music_assistant_url` | empty | Address of your Music Assistant server, e.g. `http://192.168.1.10:8095`. **Leave it empty when Music Assistant runs as a Home Assistant app**: Dasher then finds it through the Supervisor (and keeps looking if Music Assistant starts later). Only needed for the browsing tabs of the [Music page](#music). |
 | `music_assistant_token` | empty | A long-lived access token from Music Assistant (*Settings → Profile → Long-lived access tokens*). Needed for the browsing tabs, also when Music Assistant runs as an app. Only used to read the library. |
 
@@ -153,6 +154,16 @@ Heat pump or air conditioner with a vertical target-temperature slider.
 
 #### `buttons`
 A grid of icon buttons (`buttons`, same format as in `hero`) with an optional `title`.
+
+## Missing entities
+
+When `dashboard.yaml` uses entities that your Home Assistant does not have (for example after copying a dashboard from somewhere else, or after renaming a device), the tablet shows a warning at the bottom with a **Map entities** button, and a **Map entities** entry appears in the sidebar.
+
+* The screen lists every missing entity, the tiles that use it, and a **Choose** button. It offers the entities of your Home Assistant that look most alike (same kind, matching words in the name and in the tile's title) and a search box that also looks at names and areas. Tap one and the dashboard uses it from then on.
+* **Show all** also lists the entities that were found, so you can point any entity somewhere else. **Remove mapping** undoes a choice.
+* An entity can only be mapped to an entity of the **same kind** (a light to a light, a sensor to a sensor) that Home Assistant knows.
+* The choices are saved in `entity-map.yaml` next to `dashboard.yaml`; `dashboard.yaml` itself is not changed, so you can keep sharing it. The file is plain YAML (`light.kitchen_lamp: light.my_real_lamp`) and can be edited by hand. A mapped entity counts as part of the dashboard, so tablets can use it like any other.
+* A mapping can only point to an entity of the same kind, but it can point to any entity of that kind: anyone who can reach the tablet page can change it. Turn off the app option `allow_entity_mapping` to prevent that.
 
 ## Areas
 

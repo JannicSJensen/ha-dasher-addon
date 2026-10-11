@@ -185,3 +185,30 @@ test("callServiceWithResponse asks for the response and returns it", async (t) =
   assert.equal(seen.return_response, true);
   assert.equal(seen.domain, "music_assistant");
 });
+
+test("keeps an index of every entity Home Assistant knows, also the ones that are not watched", async (t) => {
+  const { wss, url } = fakeHA((ws, msg) => {
+    if (msg.type === "get_states") {
+      ws.send(JSON.stringify({ id: msg.id, type: "result", success: true, result: [
+        { entity_id: "light.a", state: "on", attributes: { friendly_name: "Lamp" } },
+        { entity_id: "sensor.t", state: "21", attributes: { friendly_name: "Temp", device_class: "temperature", unit_of_measurement: "°C" } },
+      ] }));
+      return setTimeout(() => ws.send(JSON.stringify({ type: "event", event: { event_type: "state_changed", data: { entity_id: "sensor.new", new_state: { entity_id: "sensor.new", state: "1", attributes: { friendly_name: "New" } } } } })), 20);
+    }
+    ws.send(JSON.stringify({ id: msg.id, type: "result", success: true, result: null }));
+  });
+  const client = new HAClient({ wsUrl: url, token: "good", logger: silent });
+  t.after(() => {
+    client.stop();
+    wss.close();
+  });
+  await client.setWatched(["light.a"]);
+  const snapshot = once(client, "snapshot");
+  client.start();
+  await snapshot;
+  await new Promise((r) => setTimeout(r, 60));
+  assert.deepEqual(client.entityIndex.get("sensor.t"), { id: "sensor.t", name: "Temp", domain: "sensor", deviceClass: "temperature", unit: "°C" });
+  assert.equal(client.entityIndex.get("sensor.new").name, "New");
+  assert.equal(client.entityIndex.size, 3);
+  assert.equal(client.states.has("sensor.t"), false, "only watched entities are kept as states");
+});

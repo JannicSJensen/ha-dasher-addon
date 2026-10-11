@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.0
+
+- **Map missing entities from the tablet.** When `dashboard.yaml` uses entities that Home Assistant does not have, a warning with a *Map entities* button and a sidebar entry open a screen with suggestions and a search for each missing entity. The choices are saved in `entity-map.yaml`; `dashboard.yaml` stays unchanged.
+- New app option `allow_entity_mapping` (default on) to forbid mapping from the tablets.
+- The warning banner moved to the bottom of the screen so it no longer covers tile titles.
+
 ## 0.7.0
 
 - The Music Assistant address is found automatically when Music Assistant runs as a Home Assistant app (new `hassio_api` permission, read-only use). `music_assistant_url` is only needed otherwise; the access token is still required for the browsing tabs.

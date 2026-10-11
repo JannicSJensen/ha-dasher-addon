@@ -10,6 +10,7 @@ This repository contains the **Dasher** app (add-on) for Home Assistant: a dark,
 * **Area pages:** every Home Assistant area as a clickable picture card; each opens a sub-page with its temperature, humidity, windows and a picture tile with brightness slider for every light and player.
 * **Now playing tile:** follows whichever speaker is playing, with controls, volume and progress; when everything is stopped it shows the last track that played (remembered by the app).
 * **Music page:** swipeable tabs for Discover, Radio, Albums, Artists, Podcasts (with episodes) and Search, a speaker picker with Music Assistant grouping and a now-playing bar. Browsing uses Music Assistant's API with a read-only token in the app options; playback goes through Home Assistant.
+* **Missing entities:** when `dashboard.yaml` uses entities your Home Assistant does not have, a screen on the tablet suggests and lets you pick the right ones; the choices are kept in `entity-map.yaml`.
 * Vanilla JavaScript front end, one small Node.js server, no build step.
 * Commands from tablets are restricted to the entities in `dashboard.yaml`, the area pages and the music page, and to a fixed list of services.
 

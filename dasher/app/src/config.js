@@ -3,7 +3,8 @@ import path from "node:path";
 import YAML from "yaml";
 import { AREA_DOMAINS, DEFAULT_AREA_DOMAINS } from "./areas.js";
 import { DEFAULT_TABS, MUSIC_TABS } from "./music.js";
-import { collectEntities } from "../web/js/lib/entities.js";
+import { collectEntities, describeUsage, mapEntities } from "../web/js/lib/entities.js";
+import { MAP_FILE, parseEntityMap, serializeEntityMap } from "./mapping.js";
 
 export { collectEntities };
 
@@ -109,20 +110,23 @@ function parseMusic(raw, errors) {
  * Parse and normalise a dashboard.yaml document.
  * Never throws: problems end up in `errors` and offending tiles are dropped.
  */
-export function parseConfig(text) {
+export function parseConfig(text, { entityMap = {} } = {}) {
   const errors = [];
+  const failed = (message) => ({ config: null, errors: [message], entities: new Set(), rawEntities: new Set(), usage: new Map() });
   let raw;
   try {
     raw = YAML.parse(text);
   } catch (err) {
-    return { config: null, errors: [`YAML syntax error: ${err.message}`], entities: new Set() };
+    return failed(`YAML syntax error: ${err.message}`);
   }
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    return { config: null, errors: ["The file must contain a YAML mapping."], entities: new Set() };
-  }
-  if (!Array.isArray(raw.pages) || raw.pages.length === 0) {
-    return { config: null, errors: ["`pages` must be a non-empty list."], entities: new Set() };
-  }
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return failed("The file must contain a YAML mapping.");
+  if (!Array.isArray(raw.pages) || raw.pages.length === 0) return failed("`pages` must be a non-empty list.");
+
+  // The entities as written in the file, before the user's mapping replaces some of them.
+  const rawEntities = collectEntities(raw.pages);
+  collectEntities(raw.areas?.overrides ?? {}, rawEntities);
+  const usage = describeUsage(raw);
+  if (Object.keys(entityMap).length) raw = mapEntities(raw, entityMap);
 
   const defaults = {
     columns: posInt(raw.columns, 4),
@@ -187,7 +191,7 @@ export function parseConfig(text) {
   const entities = collectEntities(pages);
   collectEntities(areas.overrides, entities);
   for (const id of [...music.players, music.default_player]) if (id) entities.add(id);
-  return { config, errors, entities };
+  return { config, errors, entities, rawEntities, usage };
 }
 
 /** Watches dashboard.yaml and keeps the parsed result current. */
@@ -195,10 +199,12 @@ export class ConfigStore {
   constructor({ dir, onChange, logger }) {
     this.dir = dir;
     this.file = path.join(dir, "dashboard.yaml");
+    this.mapFile = path.join(dir, MAP_FILE);
+    this.entityMap = {};
     this.assetsDir = path.join(dir, "assets");
     this.onChange = onChange;
     this.log = logger;
-    this.current = { config: null, errors: ["Not loaded yet."], entities: new Set() };
+    this.current = { config: null, errors: ["Not loaded yet."], entities: new Set(), rawEntities: new Set(), usage: new Map() };
     this._signature = "";
   }
 
@@ -216,30 +222,60 @@ export class ConfigStore {
     try {
       text = fs.readFileSync(this.file, "utf8");
     } catch (err) {
-      this.current = { config: null, errors: [`Cannot read ${this.file}: ${err.message}`], entities: new Set() };
+      this.current = { config: null, errors: [`Cannot read ${this.file}: ${err.message}`], entities: new Set(), rawEntities: new Set(), usage: new Map() };
       return this.current;
     }
-    this.current = parseConfig(text);
+    this.entityMap = this._readEntityMap();
+    this.current = parseConfig(text, { entityMap: this.entityMap });
     for (const e of this.current.errors) this.log.warn(`dashboard.yaml: ${e}`);
     return this.current;
+  }
+
+  _readEntityMap() {
+    let text = "";
+    try {
+      text = fs.readFileSync(this.mapFile, "utf8");
+    } catch {
+      return {}; // no mapping yet
+    }
+    const { map, errors } = parseEntityMap(text);
+    for (const e of errors) this.log.warn(e);
+    return map;
+  }
+
+  /** Save the entity mapping (atomically) and reload the configuration with it. */
+  saveEntityMap(map) {
+    fs.mkdirSync(this.dir, { recursive: true });
+    const tmp = `${this.mapFile}.tmp`;
+    fs.writeFileSync(tmp, serializeEntityMap(map));
+    fs.renameSync(tmp, this.mapFile);
+    this.load();
+    this._signature = this._fileSignature();
+    this.onChange?.(this.current);
+  }
+
+  _fileSignature() {
+    const part = (file) => {
+      try {
+        const st = fs.statSync(file);
+        return `${st.mtimeMs}:${st.size}`;
+      } catch {
+        return "missing";
+      }
+    };
+    return `${part(this.file)}|${part(this.mapFile)}`;
   }
 
   /** Poll for changes (inotify is unreliable on bind mounts and atomic saves). */
   watch(intervalMs = 2000) {
     const check = () => {
-      let sig = "";
-      try {
-        const st = fs.statSync(this.file);
-        sig = `${st.mtimeMs}:${st.size}`;
-      } catch {
-        sig = "missing";
-      }
+      const sig = this._fileSignature();
       if (sig !== this._signature) {
         const first = this._signature === "";
         this._signature = sig;
         this.load();
         if (!first) {
-          this.log.info("dashboard.yaml changed, reloading");
+          this.log.info("Configuration changed, reloading");
           this.onChange?.(this.current);
         }
       }

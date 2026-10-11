@@ -5,6 +5,9 @@ configuration:
   read_only:
     name: Read-only
     description: "Show states on the tablets but refuse every command from them."
+  allow_entity_mapping:
+    name: Allow mapping of missing entities
+    description: "Lets the dashboard on a tablet map entities of dashboard.yaml that your Home Assistant does not have to entities it does have (saved in entity-map.yaml). Turn off to forbid changes from the tablets."
   music_assistant_url:
     name: Music Assistant address
     description: "Address of your Music Assistant server, for example http://192.168.1.10:8095. Leave empty when Music Assistant runs as a Home Assistant app: Dasher then finds it itself. Needed for the Discover, Albums, Artists, Podcasts and Search tabs otherwise."

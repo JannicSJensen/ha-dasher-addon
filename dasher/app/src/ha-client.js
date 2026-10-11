@@ -25,6 +25,7 @@ export class HAClient extends EventEmitter {
     this.missing = [];
     this.registries = null;
     this.deviceClasses = new Map();
+    this.entityIndex = new Map(); // every entity Home Assistant knows: id -> { id, name, domain, deviceClass, unit }
     this.connected = false;
     this._nextId = 1;
     this._pending = new Map();
@@ -178,9 +179,22 @@ export class HAClient extends EventEmitter {
     }, 1000);
   }
 
+  _indexEntity(s) {
+    const a = s.attributes ?? {};
+    this.entityIndex.set(s.entity_id, {
+      id: s.entity_id,
+      name: a.friendly_name ?? null,
+      domain: s.entity_id.slice(0, s.entity_id.indexOf(".")),
+      deviceClass: a.device_class ?? null,
+      unit: a.unit_of_measurement ?? null,
+    });
+  }
+
   _indexDeviceClasses(all) {
     this.deviceClasses.clear();
+    this.entityIndex.clear();
     for (const s of all) {
+      this._indexEntity(s);
       const cls = s.attributes?.device_class;
       if (cls && (s.entity_id.startsWith("sensor.") || s.entity_id.startsWith("binary_sensor."))) {
         this.deviceClasses.set(s.entity_id, cls);
@@ -218,6 +232,8 @@ export class HAClient extends EventEmitter {
   }
 
   _onStateChanged({ entity_id, new_state }) {
+    if (new_state) this._indexEntity(new_state);
+    else this.entityIndex.delete(entity_id);
     if (!this.watched.has(entity_id)) return;
     if (new_state) {
       const s = slim(new_state);
