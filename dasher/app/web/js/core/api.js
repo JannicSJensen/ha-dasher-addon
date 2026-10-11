@@ -18,7 +18,7 @@ export function connect(handlers) {
         retry = setTimeout(open, 3000);
       }
     };
-    for (const event of ["hello", "status", "config", "areas", "music", "ev", "climate", "lastplayed", "snapshot", "state"]) {
+    for (const event of ["hello", "status", "config", "areas", "music", "ev", "climate", "plex", "lastplayed", "snapshot", "state"]) {
       source.addEventListener(event, (e) => handlers[event]?.(JSON.parse(e.data)));
     }
   };
@@ -110,4 +110,17 @@ export function pictureUrl(picture) {
   if (!picture) return "";
   if (/^https?:\/\//.test(picture)) return picture;
   return proxyUrl(picture);
+}
+
+/** Play a Plex item (a `plex://` id from the Media page) on a player. */
+export async function playPlex(entityId, item) {
+  const response = await fetch("./api/plex/play", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ entity_id: entityId, id: item.id, type: item.type }),
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body.error ?? `Request failed (${response.status})`);
+  }
 }

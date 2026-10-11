@@ -7,6 +7,7 @@ import { ConfigStore } from "./config.js";
 import { discoverMusicAssistant } from "./discovery.js";
 import { discoverEv, resolveEv } from "./ev.js";
 import { resolveClimate } from "./climate.js";
+import { PlexService, plexConfigured, plexPlayers, validBrowse, validatePlay } from "./plex.js";
 import { mappingItems, rankCandidates, validateMapping } from "./mapping.js";
 import { MusicService, availableTabs, DETAIL_TYPES } from "./music.js";
 import { PSEUDO_IDS, buildSuggestions } from "./suggestions.js";
@@ -122,6 +123,17 @@ async function fetchPicture(picture) {
 
 const dataDir = process.env.DATA_DIR ?? (fs.existsSync("/data") ? "/data" : null);
 const calendars = new CalendarService({ ha, logger });
+const plex = new PlexService({
+  ha,
+  logger,
+  fetchImage: async (path) => {
+    const upstream = await fetch(haHttpBase + path, { headers: { Authorization: `Bearer ${haToken}` }, signal: AbortSignal.timeout(10_000) });
+    const type = upstream.headers.get("content-type") ?? "";
+    if (!upstream.ok || !type.startsWith("image/")) return null;
+    const body = Buffer.from(await upstream.arrayBuffer());
+    return body.length > 10 * 1024 * 1024 ? null : { type, body };
+  },
+});
 const nowPlaying = new NowPlayingStore({ dir: dataDir, logger, fetchPicture });
 nowPlaying.on("change", () => broadcast("lastplayed", nowPlaying.payload()));
 
@@ -141,6 +153,8 @@ const areasPayload = () => {
 
 let radioPlayerIds = [];
 let evState = { enabled: false, roles: {} };
+let plexState = { enabled: false, players: [] };
+const plexPayload = () => (plexState.enabled ? plexState : { enabled: false, players: [] });
 let climateState = { enabled: false, entities: [] };
 const climatePayload = () => (climateState.enabled ? climateState : { enabled: false, entities: [] });
 const evPayload = () => (evState.enabled ? evState : { enabled: false, roles: {} });
@@ -178,18 +192,27 @@ function rebuild({ refresh }) {
     discovered: discoverEv({ registries: ha.registries, index: ha.entityIndex }),
   });
   climateState = resolveClimate({ settings: current.config?.climate, registries: ha.registries, index: ha.entityIndex });
+  {
+    const settings = current.config?.plex;
+    const players = plexPlayers({ settings, registries: ha.registries });
+    const enabled = Boolean(settings) && settings.enabled !== false && players.length > 0 && (settings.enabled === true || plexConfigured(ha.registries));
+    plexState = { enabled, title: settings?.title ?? null, icon: settings?.icon, players: enabled ? players.map((p) => p.id) : [] };
+    plex.configure(enabled ? players : []);
+  }
   allowed = new Set([
     ...current.entities,
     ...areaModel.entities,
     ...radioPlayerIds,
     ...(evState.enabled ? Object.values(evState.roles) : []),
     ...(climateState.enabled ? climateState.entities : []),
+    ...plexState.players,
   ]);
   ha.setWatched(allowed, { refresh, required: current.entities });
   broadcast("areas", areasPayload());
   broadcast("music", musicPayload());
   broadcast("ev", evPayload());
   broadcast("climate", climatePayload());
+  broadcast("plex", plexPayload());
   if (radioPlayerIds.length && (radio.stations.length === 0 || radio.error)) radio.refresh();
 }
 
@@ -320,6 +343,7 @@ function handleEvents(req, res) {
   send(res, "music", musicPayload());
   send(res, "ev", evPayload());
   send(res, "climate", climatePayload());
+  send(res, "plex", plexPayload());
   send(res, "lastplayed", nowPlaying.payload());
   send(res, "snapshot", Object.fromEntries(ha.states));
   clients.add(res);
@@ -444,6 +468,50 @@ const sendImage = (res, image) => {
   res.end(image.body);
 };
 
+async function handlePlexGet(res, p, params) {
+  if (!plexState.enabled) return json(res, 503, { error: "The Media page is not available." });
+  try {
+    if (p === "/api/plex/home") return json(res, 200, await plex.home());
+    if (p === "/api/plex/browse") {
+      const query = { id: params.get("id"), type: params.get("type") };
+      if (!validBrowse(query)) return json(res, 400, { error: "Cannot browse that item." });
+      return json(res, 200, await plex.children(query.id, query.type));
+    }
+    const image = /^\/api\/plex\/image\/([A-Za-z0-9]+)\/(\d+)$/.exec(p);
+    if (image) {
+      const picture = await plex.image(image[1], image[2]);
+      if (!picture) return json(res, 404, { error: "No image." });
+      res.writeHead(200, { "Content-Type": picture.type, "Content-Length": picture.body.length, "Cache-Control": "private, max-age=86400" });
+      return res.end(picture.body);
+    }
+    return json(res, 404, { error: "Not found." });
+  } catch (err) {
+    logger.warn(`Plex request failed: ${err.message}`);
+    return json(res, 502, { error: err.message });
+  }
+}
+
+async function handlePlexPlay(req, res) {
+  if (READ_ONLY) return json(res, 403, { error: "The add-on is in read-only mode." });
+  if (!plexState.enabled) return json(res, 503, { error: "The Media page is not available." });
+  let body;
+  try {
+    body = JSON.parse(await readBody(req));
+  } catch (err) {
+    return json(res, err.status ?? 400, { error: err.message || "Invalid JSON." });
+  }
+  const check = validatePlay(body ?? {}, plex.players);
+  if (!check.ok) return json(res, 400, { error: check.error });
+  try {
+    await plex.play(check.entityId, check.id, check.type);
+    logger.info(`Plex: playing ${check.id} on ${check.entityId}`);
+    return json(res, 200, { ok: true });
+  } catch (err) {
+    logger.warn(`Plex play failed: ${err.message}`);
+    return json(res, 502, { error: err.message });
+  }
+}
+
 async function handleCalendar(res, params) {
   const scope = calendarScope(configStore.current.config, [...ha.entityIndex.keys()]);
   const window = parseWindow(params.get("start"), params.get("end"));
@@ -547,6 +615,7 @@ const server = http.createServer(async (req, res) => {
       if (p === "/api/events") return handleEvents(req, res);
       if (p === "/api/config") return json(res, 200, configPayload());
       if (p === "/api/calendar") return await handleCalendar(res, url.searchParams);
+      if (p.startsWith("/api/plex/")) return await handlePlexGet(res, p, url.searchParams);
       if (p === "/api/proxy") return await proxyImage(res, url.searchParams.get("path"));
       if (p.startsWith("/api/entities/")) return await handleMappingGet(res, p, url.searchParams);
       if (p.startsWith("/api/nowplaying/art/")) return handleNowPlayingArt(res, p.slice("/api/nowplaying/art/".length));
@@ -569,6 +638,7 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === "PUT" && p === "/api/entities/map") return await handleMappingPut(req, res);
     if (req.method === "POST" && p === "/api/service") return await handleService(req, res);
+    if (req.method === "POST" && p === "/api/plex/play") return await handlePlexPlay(req, res);
     if (req.method === "POST" && p === "/api/radio/play") return await handleRadioPlay(req, res);
     if (req.method === "POST" && p === "/api/music/play") return await handleMusicPlay(req, res);
     if (req.method === "POST" && p === "/api/radio/group") return await handleRadioGroup(req, res);

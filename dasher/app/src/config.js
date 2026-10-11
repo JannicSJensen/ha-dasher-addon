@@ -145,6 +145,26 @@ function parseEv(raw, errors) {
   };
 }
 
+/** Normalise the optional `plex:` section (the Media page). */
+function parsePlex(raw, errors) {
+  const r = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+  const ids = (key) => {
+    const out = [];
+    for (const id of toList(r[key])) {
+      if (ENTITY_RE.test(id) && id.startsWith("media_player.")) out.push(id);
+      else errors.push(`plex.${key}: "${id}" is not a media player entity id`);
+    }
+    return out;
+  };
+  return {
+    enabled: r.enabled === false ? false : r.enabled === true ? true : "auto",
+    title: r.title != null ? String(r.title) : null,
+    icon: String(r.icon ?? "movie-open-outline"),
+    players: ids("players"),
+    exclude: ids("exclude"),
+  };
+}
+
 /** Normalise the optional `climate:` section (the climate overview page). */
 function parseClimate(raw, errors) {
   const r = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
@@ -190,6 +210,7 @@ export function parseConfig(text, { entityMap = {} } = {}) {
   collectEntities(raw.areas?.overrides ?? {}, rawEntities);
   collectEntities(raw.ev ?? {}, rawEntities);
   collectEntities(raw.climate ?? {}, rawEntities);
+  for (const id of toList(raw.plex?.players)) rawEntities.add(id);
   for (const id of [...rawEntities]) if (!ENTITY_RE.test(id)) rawEntities.delete(id);
   const usage = describeUsage(raw);
   if (Object.keys(entityMap).length) raw = mapEntities(raw, entityMap);
@@ -244,6 +265,7 @@ export function parseConfig(text, { entityMap = {} } = {}) {
   const music = parseMusic(raw.music ?? raw.radio, errors);
   const ev = parseEv(raw.ev, errors);
   const climate = parseClimate(raw.climate, errors);
+  const plex = parsePlex(raw.plex, errors);
 
   const config = {
     title: String(raw.title ?? "Dasher"),
@@ -255,6 +277,7 @@ export function parseConfig(text, { entityMap = {} } = {}) {
     music,
     ev,
     climate,
+    plex,
     pages,
   };
 
@@ -262,6 +285,7 @@ export function parseConfig(text, { entityMap = {} } = {}) {
   collectEntities(areas.overrides, entities);
   for (const id of Object.values(ev.roles)) entities.add(id);
   for (const id of climate.entities) entities.add(id);
+  for (const id of plex.players) entities.add(id);
   for (const id of [...music.players, music.default_player]) if (id) entities.add(id);
   return { config, errors, entities, rawEntities, usage };
 }

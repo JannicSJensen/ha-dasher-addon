@@ -57,6 +57,14 @@ climate:
   # exclude: [climate.bathroom]
   # title: Climate
 
+# The Media page: continue watching and recently added movies and series from Plex, played on a
+# Cast device or a Plex client. It appears when the Plex integration and such a player exist.
+plex:
+  # enabled: false           # remove the menu entry
+  # players: [media_player.living_room_tv]   # default: every Plex client and Cast device
+  # exclude: [media_player.kitchen_speaker]
+  # title: Media
+
 pages:
   - id: home
     title: Home

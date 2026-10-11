@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.12.0
+
+- New **Media** page for Plex, through Home Assistant's Plex integration: continue watching, recently added movies and recently added series, with posters; items play on a Google Cast device or a Plex client chosen at the top, shows open as seasons and episodes, and continued items offer *Resume* or *Start over*. Configure with `plex:` in `dashboard.yaml`.
+
 ## 0.11.1
 
 - The Car page and the Areas overview now have a page title like the other pages. On the Car page the card only shows a name when `name:` is set in `ev:`.

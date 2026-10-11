@@ -25,7 +25,7 @@ If the file has a mistake, the page shows what is wrong instead of failing silen
 
 ## Security
 
-The tablet page needs no login. Anyone who can reach port 8099 can use the entities that appear in `dashboard.yaml` **and the entities of the area pages and the climate page** (lights, fans, covers and media players in your areas by default; set `areas.enabled: false` or narrow `areas.domains` to restrict this), and the Music Assistant players of the music page (play/pause, volume, grouping, and starting radio stations or music from your library), and nothing else: the server rejects any other entity, any service outside a fixed allow-list (lights, switches, fans, covers, scenes, scripts, media players, climate and similar; never locks, alarms or `homeassistant.restart`), and any attempt to retarget a call through `data`. Anyone who can reach the port can also browse your Music Assistant library through the add-on; the access token itself never leaves the add-on, and the add-on only reads with it. Keep the port on your trusted LAN, remove the port mapping under *Network* if you only use the sidebar entry, or enable `read_only`.
+The tablet page needs no login. Anyone who can reach port 8099 can use the entities that appear in `dashboard.yaml` **and the entities of the area pages, the climate page and the media page's players** (and the Plex home screen it shows) (lights, fans, covers and media players in your areas by default; set `areas.enabled: false` or narrow `areas.domains` to restrict this), and the Music Assistant players of the music page (play/pause, volume, grouping, and starting radio stations or music from your library), and nothing else: the server rejects any other entity, any service outside a fixed allow-list (lights, switches, fans, covers, scenes, scripts, media players, climate and similar; never locks, alarms or `homeassistant.restart`), and any attempt to retarget a call through `data`. Anyone who can reach the port can also browse your Music Assistant library through the add-on; the access token itself never leaves the add-on, and the add-on only reads with it. Keep the port on your trusted LAN, remove the port mapping under *Network* if you only use the sidebar entry, or enable `read_only`.
 
 ## `dashboard.yaml`
 
@@ -243,6 +243,30 @@ climate:
 * Without a `climate:` section the page appears on its own when climate helpers exist.
 * `entities` wins over `source`, and its entities take part in entity mapping.
 * A change of the setpoint is sent half a second after the last tap. Cards of entities that are unavailable are dimmed.
+
+## Media
+
+A **Media** entry in the menu shows what Plex offers on its home screen and plays it on your player:
+
+* **Continue watching**, **Recently added movies** and **Recently added series**, as rows of posters (episodes as wide pictures).
+* Tap an item: **Play** (or **Resume** and **Start over** for something you have begun). Shows open as seasons and episodes, each with its own **Play**.
+* **Play on** at the top (and in every item) chooses the player. The choice is remembered on that tablet; players that are off are dimmed.
+
+It uses the **Plex integration** of Home Assistant, so no Plex address or token is needed here: the lists come from the integration's media browser (the hubs of the *Recommended* folder, for the Plex account the integration is signed in with), and playing is `media_player.play_media` with the Plex item. That works on the players the Plex integration supports: **Google Cast** devices (Chromecast, Google TV) and **Plex clients**. Other players, such as an Apple TV or a DLNA TV, cannot be told to play a Plex item this way.
+
+```yaml
+plex:
+  # enabled: false           # remove the menu entry
+  # players: [media_player.living_room_tv]   # default: every Plex client and Cast device
+  # exclude: [media_player.kitchen_speaker]  # e.g. Cast speakers that cannot show video
+  # title: Medier
+  # icon: movie-open-outline
+```
+
+* The page appears on its own when the Plex integration has entities and at least one such player exists. Music Assistant's own Plex client is left out.
+* Browsing needs one player that is not `unavailable` (any Cast device, or a Plex client that is on); otherwise the page says so.
+* A row is missing when Plex has no matching hub for it; the app log lists the hubs it found (`Plex: hubs ...`).
+* Lists are cached for a minute, posters through the app for the session. Tablets can browse the titles and posters of your Plex home screen and start playback, so keep the port on your trusted network.
 
 ## Areas
 

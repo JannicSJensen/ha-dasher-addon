@@ -34,6 +34,10 @@ thermostat("climate.hjalte", "hjalte", 21.6, 19);
 thermostat("climate.bryggers", "bryggers", 22.1, 21.5, "off");
 thermostat("climate.bad", "bad", 23.7, 24, "heat", { hvac_modes: ["off"] });
 thermostat("climate.climate_stue_01", "climate-stue-01", 22.1, 22);
+// Plex: two players that can play Plex media (a Cast TV and a Plex client) and one that is offline
+put("media_player.living_room_tv", "idle", { friendly_name: "Living room TV", supported_features: 152127 });
+put("media_player.plex_ipad", "idle", { friendly_name: "Plex (iPad)", supported_features: 152127 });
+put("media_player.plex_apple_tv", "unavailable", { friendly_name: "Plex (Apple TV)", restored: true });
 put("calendar.family", "off", { friendly_name: "Family" });
 put("calendar.privat", "off", { friendly_name: "Privat" });
 put("weather.forecast_home", "cloudy", { friendly_name: "Forecast Home", temperature: 11 });
@@ -111,6 +115,9 @@ let registry = {
     { ei: "climate.bryggers", pl: "climate_group_helper" },
     { ei: "climate.bad", pl: "climate_group_helper" },
     { ei: "climate.climate_stue_01", pl: "zwave_js" },
+    { ei: "media_player.living_room_tv", pl: "cast" },
+    { ei: "media_player.plex_ipad", pl: "plex" },
+    { ei: "media_player.plex_apple_tv", pl: "plex" },
     { ei: "calendar.family" },
     { ei: "calendar.privat" },
     { ei: "weather.forecast_home" },
@@ -156,6 +163,76 @@ function forecastDays() {
   const conditions = ["cloudy", "partlycloudy", "rainy", "sunny", "lightning-rainy", "snowy", "fog"];
   return Array.from({ length: 7 }, (_, i) => ({ datetime: atDay(i, 12).toISOString().replace(/^.{10}/, isoLocal(atDay(i, 12))), temperature: 11 + (i % 3) * 2, condition: conditions[i % conditions.length] }));
 }
+
+// Plex library as Home Assistant's Plex integration exposes it through media browsing.
+const SRV = "abc123def456";
+const plexUri = (key, resume) => `plex://${SRV}/${key}${resume ? "?resume=1" : ""}`;
+const PLEX_TITLES = {};
+const plexItem = (key, type, title, { resume = false, expand = false } = {}) => {
+  PLEX_TITLES[key] = title;
+  return { title, media_class: type, media_content_id: plexUri(key, resume), media_content_type: type, can_play: true, can_expand: expand, thumbnail: `/api/plex_image_proxy/${SRV}/${key}` };
+};
+const PLEX_HUBS = {
+  "home.continue": ["Continue Watching", () => [
+    plexItem(2001, "episode", "Lanterns - S01E01 - Pilot", { resume: true }),
+    plexItem(2002, "movie", "Rage of Stars (2026)", { resume: true }),
+    plexItem(2003, "episode", "The Mandalorian - S03E08 - The Return", { resume: true }),
+  ]],
+  "home.movies.recent": ["Recently Added Movies", () => [
+    plexItem(3001, "movie", "Speed 2: Cruise Control (1997)"),
+    plexItem(3002, "movie", "Mutiny (2026)"),
+    plexItem(3003, "movie", "Iron Man 2 (2010)"),
+    plexItem(3004, "movie", "The Fix (2026)"),
+  ]],
+  "home.television.recent": ["Recently Added TV", () => [
+    plexItem(1001, "show", "The Boys", { expand: true }),
+    plexItem(1002, "show", "Slow Horses", { expand: true }),
+    plexItem(2004, "episode", "Slow Horses - S06E04 - Lost & Found"),
+  ]],
+  "home.music.recent": ["Recently Added Music", () => [plexItem(4001, "album", "Some Album - Greatest Hits")]],
+  "home.recommended": ["Recommended For You", () => [plexItem(3005, "movie", "Something Else (2020)")]],
+};
+function plexBrowse({ entity_id, media_content_type, media_content_id }) {
+  const e = states.get(entity_id);
+  if (!e || e.state === "unavailable") throw new Error("Entity not available");
+  const isCast = entity_id.includes("living_room_tv");
+  const server = () => ({
+    title: "Bryggers", media_class: "directory", media_content_id: plexUri("server"), media_content_type: "server", can_play: false, can_expand: true,
+    children: [
+      { title: "Recommended (Bryggers)", media_class: "directory", media_content_id: plexUri("server/Recommended"), media_content_type: "server", can_play: false, can_expand: true },
+      { title: "Movies", media_class: "directory", media_content_id: plexUri("1"), media_content_type: "library", can_play: false, can_expand: true },
+    ],
+  });
+  if (!media_content_type) return isCast ? { title: "Cast", media_class: "directory", media_content_id: "", media_content_type: "app", children: [{ title: "Plex", media_class: "app", media_content_id: "", media_content_type: "plex", can_play: false, can_expand: true }] } : server();
+  if (media_content_type === "plex") return server();
+  if (media_content_type === "server") {
+    return { title: "Bryggers", media_class: "directory", media_content_id: media_content_id, media_content_type: "server", can_expand: true,
+      children: Object.entries(PLEX_HUBS).map(([id, [title]]) => ({ title, media_class: "directory", media_content_id: plexUri(`server/${id}`), media_content_type: "hub", can_play: false, can_expand: true })) };
+  }
+  if (media_content_type === "hub") {
+    const id = media_content_id.split("/").pop();
+    if (!PLEX_HUBS[id]) throw new Error("Hub not found");
+    return { title: PLEX_HUBS[id][0], media_class: "directory", media_content_id, media_content_type: "hub", can_expand: true, children: PLEX_HUBS[id][1]() };
+  }
+  if (media_content_type === "show") {
+    const key = Number(media_content_id.split("/").pop().split("?")[0]);
+    return { title: PLEX_TITLES[key] ?? "Show", media_class: "tv_show", media_content_id, media_content_type: "show", can_expand: true,
+      children: [1, 2].map((n) => plexItem(key * 10 + n, "season", `Season ${n}`, { expand: true })) };
+  }
+  if (media_content_type === "season") {
+    const key = Number(media_content_id.split("/").pop().split("?")[0]);
+    return { title: `${PLEX_TITLES[Math.floor(key / 10)] ?? "Show"} - Season ${key % 10}`, media_class: "season", media_content_id, media_content_type: "season", can_expand: true,
+      children: [1, 2, 3].map((n) => plexItem(key * 100 + n, "episode", `S0${key % 10}E0${n} - Episode ${n}`)) };
+  }
+  throw new Error("Media not found");
+}
+const plexPoster = (key) => {
+  const hue = (Number(key) * 47) % 360;
+  const label = String(PLEX_TITLES[key] ?? "Plex").replace(/&/g, "&amp;").replace(/</g, "&lt;").slice(0, 24);
+  const wide = [2001, 2003, 2004].includes(Number(key));
+  const [w, h] = wide ? [320, 180] : [200, 300];
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}"><rect width="${w}" height="${h}" fill="hsl(${hue} 45% 32%)"/><text x="${w / 2}" y="${h / 2}" font-family="Arial,sans-serif" font-weight="700" font-size="20" fill="#fff" text-anchor="middle">${label}</text></svg>`;
+};
 
 // Music Assistant: radio stations (logos are served by this mock at /imageproxy).
 const STATIONS = [
@@ -255,7 +332,11 @@ function callService({ domain, service, service_data = {}, target = {} }) {
     else if (service === "toggle") next.state = s.state === "on" ? "off" : "on";
     else if (service === "media_play_pause") next.state = s.state === "playing" ? "paused" : "playing";
     else if (service === "select_option") next.state = service_data.option;
-    else if (domain === "climate" && service === "set_temperature") next.attributes.temperature = service_data.temperature;
+    else if (domain === "media_player" && service === "play_media" && String(service_data.media_content_id).startsWith("plex://")) {
+      next.state = "playing";
+      next.attributes.media_title = `plex ${service_data.media_content_id}`;
+      console.log(`[mock-ha] plex play ${service_data.media_content_type} ${service_data.media_content_id} on ${id}`);
+    } else if (domain === "climate" && service === "set_temperature") next.attributes.temperature = service_data.temperature;
     else if (domain === "climate" && service === "set_hvac_mode") next.state = service_data.hvac_mode;
     else if (domain === "button" && service === "press") {
       next.state = new Date().toISOString();
@@ -299,6 +380,11 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { "Content-Type": "image/svg+xml" });
     return res.end(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2e86ab"/><stop offset="1" stop-color="#e4572e"/></linearGradient></defs><rect width="300" height="300" fill="url(#g)"/><circle cx="150" cy="150" r="95" fill="rgba(0,0,0,.2)"/><circle cx="150" cy="150" r="20" fill="rgba(255,255,255,.8)"/><text x="18" y="46" font-family="Arial" font-weight="700" font-size="30" fill="rgba(255,255,255,.85)">${label}</text></svg>`);
   }
+  const plexImage = url.pathname.match(/^\/api\/plex_image_proxy\/([a-z0-9]+)\/(\d+)$/);
+  if (plexImage) {
+    res.writeHead(200, { "Content-Type": "image/svg+xml" });
+    return res.end(plexPoster(plexImage[2]));
+  }
   if (url.pathname === "/imageproxy") {
     res.writeHead(200, { "Content-Type": "image/svg+xml" });
     return res.end(logo(url.searchParams.get("path")));
@@ -332,6 +418,13 @@ wss.on("connection", (ws) => {
     if (msg.type === "call_service" && msg.domain === "music_assistant" && msg.service === "get_library") {
       const items = STATIONS.map(({ _color, _label, ...item }) => item);
       return reply({ context: {}, response: { items, limit: msg.service_data.limit, offset: 0, order_by: "name", media_type: "radio" } });
+    }
+    if (msg.type === "media_player/browse_media") {
+      try {
+        return reply(plexBrowse(msg));
+      } catch (err) {
+        return ws.send(JSON.stringify({ id: msg.id, type: "result", success: false, error: { code: "failed", message: err.message } }));
+      }
     }
     if (msg.type === "call_service" && msg.domain === "calendar" && msg.service === "get_events") {
       const wanted = msg.target?.entity_id ?? [];
