@@ -1,7 +1,7 @@
 import { isUnavailable } from "./format.js";
 
 const ON = new Set(["on", "true", "yes", "charging"]);
-const PLUGGED = new Set(["on", "connected", "plugged", "plugged_in", "true", "yes"]);
+const PLUGGED = new Set(["on", "connected", "charging", "plugged", "plugged_in", "true", "yes"]);
 const UNPLUGGED = new Set(["off", "disconnected", "not_plugged_in", "unplugged", "false", "no"]);
 
 const num = (value) => {

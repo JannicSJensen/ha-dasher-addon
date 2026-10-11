@@ -6,7 +6,7 @@ const CHARGER_PLATFORMS = new Set(["peblar", "easee", "wallbox", "zaptec", "ocpp
 
 /**
  * How to recognise the entities of the car page in Home Assistant's registry (`pl` = integration,
- * `tk` = translation key) and states. EV Smart Charging and Peblar are known by name; everything else
+ * `tk` = translation key) and states. EV Smart Charging, Peblar and FordPass are known by name; everything else
  * is set in the `ev:` section of dashboard.yaml.
  */
 const RULES = {
@@ -17,7 +17,10 @@ const RULES = {
   ready_time_entity: (e) => e.pl === "ev_smart_charging" && e.tk === "charge_completion_time",
   start_entity: (e) => e.pl === "ev_smart_charging" && e.tk === "manually_start_charging",
   stop_entity: (e) => e.pl === "ev_smart_charging" && e.tk === "manually_stop_charging",
-  plug_entity: (e) => e.pl === "ev_smart_charging" && e.tk === "ev_connected",
+  // The car's own report beats EV Smart Charging's "EV connected" switch, which is only its own input and can say "on" while unplugged.
+  battery_entity: (e) => e.pl === "fordpass" && e.tk === "soc",
+  range_entity: (e) => e.pl === "fordpass" && e.tk === "elveh",
+  plug_entity: [(e) => e.pl === "fordpass" && e.tk === "elvehplug", (e) => e.pl === "ev_smart_charging" && e.tk === "ev_connected"],
   charge_switch_entity: (e) => CHARGER_PLATFORMS.has(e.pl) && domainOf(e.ei) === "switch" && e.tk === "charge",
   restart_entity: (e, index) =>
     CHARGER_PLATFORMS.has(e.pl) && domainOf(e.ei) === "button" && (index.get(e.ei)?.deviceClass === "restart" || RESTART_WORDS.test(e.ei)),
@@ -27,9 +30,15 @@ const RULES = {
 export function discoverEv({ registries, index = new Map() }) {
   const found = {};
   const entries = [...(registries?.entities ?? [])].filter((e) => e?.ei && !e.hb).sort((a, b) => a.ei.localeCompare(b.ei));
-  for (const [role, matches] of Object.entries(RULES)) {
-    const hit = entries.find((e) => matches(e, index));
-    if (hit) found[role] = hit.ei;
+  for (const [role, rule] of Object.entries(RULES)) {
+    // A list of matchers is in order of preference.
+    for (const matches of Array.isArray(rule) ? rule : [rule]) {
+      const hit = entries.find((e) => matches(e, index));
+      if (hit) {
+        found[role] = hit.ei;
+        break;
+      }
+    }
   }
   return found;
 }

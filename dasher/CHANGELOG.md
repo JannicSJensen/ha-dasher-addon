@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.10.3
+
+- Car page: "plugged in" no longer sticks to *on*. When a FordPass car is present, its plug sensor is used (and its battery level and range), instead of EV Smart Charging's *EV connected* switch, which can say "on" while the car is unplugged. Set `plug_entity` in the `ev:` section to use another entity.
+
 ## 0.10.2
 
 - The *Map entities* screen now also lists features your `dashboard.yaml` does not use yet (the `calendar` tile and the electricity price in the car tile). Pick the entities there and copy the ready-made YAML into `dashboard.yaml`.

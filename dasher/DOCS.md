@@ -195,7 +195,7 @@ A **Car** entry (icon of an electric car; title and icon can be changed) appears
 
 ### Entities
 
-The page recognises **EV Smart Charging** (HACS) and **Peblar** entities on its own, by integration and entity type, so nothing needs to be set for them: the smart charging switch, status and schedule sensor, the start/completion time selects, the manual start and stop buttons, the charger's charge switch and its restart button. Everything can be set or overridden in an `ev:` section of `dashboard.yaml`:
+The page recognises **EV Smart Charging** (HACS), **Peblar** and **FordPass** entities on its own, by integration and entity type, so nothing needs to be set for them: the smart charging switch, status and schedule sensor, the start/completion time selects, the manual start and stop buttons, the charger's charge switch and its restart button; from FordPass the battery level, range and the plug state (the car's own report is used for "plugged in" in preference to EV Smart Charging's *EV connected* switch, which only reflects its own input). Everything can be set or overridden in an `ev:` section of `dashboard.yaml`:
 
 ```yaml
 ev:

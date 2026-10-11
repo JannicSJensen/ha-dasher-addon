@@ -1,6 +1,6 @@
 {
   "name": "dasher-addon",
-  "version": "0.10.2",
+  "version": "0.10.3",
   "private": true,
   "type": "module",
   "description": "Tablet dashboard server for Home Assistant",

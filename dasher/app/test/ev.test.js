@@ -77,3 +77,22 @@ test("the ev section is parsed, validated and takes part in entity mapping", () 
   assert.equal(config.ev.enabled, "auto");
   assert.equal(parseConfig("pages:\n  - id: a\nev:\n  enabled: false\n").config.ev.enabled, false);
 });
+
+test("discoverEv prefers the car's own FordPass entities over EV Smart Charging's connected switch", () => {
+  const withCar = {
+    entities: [
+      ...registries.entities,
+      entry("sensor.fordpass_x_elvehplug", "fordpass", "elvehplug"),
+      entry("sensor.fordpass_x_soc", "fordpass", "soc"),
+      entry("sensor.fordpass_x_elveh", "fordpass", "elveh"),
+      entry("sensor.fordpass_x_elvehcharging", "fordpass", "elvehcharging"),
+    ],
+  };
+  const found = discoverEv({ registries: withCar });
+  assert.equal(found.plug_entity, "sensor.fordpass_x_elvehplug");
+  assert.equal(found.battery_entity, "sensor.fordpass_x_soc");
+  assert.equal(found.range_entity, "sensor.fordpass_x_elveh");
+  // without a car integration the EV Smart Charging switch is still used
+  assert.equal(discoverEv({ registries }).plug_entity, "switch.ev_smart_charging_ev_connected");
+  assert.equal(discoverEv({ registries }).battery_entity, undefined);
+});
