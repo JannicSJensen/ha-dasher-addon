@@ -6,9 +6,36 @@ const has = (attrs, flag) => attrs?.supported_features == null || (Number(attrs.
 
 const BUSY_STATES = new Set(["cleaning", "mowing"]);
 
+/** "Robbie   Robbie " (Dreame repeats its name) -> "Robbie". */
+export function tidyName(name) {
+  const words = String(name ?? "").trim().split(/\s+/).filter(Boolean);
+  const half = words.length / 2;
+  if (words.length >= 2 && Number.isInteger(half) && words.slice(0, half).join(" ").toLowerCase() === words.slice(half).join(" ").toLowerCase()) return words.slice(0, half).join(" ");
+  return words.join(" ");
+}
+
+const CLEAN_WATER_TEXT = /water tank dry|low water|no water|water shortage|water level low|clean water tank (low|empty|dry)|lack of water/i;
+const DIRTY_WATER_TEXT = /dirty water tank (is )?full|waste water (tank )?(is )?full|dirty tank full|water tank full/i;
+
+/**
+ * Whether a (Dreame-style) vacuum needs its water changed: { clean, dirty }. `clean`: the clean water tank is low or
+ * empty, `dirty`: the dirty water tank is full. Read from the vacuum's own attributes (tank status, low water flag,
+ * the error and the faults), so no extra entities are needed.
+ */
+export function vacuumWater(entity) {
+  const none = { clean: false, dirty: false };
+  if (!entity || entity.state === "unavailable") return none;
+  const a = entity.attributes ?? {};
+  const texts = [a.error, a.low_water_warning, ...(a.faults && typeof a.faults === "object" ? Object.values(a.faults) : [])]
+    .filter((x) => typeof x === "string" && x && !/^no (error|warning)$/i.test(x));
+  const clean = a.low_water === true || /low|empty|dry/i.test(String(a.clean_water_tank_status ?? "")) || texts.some((x) => CLEAN_WATER_TEXT.test(x));
+  const dirty = /full/i.test(String(a.dirty_water_tank_status ?? "")) || texts.some((x) => DIRTY_WATER_TEXT.test(x));
+  return { clean, dirty };
+}
+
 /** What a vacuum card needs: a simple status, battery, fan speed and which buttons make sense. */
 export function vacuumInfo(entity) {
-  if (isUnavailable(entity)) return { status: entity?.state === "unknown" ? "unknown" : "unavailable", usable: false, fanSpeeds: [], error: null };
+  if (isUnavailable(entity)) return { status: entity?.state === "unknown" ? "unknown" : "unavailable", usable: false, fanSpeeds: [], error: null, water: { clean: false, dirty: false } };
   const a = entity.attributes ?? {};
   const state = entity.state;
   const battery = [a.battery_level, a.battery].map(Number).find((n) => Number.isFinite(n) && n >= 0 && n <= 100) ?? null;
@@ -30,6 +57,7 @@ export function vacuumInfo(entity) {
     canDock: has(a, VACUUM.RETURN_HOME),
     canLocate: has(a, VACUUM.LOCATE) && a.supported_features != null,
     startService: a.supported_features != null && !has(a, VACUUM.START) && has(a, VACUUM.TURN_ON) ? "turn_on" : "start",
+    water: vacuumWater(entity),
     error: typeof a.error === "string" && a.error && !/^no error$/i.test(a.error) ? a.error : null,
   };
 }

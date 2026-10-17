@@ -52,7 +52,7 @@ put("number.fordpass_x_rcctemperature", "22.0", { friendly_name: "RC: Temperatur
 put("switch.fordpass_x_rccdefrostfront", "off", { friendly_name: "RC: Front" });
 put("switch.fordpass_x_rccdefrostrear", "off", { friendly_name: "RC: Rear" });
 // vacuums and LG ThinQ-like appliances (washer running, dishwasher idle, dryer offline)
-put("vacuum.robbie", "docked", { friendly_name: "Robbie", supported_features: 31676, battery_level: 80, fan_speed: "standard", fan_speed_list: ["silent", "standard", "strong", "turbo"] });
+put("vacuum.robbie", "paused", { friendly_name: "Robbie   Robbie ", clean_water_tank_status: "Low water", dirty_water_tank_status: "Installed", error: "Water tank dry", faults: { 107: "Water tank dry" }, supported_features: 31676, battery_level: 80, fan_speed: "standard", fan_speed_list: ["silent", "standard", "strong", "turbo"] });
 put("vacuum.overlord", "cleaning", { friendly_name: "Overlord", supported_features: 31676, battery_level: 54, fan_speed: "strong", fan_speed_list: ["silent", "standard", "strong", "turbo"] });
 put("vacuum.roborock_old", "unavailable", { friendly_name: "roborock.vacuum.s5" });
 const appliance = (slug, status, extra = {}) => {

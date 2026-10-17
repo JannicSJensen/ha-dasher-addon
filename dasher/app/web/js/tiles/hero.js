@@ -3,7 +3,7 @@ import { assetUrl } from "../core/api.js";
 import { formatDate, formatTime } from "../lib/format.js";
 import { icon } from "../core/icons.js";
 import { pickFirst } from "../lib/conditions.js";
-import { activeMessages } from "../lib/messages.js";
+import { activeMessages, withVacuumMessages } from "../lib/messages.js";
 import { backgroundImage, createButtonRow } from "./common.js";
 
 /** Large area tile: state-dependent background, clock/date and a row of quick buttons. */
@@ -60,7 +60,8 @@ export function createHeroTile(cfg, ctx) {
   };
 
   const paintMessages = () => {
-    const list = Array.isArray(cfg.messages) && cfg.messages.length ? activeMessages(cfg.messages, ctx.getState, { t: ctx.t, locale: ctx.locale }) : [];
+    const configured = withVacuumMessages(cfg);
+    const list = configured.length ? activeMessages(configured, ctx.getState, { t: ctx.t, locale: ctx.locale, vacuums: ctx.vacuums?.() ?? [] }) : [];
     const signature = JSON.stringify(list);
     if (signature === messagesSignature) return;
     messagesSignature = signature;
@@ -81,6 +82,10 @@ export function createHeroTile(cfg, ctx) {
 
   return {
     el,
+    // the vacuums that may need water, so the tile is updated when one changes
+    get entities() {
+      return withVacuumMessages(cfg).some((m) => m?.kind === "vacuum" && !m.entity) ? (ctx.vacuums?.() ?? []) : [];
+    },
     update() {
       paintMessages();
       const match = pickFirst(cfg.backgrounds, ctx.getState);

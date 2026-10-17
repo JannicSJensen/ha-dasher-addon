@@ -97,6 +97,7 @@ pages:
           - { entity: sensor.waste_general }       # a pick-up sensor: "Empty the trash can" today and tomorrow
           - { entity: sensor.waste_paper }
           - { entity: sensor.waste_plastic }
+          # A robot vacuum that needs its water changed also shows up here by itself (vacuum_water: false turns that off).
           # - { entity: sensor.waste_paper, within_days: 2, name: Paper, title: Put out the paper }
           # - { entity: binary_sensor.garage_door, text: The garage door is open, icon: garage-open }   # any entity that is on
         buttons:

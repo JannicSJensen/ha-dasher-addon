@@ -2,7 +2,7 @@ import { h } from "../core/h.js";
 import { icon, setIcon } from "../core/icons.js";
 import { formatNumber, isUnavailable } from "../lib/format.js";
 import { powerCall, stepTarget } from "../lib/climate.js";
-import { applianceInfo, batteryIcon, formatRemaining, vacuumInfo, vacuumMainCall } from "../lib/devices.js";
+import { applianceInfo, batteryIcon, formatRemaining, tidyName, vacuumInfo, vacuumMainCall } from "../lib/devices.js";
 import { translateState } from "../lib/i18n.js";
 import { friendlyName, pressable } from "../tiles/common.js";
 
@@ -59,7 +59,7 @@ export function createDevicesPage(model, ctx) {
         const e = getState(id);
         const info = vacuumInfo(e);
         card.className = `devcard is-${info.status}${info.cleaning ? " is-active" : ""}`;
-        name.textContent = friendlyName(e, id).replace(/\s+/g, " ").trim();
+        name.textContent = tidyName(friendlyName(e, id));
         setIcon(iconEl, info.cleaning ? "robot-vacuum" : info.docked ? "robot-vacuum" : info.status === "error" ? "robot-vacuum-alert" : "robot-vacuum-variant");
         battery.hidden = info.battery == null;
         if (info.battery != null) {
@@ -67,8 +67,9 @@ export function createDevicesPage(model, ctx) {
           batteryText.textContent = `${num(info.battery)}%`;
         }
         status.textContent = info.usable ? (t(`dev_vac_${info.status}`) !== `dev_vac_${info.status}` ? t(`dev_vac_${info.status}`) : translateState(t, info.status)) : t(info.status === "unknown" ? "unknown" : "unavailable");
-        error.textContent = info.error ?? "";
-        error.hidden = !info.error;
+        const waterHint = [info.water.clean ? t("msg_vac_fill") : null, info.water.dirty ? t("msg_vac_empty") : null].filter(Boolean).join(" · ");
+        error.textContent = waterHint || (info.error ?? "");
+        error.hidden = !error.textContent;
         const action = info.usable ? vacuumMainCall(info) : null;
         main.disabled = !action;
         const pausing = action?.service === "pause" || action?.service === "stop";

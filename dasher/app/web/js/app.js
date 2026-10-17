@@ -73,6 +73,7 @@ function makeContext(config) {
     musicEnabled: () => Boolean(store.getState().music?.enabled),
     lastPlayed: () => store.getState().lastPlayed,
     evEnabled: () => Boolean(store.getState().ev?.enabled),
+    vacuums: () => store.getState().devices?.vacuums ?? [],
     /** Open the full-screen player; false when nothing is playing or paused. */
     openNowPlaying: (speaker) => Boolean(nowScreen?.open(speaker)),
     navigate: (target) => (location.hash = `#/${target}`),
@@ -403,6 +404,7 @@ store.subscribe((s) => s.devices, () => {
   const { config } = store.getState();
   if (!config) return;
   if (route.kind === "devices" || location.hash === "#/devices") renderRoute();
+  else if (route.kind === "page" && config.pages.find((p) => p.id === route.id)?.tiles.some((tile) => tile.type === "hero" && Array.isArray(tile.messages))) renderRoute(); // its messages follow the vacuums
   else renderSidebar(config);
 });
 

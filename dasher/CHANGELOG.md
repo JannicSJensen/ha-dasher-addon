@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.19.0
+
+- A robot vacuum that needs its water changed now shows a **Change the water** status message on the front page: *Refill the clean water tank* and/or *Empty the dirty water tank*, with the vacuum's name. It appears automatically on a hero tile with `messages:` (`vacuum_water: false` turns it off) and is also shown on the vacuum's card on the Devices page. Doubled Dreame names such as "Robbie Robbie" are shown once.
+
 ## 0.18.1
 
 - The picture and title in the Music page's now-playing bar open the full-screen player (marked with a small expand symbol), so it can be brought back after it was closed. It shows the speaker chosen in the bar.
