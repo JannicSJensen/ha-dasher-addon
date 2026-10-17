@@ -88,6 +88,8 @@ tap: { action: service, service: scene.turn_on, entity: scene.cozy, data: {} }
 ### Tile types
 
 #### `hero`
+
+![Front page](https://raw.githubusercontent.com/JannicSJensen/ha-dasher-addon/main/docs/screenshots/home.png)
 Large area picture with clock, date and quick buttons.
 
 | Key | Description |
@@ -199,6 +201,8 @@ A grid of icon buttons (`buttons`, same format as in `hero`) with an optional `t
 
 ## Missing entities
 
+![Map missing entities](https://raw.githubusercontent.com/JannicSJensen/ha-dasher-addon/main/docs/screenshots/map-entities.png)
+
 When `dashboard.yaml` uses entities that your Home Assistant does not have (for example after copying a dashboard from somewhere else, or after renaming a device), the tablet shows a warning at the bottom with a **Map entities** button, and a **Map entities** entry appears in the sidebar.
 
 * The screen lists every missing entity, the tiles that use it, and a **Choose** button. It offers the entities of your Home Assistant that look most alike (same kind, matching words in the name and in the tile's title) and a search box that also looks at names and areas. Tap one and the dashboard uses it from then on.
@@ -209,6 +213,8 @@ When `dashboard.yaml` uses entities that your Home Assistant does not have (for 
 * A mapping can only point to an entity of the same kind, but it can point to any entity of that kind: anyone who can reach the tablet page can change it. Turn off the app option `allow_entity_mapping` to prevent that.
 
 ## Car
+
+![Car page](https://raw.githubusercontent.com/JannicSJensen/ha-dasher-addon/main/docs/screenshots/car.png)
 
 A **Car** entry (icon of an electric car; title and icon can be changed) appears in the sidebar when there is something to control. The page is deliberately small:
 
@@ -255,6 +261,8 @@ ev:
 
 ## Climate
 
+![Climate page](https://raw.githubusercontent.com/JannicSJensen/ha-dasher-addon/main/docs/screenshots/climate.png)
+
 A **Climate** entry in the menu gives an overview of the heating: one card per room with the temperature, whether it is heating, the setpoint with **−** / **+** buttons and a power button. A summary at the top shows how many are on and the average temperature.
 
 By default it lists your **climate helpers** (Settings > Devices & services > Helpers: climate groups and generic thermostats), not every thermostat of every device, so rooms are not listed several times. Configure it in a `climate:` section of `dashboard.yaml`:
@@ -275,6 +283,8 @@ climate:
 * A change of the setpoint is sent half a second after the last tap. Cards of entities that are unavailable are dimmed.
 
 ## Media
+
+![Media page](https://raw.githubusercontent.com/JannicSJensen/ha-dasher-addon/main/docs/screenshots/media.png)
 
 A **Media** entry in the menu shows what Plex offers on its home screen and plays it on your player:
 
@@ -317,6 +327,8 @@ plex:
 
 ## Devices
 
+![Devices page](https://raw.githubusercontent.com/JannicSJensen/ha-dasher-addon/main/docs/screenshots/devices.png)
+
 A **Devices** entry in the menu collects the household machines, in sections for **Vacuums**, **Dishwashers**, **Dryers and clothes heaters** and **Washing machines**:
 
 * **Vacuum cards:** name, battery, status (cleaning, docked, returning, paused, error with its message), a main button (*Start*, *Pause* or *Resume*), **Dock** and **Find**, and the fan speed as chips when the vacuum has them. Every `vacuum` entity is listed; ones that are unavailable are dimmed.
@@ -349,6 +361,8 @@ devices:
 
 ## To-do lists
 
+![A to-do list](https://raw.githubusercontent.com/JannicSJensen/ha-dasher-addon/main/docs/screenshots/todo-list.png)
+
 A **To-do lists** entry in the menu (call it *Huskelister* with `title:`) lists every `todo` entity of Home Assistant as a card: the name, how many items are open and where the list comes from (shopping list, Local, CalDAV, ...). Tap a list to work on it:
 
 * **Add** an item with the field at the top (Enter works too).
@@ -373,6 +387,8 @@ todo:
 * Renaming a list changes the name of its entity in Home Assistant (the entity id stays).
 
 ## Areas
+
+![Areas](https://raw.githubusercontent.com/JannicSJensen/ha-dasher-addon/main/docs/screenshots/areas.png)
 
 Every area in Home Assistant (Settings → Areas) gets a picture card on an **Areas** page, reachable from the extra entry at the bottom of the sidebar. A card shows the area name, its floor (or how many lights are on) and opens a sub-page with:
 
@@ -411,6 +427,8 @@ Areas without any matching entity are not listed. If the app cannot read the are
 
 ## Music
 
+![Music page](https://raw.githubusercontent.com/JannicSJensen/ha-dasher-addon/main/docs/screenshots/music-discover.png)
+
 If the Music Assistant integration is set up in Home Assistant, a **Music** entry appears in the sidebar (the title and icon can be changed). The page has these parts:
 
 * **Speakers** at the top: one button for every Music Assistant player. Pick the one to listen on; the choice is remembered on that tablet. Speakers that are playing show moving bars, unavailable ones are hidden.
@@ -435,6 +453,8 @@ These tabs read your library through Music Assistant's own API (Home Assistant's
 
 ### Party
 
+![Party tab](https://raw.githubusercontent.com/JannicSJensen/ha-dasher-addon/main/docs/screenshots/music-party.png)
+
 The **Party** tab is the host dashboard of Music Assistant's [Party plugin](https://music-assistant.io/plugins/party/) (*Settings → Plugins → Add a plugin → Party* in Music Assistant). It shows:
 
 * the **QR code** guests scan to add songs from their phones (with the party name and text you set in the plugin, and whether it is *Venue* or *Silent disco* mode), and
@@ -452,6 +472,8 @@ Music Assistant can play on several speakers in sync. Press **Group** at the top
 * Which speakers can be combined is up to Music Assistant: speakers of different kinds (for example AirPlay and Chromecast) cannot join the same sync group and the error is shown on screen. Music Assistant's own group players (such as "Party") are ordinary speakers on this page and cannot be put into a sync group.
 
 ### Full-screen player
+
+![Full-screen player](https://raw.githubusercontent.com/JannicSJensen/ha-dasher-addon/main/docs/screenshots/now-playing.png)
 
 When a Music Assistant speaker **starts playing**, the tablet shows a full-screen player: big artwork on a blurred background, title, album or station, artist, a progress bar you can tap to seek, shuffle, previous, play/pause, next and repeat, a volume slider and the speaker's name (tap it to switch between speakers when several play; a sync group shows `+2`).
 

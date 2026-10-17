@@ -20,6 +20,29 @@ This repository contains the **Dasher** app (add-on) for Home Assistant: a dark,
 * Vanilla JavaScript front end, one small Node.js server, no build step.
 * Commands from tablets are restricted to the entities in `dashboard.yaml`, the area pages, the climate page, the devices page, the to-do page, the media page and the music page, and to a fixed list of services.
 
+## Screenshots
+
+All screenshots show the built-in fake Home Assistant and Music Assistant (see [Development](#development)), so the names, tracks and posters are made up. Click an image for full size.
+
+| | |
+| :---: | :---: |
+| [![Front page](docs/screenshots/home.png)](docs/screenshots/home.png) | [![Climate](docs/screenshots/climate.png)](docs/screenshots/climate.png) |
+| **Front page**<br>Clock, status messages (waste pick-up and a vacuum that needs water), calendar with weather, now playing, car with the electricity price, and quick buttons. | **Climate**<br>A card per room, built from your climate helpers. |
+| [![Areas](docs/screenshots/areas.png)](docs/screenshots/areas.png) | [![An area](docs/screenshots/area.png)](docs/screenshots/area.png) |
+| **Areas**<br>Every Home Assistant area as a clickable picture. | **An area**<br>Temperature, humidity and windows over the area's picture; swipe up for the devices. |
+| [![An area, devices](docs/screenshots/area-devices.png)](docs/screenshots/area-devices.png) | [![Music: Discover](docs/screenshots/music-discover.png)](docs/screenshots/music-discover.png) |
+| **An area, devices**<br>A picture tile with a brightness slider for every light, and the area's players. | **Music: Discover**<br>Music Assistant's recommendations, with a speaker picker and grouping. |
+| [![Music: Radio](docs/screenshots/music-radio.png)](docs/screenshots/music-radio.png) | [![Music: Party](docs/screenshots/music-party.png)](docs/screenshots/music-party.png) |
+| **Music: Radio**<br>One button per radio station. | **Music: Party**<br>The guest QR code and live queue of Music Assistant's Party plugin. |
+| [![Full-screen player](docs/screenshots/now-playing.png)](docs/screenshots/now-playing.png) | [![Media (Plex)](docs/screenshots/media.png)](docs/screenshots/media.png) |
+| **Full-screen player**<br>Opens when music starts: big artwork, seeking, shuffle/repeat and volume. | **Media (Plex)**<br>Continue watching and recently added movies and series, played on Cast, Plex, Apple TV or DLNA players. |
+| [![To-do lists](docs/screenshots/todo.png)](docs/screenshots/todo.png) | [![A to-do list](docs/screenshots/todo-list.png)](docs/screenshots/todo-list.png) |
+| **To-do lists**<br>Every to-do list of Home Assistant (Huskelister). | **A to-do list**<br>Add, tick off, edit and delete items; rename or delete Local To-do lists. |
+| [![Devices](docs/screenshots/devices.png)](docs/screenshots/devices.png) | [![Car](docs/screenshots/car.png)](docs/screenshots/car.png) |
+| **Devices**<br>Robot vacuums, dishwashers, dryers, clothes heaters and washing machines. | **Car**<br>Charging, smart charging with its times, remote climate and a charger restart. |
+| [![Map missing entities](docs/screenshots/map-entities.png)](docs/screenshots/map-entities.png) | |
+| **Map missing entities**<br>Pick your own entities when the dashboard uses ones Home Assistant does not have. | |
+
 ## Install
 
 1. Click the button above, or in Home Assistant open **Settings → Apps → App store → ⋮ → Repositories** and add
@@ -54,7 +77,7 @@ CONFIG_DIR=$PWD/dev/config DATA_DIR=$PWD/dev/data \
 node src/index.js             # then open http://localhost:8099
 ```
 
-`npm run dev` starts all three at once. The first start copies `examples/dashboard.yaml` to `dev/config/`; edit that copy and the page reloads.
+`npm run dev` starts all three at once. The screenshots above are made by `dev/screenshots.mjs` (see the top of that file). The first start copies `examples/dashboard.yaml` to `dev/config/`; edit that copy and the page reloads.
 
 Against a real Home Assistant, create a long-lived access token (Profile → Security), keep it in your shell rather than in a file, and set `HA_URL` and `HA_TOKEN`. For the Music Assistant tabs also set `MA_URL` and `MA_TOKEN`. Entities in `dashboard.yaml` that Home Assistant does not know are logged as a warning and shown in a banner on the tablet.
 

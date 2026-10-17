@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.20.1
+
+- Devices page: the appliance cards are a little wider so the *Delayed end* buttons no longer overflow.
+- Documentation: screenshots of every page in the repository README and the app's documentation (`docs/screenshots`), made by `dev/screenshots.mjs` from the built-in fake servers.
+
 ## 0.20.0
 
 - New **To-do lists** page (call it *Huskelister* with `todo: title:`): every to-do list of Home Assistant as a card with its open items. Open a list to add, tick off, edit (text, description, due date where supported) and delete items, and clear completed ones. Lists of the Local To-do integration can be created, renamed and deleted; the new app option `allow_todo_management` (default on) can forbid changing lists.

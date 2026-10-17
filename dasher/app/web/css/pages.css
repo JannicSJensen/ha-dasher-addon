@@ -650,7 +650,7 @@
 .devpage::-webkit-scrollbar { display: none; }
 .devsection { margin-top: 20px; }
 .devsection__title { margin: 0 0 10px; font-size: 18px; font-weight: 500; }
-.devgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.devgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
 .devcard { position: relative; display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: var(--radius); background: var(--tile-bg); overflow: hidden; transition: background 0.4s, opacity 0.3s; }
 .devcard::before { content: ""; position: absolute; inset: 0; background: radial-gradient(90% 70% at 90% 0%, color-mix(in srgb, var(--accent) 24%, transparent), transparent 70%); opacity: 0; transition: opacity 0.5s; pointer-events: none; }
 .devcard.is-active::before { opacity: 1; }
@@ -681,7 +681,9 @@
 .devspeed { padding: 6px 12px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); color: #d0d0d3; font-size: 12.5px; text-transform: capitalize; transition: background 0.2s, color 0.2s; }
 .devspeed.is-active { background: color-mix(in srgb, var(--accent) 24%, #1f1f21); color: var(--accent); box-shadow: inset 0 0 0 1.5px var(--accent); }
 .devspeeds[hidden] { display: none; }
-.devcard .evtemp { margin-top: 0; }
+.devcard .evtemp { margin-top: 0; gap: 8px; }
+.devcard .evtemp__label { flex: 1; min-width: 0; }
+.devcard .evtemp__value { min-width: 52px; }
 
 /* now-playing bar: picture and title open the full-screen player */
 .np__art { position: relative; }
