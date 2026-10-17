@@ -191,6 +191,26 @@ function parseDevices(raw, errors) {
   };
 }
 
+/** Normalise the optional `todo:` section (the to-do lists page). */
+function parseTodo(raw, errors) {
+  const r = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+  const ids = (key) => {
+    const out = [];
+    for (const id of toList(r[key])) {
+      if (ENTITY_RE.test(id) && id.startsWith("todo.")) out.push(id);
+      else errors.push(`todo.${key}: "${id}" is not a todo entity id`);
+    }
+    return out;
+  };
+  return {
+    enabled: r.enabled === false ? false : r.enabled === true ? true : "auto",
+    title: r.title != null ? String(r.title) : null,
+    icon: String(r.icon ?? "format-list-checks"),
+    lists: ids("lists"),
+    exclude: ids("exclude"),
+  };
+}
+
 /** Normalise the optional `plex:` section (the Media page). */
 function parsePlex(raw, errors) {
   const r = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
@@ -259,6 +279,7 @@ export function parseConfig(text, { entityMap = {} } = {}) {
   collectEntities(raw.climate ?? {}, rawEntities);
   for (const id of toList(raw.plex?.players)) rawEntities.add(id);
   for (const id of toList(raw.devices?.vacuums)) rawEntities.add(id);
+  for (const id of toList(raw.todo?.lists)) rawEntities.add(id);
   collectEntities(raw.devices?.appliances ?? [], rawEntities);
   for (const id of [...rawEntities]) if (!ENTITY_RE.test(id)) rawEntities.delete(id);
   const usage = describeUsage(raw);
@@ -316,6 +337,7 @@ export function parseConfig(text, { entityMap = {} } = {}) {
   const climate = parseClimate(raw.climate, errors);
   const plex = parsePlex(raw.plex, errors);
   const devices = parseDevices(raw.devices, errors);
+  const todo = parseTodo(raw.todo, errors);
 
   const config = {
     title: String(raw.title ?? "Dasher"),
@@ -329,6 +351,7 @@ export function parseConfig(text, { entityMap = {} } = {}) {
     climate,
     plex,
     devices,
+    todo,
     pages,
   };
 
@@ -338,6 +361,7 @@ export function parseConfig(text, { entityMap = {} } = {}) {
   for (const id of climate.entities) entities.add(id);
   for (const id of plex.players) entities.add(id);
   for (const id of devices.vacuums) entities.add(id);
+  for (const id of todo.lists) entities.add(id);
   for (const a of devices.appliances) for (const id of Object.values(a.roles)) entities.add(id);
   for (const id of [...music.players, music.default_player]) if (id) entities.add(id);
   return { config, errors, entities, rawEntities, usage };

@@ -67,6 +67,14 @@ plex:
   # transcode: auto         # stream links (Apple TV, DLNA): auto | always | never
   # title: Media
 
+# The to-do lists page (Huskelister): every to-do list of Home Assistant, with items you can add, tick off, edit and delete.
+# Lists of the Local To-do integration can also be created, renamed and deleted here.
+todo:
+  title: Huskelister
+  # enabled: false
+  # lists: [todo.shopping_list, todo.chores]   # default: every to-do list
+  # exclude: [todo.old_list]
+
 # The Devices page: robot vacuums, washing machines, dryers, dishwashers and clothes heaters.
 # Vacuums and LG ThinQ appliances are found automatically; list anything else under appliances.
 devices:

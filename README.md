@@ -12,12 +12,13 @@ This repository contains the **Dasher** app (add-on) for Home Assistant: a dark,
 * **Music page:** swipeable tabs for Discover, Radio, Albums, Artists, Podcasts (with episodes), Party (QR code and live queue of Music Assistant's Party plugin) and Search, a speaker picker with Music Assistant grouping and a now-playing bar. Browsing uses Music Assistant's API with a read-only token in the app options; playback goes through Home Assistant.
 * **Car page:** battery and range, start/stop charging, smart charging with its times, a charger restart, and remote climate (start, temperature, window heat); EV Smart Charging, Peblar and FordPass are recognised automatically.
 * **Media page:** Plex through Home Assistant's Plex integration: continue watching and recently added movies and series. Plays on Cast devices and Plex clients, and, with a Plex address and token in the app options, on Apple TVs and DLNA players with stream links.
+* **To-do lists page (Huskelister):** every to-do list of Home Assistant; add, tick off, edit and delete items, and create, rename and delete Local To-do lists.
 * **Devices page:** robot vacuums with controls, and washing machines, dryers, dishwashers and clothes heaters (LG ThinQ found automatically, others listed in `dashboard.yaml`).
 * **Climate page:** a card per room with temperature, setpoint and power, built from your climate helpers.
 * **Missing entities:** when `dashboard.yaml` uses entities your Home Assistant does not have, a screen on the tablet suggests and lets you pick the right ones; the choices are kept in `entity-map.yaml`. The same screen offers the calendar tile and the car price from newer versions, with ready-made YAML to copy.
 * **Updates:** an unedited `dashboard.yaml` follows new versions of the example (the old one is saved as `dashboard.yaml.bak`); an edited one is never touched. The current example is always written to `dashboard.example.yaml`.
 * Vanilla JavaScript front end, one small Node.js server, no build step.
-* Commands from tablets are restricted to the entities in `dashboard.yaml`, the area pages, the climate page, the devices page, the media page and the music page, and to a fixed list of services.
+* Commands from tablets are restricted to the entities in `dashboard.yaml`, the area pages, the climate page, the devices page, the to-do page, the media page and the music page, and to a fixed list of services.
 
 ## Install
 

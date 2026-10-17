@@ -7,6 +7,7 @@ import { ConfigStore } from "./config.js";
 import { discoverMusicAssistant } from "./discovery.js";
 import { discoverEv, resolveEv } from "./ev.js";
 import { resolveClimate } from "./climate.js";
+import { TodoService, cleanListName, resolveTodo } from "./todo.js";
 import { deviceEntities, discoverDevices, resolveDevices } from "./devices.js";
 import { PlexService, plexBrowsers, plexConfigured, plexPlayers, validBrowse, validatePlay } from "./plex.js";
 import { PlexStreamer } from "./plex-stream.js";
@@ -50,6 +51,7 @@ const logger = Object.fromEntries(
 const PORT = Number(process.env.PORT ?? 8099);
 const READ_ONLY = options.read_only === true;
 // Tablets may map entities that are missing from Home Assistant to existing ones (see entity-map.yaml).
+const TODO_MANAGE = !READ_ONLY && options.allow_todo_management !== false && process.env.ALLOW_TODO_MANAGEMENT !== "0";
 const MAPPING_ENABLED = !READ_ONLY && options.allow_entity_mapping !== false && process.env.ALLOW_ENTITY_MAPPING !== "0";
 const configDir = process.env.CONFIG_DIR ?? "/config";
 
@@ -125,6 +127,26 @@ async function fetchPicture(picture) {
 
 const dataDir = process.env.DATA_DIR ?? (fs.existsSync("/data") ? "/data" : null);
 const calendars = new CalendarService({ ha, logger });
+
+/** Home Assistant's REST API (list creation and removal go through the config entries API). */
+async function haRest(method, apiPath, body) {
+  const response = await fetch(haHttpBase + apiPath, {
+    method,
+    headers: { Authorization: `Bearer ${haToken}`, ...(body ? { "Content-Type": "application/json" } : {}) },
+    body: body ? JSON.stringify(body) : undefined,
+    signal: AbortSignal.timeout(15_000),
+  });
+  const text = await response.text();
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    // not JSON
+  }
+  if (!response.ok) throw new Error(data?.message ?? `HTTP ${response.status}`);
+  return data;
+}
+const todo = new TodoService({ ha, rest: haRest, logger });
 const plexStreamer = new PlexStreamer({ url: options.plex_url ?? process.env.PLEX_URL, token: options.plex_token ?? process.env.PLEX_TOKEN, logger });
 const plex = new PlexService({
   ha,
@@ -161,6 +183,8 @@ let plexState = { enabled: false, players: [] };
 const plexPayload = () => (plexState.enabled ? plexState : { enabled: false, players: [] });
 let devicesState = { enabled: false, vacuums: [], appliances: [] };
 const devicesPayload = () => (devicesState.enabled ? devicesState : { enabled: false, vacuums: [], appliances: [] });
+let todoState = { enabled: false, lists: [], manage: false };
+const todoPayload = () => (todoState.enabled ? todoState : { enabled: false, lists: [], manage: false });
 let climateState = { enabled: false, entities: [] };
 const climatePayload = () => (climateState.enabled ? climateState : { enabled: false, entities: [] });
 const evPayload = () => (evState.enabled ? evState : { enabled: false, roles: {} });
@@ -214,8 +238,10 @@ function rebuild({ refresh }) {
     plex.transcode = settings?.transcode ?? "auto";
   }
   devicesState = resolveDevices({ settings: current.config?.devices, discovered: discoverDevices({ registries: ha.registries, index: ha.entityIndex }) });
+  todoState = resolveTodo({ settings: current.config?.todo, registries: ha.registries, index: ha.entityIndex, manage: TODO_MANAGE });
   allowed = new Set([
     ...current.entities,
+    ...(todoState.enabled ? todoState.lists.map((l) => l.id) : []),
     ...(devicesState.enabled ? deviceEntities(devicesState) : []),
     ...areaModel.entities,
     ...radioPlayerIds,
@@ -230,6 +256,7 @@ function rebuild({ refresh }) {
   broadcast("climate", climatePayload());
   broadcast("plex", plexPayload());
   broadcast("devices", devicesPayload());
+  broadcast("todo", todoPayload());
   if (radioPlayerIds.length && (radio.stations.length === 0 || radio.error)) radio.refresh();
 }
 
@@ -362,6 +389,7 @@ function handleEvents(req, res) {
   send(res, "climate", climatePayload());
   send(res, "plex", plexPayload());
   send(res, "devices", devicesPayload());
+  send(res, "todo", todoPayload());
   send(res, "lastplayed", nowPlaying.payload());
   send(res, "snapshot", Object.fromEntries(ha.states));
   clients.add(res);
@@ -530,6 +558,56 @@ async function handlePlexPlay(req, res) {
   }
 }
 
+const todoList = (id) => todoState.lists.find((l) => l.id === id);
+
+async function handleTodoGet(res, params) {
+  const id = params.get("entity_id");
+  if (!todoState.enabled || !todoList(id)) return json(res, 404, { error: "Unknown list." });
+  try {
+    return json(res, 200, await todo.items(id));
+  } catch (err) {
+    logger.warn(`To-do list ${id} could not be read: ${err.message}`);
+    return json(res, 502, { error: err.message });
+  }
+}
+
+/** Create, rename and delete lists (only Local To-do lists can be changed). */
+async function handleTodoManage(req, res, action) {
+  if (!todoState.enabled) return json(res, 503, { error: "The to-do page is not available." });
+  if (!TODO_MANAGE) return json(res, 403, { error: "Changing lists is switched off." });
+  let body;
+  try {
+    body = JSON.parse(await readBody(req));
+  } catch (err) {
+    return json(res, err.status ?? 400, { error: err.message || "Invalid JSON." });
+  }
+  try {
+    if (action === "create") {
+      const name = cleanListName(body?.name);
+      if (!name) return json(res, 400, { error: "Give the list a name of 1 to 60 characters." });
+      await todo.createList(name);
+      logger.info(`To-do list "${name}" created`);
+      return json(res, 200, { ok: true });
+    }
+    const list = todoList(body?.entity_id);
+    if (!list) return json(res, 404, { error: "Unknown list." });
+    if (!list.managed) return json(res, 400, { error: "Only lists of the Local To-do integration can be changed here." });
+    if (action === "rename") {
+      const name = cleanListName(body?.name);
+      if (!name) return json(res, 400, { error: "Give the list a name of 1 to 60 characters." });
+      await todo.renameList(list.id, name);
+      logger.info(`To-do list ${list.id} renamed to "${name}"`);
+    } else {
+      await todo.deleteList(list.id);
+      logger.info(`To-do list ${list.id} deleted`);
+    }
+    return json(res, 200, { ok: true });
+  } catch (err) {
+    logger.warn(`To-do ${action} failed: ${err.message}`);
+    return json(res, err.status ?? 502, { error: err.message });
+  }
+}
+
 async function handleCalendar(res, params) {
   const scope = calendarScope(configStore.current.config, [...ha.entityIndex.keys()]);
   const window = parseWindow(params.get("start"), params.get("end"));
@@ -640,6 +718,7 @@ const server = http.createServer(async (req, res) => {
       if (p === "/api/events") return handleEvents(req, res);
       if (p === "/api/config") return json(res, 200, configPayload());
       if (p === "/api/calendar") return await handleCalendar(res, url.searchParams);
+      if (p === "/api/todo/items") return await handleTodoGet(res, url.searchParams);
       if (p.startsWith("/api/plex/")) return await handlePlexGet(res, p, url.searchParams);
       if (p === "/api/proxy") return await proxyImage(res, url.searchParams.get("path"));
       if (p.startsWith("/api/entities/")) return await handleMappingGet(res, p, url.searchParams);
@@ -664,6 +743,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "PUT" && p === "/api/entities/map") return await handleMappingPut(req, res);
     if (req.method === "POST" && p === "/api/service") return await handleService(req, res);
     if (req.method === "POST" && p === "/api/plex/play") return await handlePlexPlay(req, res);
+    if (req.method === "POST" && ["/api/todo/create", "/api/todo/rename", "/api/todo/delete"].includes(p)) return await handleTodoManage(req, res, p.slice("/api/todo/".length));
     if (req.method === "POST" && p === "/api/radio/play") return await handleRadioPlay(req, res);
     if (req.method === "POST" && p === "/api/music/play") return await handleMusicPlay(req, res);
     if (req.method === "POST" && p === "/api/radio/group") return await handleRadioGroup(req, res);

@@ -11,6 +11,7 @@ import { createClimatePage } from "./pages/climate.js";
 import { createDevicesPage } from "./pages/devices.js";
 import { createEvPage } from "./pages/ev.js";
 import { createPlexPage } from "./pages/plex.js";
+import { createTodoPage } from "./pages/todo.js";
 import { createMappingPage } from "./pages/mapping.js";
 import { createMusicPage } from "./pages/music.js";
 import { TILE_FACTORIES } from "./tiles/index.js";
@@ -29,6 +30,7 @@ const store = new Store({
   climate: null,
   plex: null,
   devices: null,
+  todo: null,
   lastPlayed: {},
   errors: [],
   entities: {},
@@ -134,7 +136,8 @@ function parseRoute(config) {
   const areasOff = areas !== null && !areas.enabled; // known to be disabled, as opposed to not loaded yet
   const { music } = store.getState();
   const musicOff = music !== null && !music.enabled;
-  const { ev, climate, plex, devices } = store.getState();
+  const { ev, climate, plex, devices, todo } = store.getState();
+  if ((raw === "todo" || raw.startsWith("todo/")) && todo?.enabled) return { kind: "todo", id: raw.startsWith("todo/") ? decodeURIComponent(raw.slice(5)) : null };
   if (raw === "devices" && devices?.enabled) return { kind: "devices", id: null };
   if (raw === "media" && plex?.enabled) return { kind: "plex", id: null };
   if (raw === "ev" && ev?.enabled) return { kind: "ev", id: null };
@@ -176,6 +179,8 @@ function renderSidebar(config) {
     const { music } = store.getState();
     items.push({ href: "#/music", title: music.title ?? t("music"), icon: music.icon, active: route.kind === "music" });
   }
+  const { todo } = store.getState();
+  if (todo?.enabled) items.push({ href: "#/todo", title: todo.title ?? t("todo_title"), icon: todo.icon, active: route.kind === "todo" });
   const { devices } = store.getState();
   if (devices?.enabled) items.push({ href: "#/devices", title: devices.title ?? t("dev_devices"), icon: devices.icon, active: route.kind === "devices" });
   const { plex } = store.getState();
@@ -203,7 +208,7 @@ function mountSingle(page) {
 }
 
 function renderRoute() {
-  const { config, areas, music, ev, climate, plex, devices } = store.getState();
+  const { config, areas, music, ev, climate, plex, devices, todo } = store.getState();
   destroyTiles();
   document.querySelectorAll(".modal").forEach((m) => m.remove());
   route = parseRoute(config);
@@ -211,7 +216,9 @@ function renderRoute() {
   stage.dataset.page = route.kind === "page" ? route.id : route.kind;
   const ctx = makeContext(config);
 
-  if (route.kind === "devices") {
+  if (route.kind === "todo") {
+    mountSingle(createTodoPage(todo, ctx, route.id));
+  } else if (route.kind === "devices") {
     mountSingle(createDevicesPage(devices, ctx));
   } else if (route.kind === "plex") {
     mountSingle(createPlexPage(plex, ctx));
@@ -408,6 +415,13 @@ store.subscribe((s) => s.devices, () => {
   else renderSidebar(config);
 });
 
+store.subscribe((s) => s.todo, () => {
+  const { config } = store.getState();
+  if (!config) return;
+  if (route.kind === "todo" || location.hash.startsWith("#/todo")) renderRoute();
+  else renderSidebar(config);
+});
+
 store.subscribe((s) => s.lastPlayed, () => refreshTiles(true));
 
 window.addEventListener("hashchange", () => {
@@ -441,6 +455,7 @@ connect({
   climate: (climate) => setIfChanged("climate", climate),
   plex: (plex) => setIfChanged("plex", plex),
   devices: (devices) => setIfChanged("devices", devices),
+  todo: (todo) => setIfChanged("todo", todo),
   lastplayed: (lastPlayed) => setIfChanged("lastPlayed", lastPlayed),
   snapshot: (states) => store.setState({ entities: states }),
   state: (state) => store.setState((s) => ({ ...s, entities: { ...s.entities, [state.entity_id]: state } })),

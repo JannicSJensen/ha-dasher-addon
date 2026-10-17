@@ -65,6 +65,25 @@ const appliance = (slug, status, extra = {}) => {
 appliance("vaskemaskine", "running", { remaining: new Date(Date.now() + 47 * 60_000).toISOString() });
 appliance("opvaskemaskine", "end", { power: "on" });
 appliance("torretumbler", "unavailable", { power: "unavailable" });
+// to-do lists: a shopping list, a Local To-do list and a CalDAV list, with items
+const todoItems = new Map();
+const todoFeatures = { shopping_list: 15, local_todo: 127, caldav: 119 };
+const todoMeta = new Map(); // entity id -> { platform, entry }
+let todoUid = 100;
+function todoCreate(entityId, name, platform, items = []) {
+  todoItems.set(entityId, items.map((i) => ({ uid: String(++todoUid), status: "needs_action", ...i })));
+  todoMeta.set(entityId, { platform, entry: `entry-${entityId.slice(5)}` });
+  put(entityId, "0", { friendly_name: name, supported_features: todoFeatures[platform] });
+  todoCount(entityId);
+}
+function todoCount(entityId) {
+  const open = todoItems.get(entityId).filter((i) => i.status === "needs_action").length;
+  const s = states.get(entityId);
+  states.set(entityId, { ...s, state: String(open), last_changed: new Date().toISOString() });
+}
+todoCreate("todo.indkobsliste", "Indkøbsliste", "shopping_list", [{ summary: "Mælk" }, { summary: "Brød" }, { summary: "Æg", status: "completed" }]);
+todoCreate("todo.garage_chores", "Garage chores", "local_todo", [{ summary: "Clean the workbench", description: "Before the weekend", due: dayLabel(2) }, { summary: "Buy oil", due: dayLabel(-1) }]);
+todoCreate("todo.family", "Family ⚠️", "caldav", [{ summary: "Book the dentist" }]);
 put("calendar.family", "off", { friendly_name: "Family" });
 put("calendar.privat", "off", { friendly_name: "Privat" });
 put("weather.forecast_home", "cloudy", { friendly_name: "Forecast Home", temperature: 11 });
@@ -172,6 +191,9 @@ let registry = {
     { ei: "vacuum.robbie", pl: "dreame_vacuum" },
     { ei: "vacuum.overlord", pl: "dreame_vacuum" },
     { ei: "vacuum.roborock_old", pl: "roborock" },
+    { ei: "todo.indkobsliste", pl: "shopping_list" },
+    { ei: "todo.garage_chores", pl: "local_todo" },
+    { ei: "todo.family", pl: "caldav" },
     { ei: "calendar.family" },
     { ei: "calendar.privat" },
     { ei: "weather.forecast_home" },
@@ -310,6 +332,9 @@ const logo = (index) => {
 };
 
 const sockets = new Set();
+const emitRegistry = () => {
+  for (const { ws, subscription } of sockets) if (subscription) ws.send(JSON.stringify({ id: subscription, type: "event", event: { event_type: "entity_registry_updated", data: {} } }));
+};
 const emit = (entity_id) => {
   const new_state = states.get(entity_id);
   for (const { ws, subscription } of sockets) {
@@ -389,6 +414,33 @@ function callService({ domain, service, service_data = {}, target = {} }) {
       next.state = service_data.option;
       if (id.endsWith("_operation")) patch(`sensor.${id.replace(/^select\./, "").replace(/_operation$/, "")}_current_status`, () => {}, service_data.option === "start" ? "running" : "end");
     }
+    else if (domain === "todo" && todoItems.has(id)) {
+      const list = todoItems.get(id);
+      const find = (key) => list.find((i) => i.uid === String(key) || i.summary === String(key));
+      if (service === "add_item") list.push({ uid: String(++todoUid), summary: service_data.item, status: "needs_action", ...(service_data.due_date ? { due: service_data.due_date } : {}), ...(service_data.description ? { description: service_data.description } : {}) });
+      else if (service === "update_item") {
+        const item = find(service_data.item);
+        if (item) {
+          if (service_data.rename) item.summary = service_data.rename;
+          if (service_data.status) item.status = service_data.status;
+          if ("due_date" in service_data) item.due = service_data.due_date ?? undefined;
+          if ("description" in service_data) item.description = service_data.description ?? undefined;
+        }
+      } else if (service === "remove_item") {
+        for (const key of [].concat(service_data.item)) {
+          const item = find(key);
+          if (item) list.splice(list.indexOf(item), 1);
+        }
+      } else if (service === "remove_completed_items") todoItems.set(id, list.filter((i) => i.status !== "completed"));
+      todoCount(id);
+      emit(id);
+      continue;
+    } else if (domain === "vacuum") {
+      if (service === "start") next.state = "cleaning";
+      else if (service === "pause") next.state = "paused";
+      else if (service === "return_to_base") next.state = "docked";
+      else if (service === "set_fan_speed") next.attributes.fan_speed = service_data.fan_speed;
+    } else if (domain === "number" && service === "set_value") next.state = String(service_data.value);
     else if (domain === "media_player" && service === "play_media" && /^https?:\/\//.test(String(service_data.media_content_id))) {
       next.state = "playing";
       console.log(`[mock-ha] stream ${service_data.media_content_type} ${service_data.media_content_id} on ${id}`);
@@ -432,8 +484,54 @@ function callService({ domain, service, service_data = {}, target = {} }) {
   console.log(`[mock-ha] ${domain}.${service}`, ids.join(","), JSON.stringify(service_data));
 }
 
+let flowCounter = 0;
+const slugOf = (name) => name.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "list";
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, "http://localhost");
+  // Home Assistant's config entries API (creating and removing Local To-do lists)
+  if (url.pathname.startsWith("/api/config/config_entries/")) {
+    if (req.headers.authorization !== "Bearer dev") {
+      res.writeHead(401);
+      return res.end();
+    }
+    let raw = "";
+    req.on("data", (c) => (raw += c));
+    req.on("end", () => {
+      const body = raw ? JSON.parse(raw) : {};
+      const send = (status, data) => (res.writeHead(status, { "Content-Type": "application/json" }), res.end(JSON.stringify(data)));
+      if (req.method === "POST" && url.pathname === "/api/config/config_entries/flow") {
+        if (process.env.MOCK_NO_LOCAL_TODO === "1") return send(400, { message: "Invalid handler specified" });
+        return send(200, { type: "form", flow_id: `flow${++flowCounter}`, handler: body.handler, step_id: "user", data_schema: [{ type: "string", name: "todo_list_name", required: true }] });
+      }
+      const flow = url.pathname.match(/^\/api\/config\/config_entries\/flow\/(flow\d+)$/);
+      if (flow && req.method === "DELETE") return send(200, {});
+      if (flow && req.method === "POST") {
+        const name = String(body.todo_list_name ?? "").trim();
+        const id = `todo.${slugOf(name)}`;
+        if (!name || todoItems.has(id)) return send(200, { type: "form", flow_id: flow[1], errors: { base: "already_configured" }, data_schema: [{ type: "string", name: "todo_list_name", required: true }] });
+        todoCreate(id, name, "local_todo");
+        registry.entities.push({ ei: id, pl: "local_todo" });
+        emit(id);
+        emitRegistry();
+        return send(200, { type: "create_entry", flow_id: flow[1], result: { entry_id: todoMeta.get(id).entry, domain: "local_todo", title: name } });
+      }
+      const entry = url.pathname.match(/^\/api\/config\/config_entries\/entry\/([^/]+)$/);
+      if (entry && req.method === "DELETE") {
+        for (const [id, meta] of todoMeta) {
+          if (meta.entry !== entry[1]) continue;
+          todoItems.delete(id);
+          todoMeta.delete(id);
+          states.delete(id);
+          registry.entities = registry.entities.filter((e) => e.ei !== id);
+          for (const { ws, subscription } of sockets) if (subscription) ws.send(JSON.stringify({ id: subscription, type: "event", event: { event_type: "state_changed", data: { entity_id: id, new_state: null } } }));
+          emitRegistry();
+        }
+        return send(200, { require_restart: false });
+      }
+      return send(404, { message: "Not found" });
+    });
+    return;
+  }
   const pictureMatch = url.pathname.match(/^\/api\/media_player_proxy\/(media_player\.[a-z0-9_]+)$/);
   if (pictureMatch) {
     const label = pictureMatch[1].split(".")[1].slice(0, 2).toUpperCase();
@@ -481,6 +579,19 @@ wss.on("connection", (ws) => {
     if (msg.type === "config/floor_registry/list") return reply(registry.floors);
     if (msg.type === "config/device_registry/list") return reply(registry.devices);
     if (msg.type === "config/entity_registry/list_for_display") return reply({ entity_categories: {}, entities: registry.entities });
+    if (msg.type === "todo/item/list") {
+      const list = todoItems.get(msg.entity_id);
+      return list ? reply({ items: list.map((i) => ({ ...i })) }) : ws.send(JSON.stringify({ id: msg.id, type: "result", success: false, error: { code: "not_found", message: "Entity not found" } }));
+    }
+    if (msg.type === "config/entity_registry/get") {
+      const meta = todoMeta.get(msg.entity_id);
+      return meta ? reply({ entity_id: msg.entity_id, config_entry_id: meta.entry, platform: meta.platform }) : ws.send(JSON.stringify({ id: msg.id, type: "result", success: false, error: { code: "not_found", message: "Entity not found" } }));
+    }
+    if (msg.type === "config/entity_registry/update") {
+      patch(msg.entity_id, (a) => (a.friendly_name = msg.name));
+      emitRegistry();
+      return reply({ entity_entry: { entity_id: msg.entity_id, name: msg.name } });
+    }
     if (msg.type === "subscribe_events") {
       entry.subscription = msg.id;
       return reply(null);

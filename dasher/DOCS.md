@@ -25,11 +25,13 @@ If the file has a mistake, the page shows what is wrong instead of failing silen
 | `plex_url` | empty | Address of your Plex server **as your players reach it**, e.g. `http://192.168.1.10:32400`. Only needed to play Plex on Apple TVs and DLNA players with [stream links](#stream-links-apple-tv-dlna); the [Media page](#media) itself uses Home Assistant's Plex integration. |
 | `plex_token` | empty | Your Plex `X-Plex-Token`. Used to read file information and put into the stream link sent to the player (so it is visible in Home Assistant's player attributes). |
 
+| `allow_todo_management` | `true` | Lets people at a tablet create, rename and delete lists of the Local To-do integration on the [To-do page](#to-do-lists). Editing the items of a list is always possible. Turn off to forbid changing lists. Always off in read-only mode. |
+
 Changes to the options take effect when the app is restarted.
 
 ## Security
 
-The tablet page needs no login. Anyone who can reach port 8099 can use the entities that appear in `dashboard.yaml` **and the entities of the area pages, the climate page and the devices page** (lights, fans, covers and media players in your areas by default; set `areas.enabled: false` or narrow `areas.domains` to restrict this), the Music Assistant players of the music page (play/pause, volume, grouping, and starting radio stations or music from your library) and the players of the media page (starting Plex items on them), and nothing else: the server rejects any other entity, any service outside a fixed allow-list (lights, switches, fans, covers, scenes, scripts, media players, climate and similar; never locks, alarms or `homeassistant.restart`), and any attempt to retarget a call through `data`.
+The tablet page needs no login. Anyone who can reach port 8099 can use the entities that appear in `dashboard.yaml` **and the entities of the area pages, the climate page, the devices page and the to-do page** (lights, fans, covers and media players in your areas by default; set `areas.enabled: false` or narrow `areas.domains` to restrict this), the Music Assistant players of the music page (play/pause, volume, grouping, and starting radio stations or music from your library) and the players of the media page (starting Plex items on them), and nothing else: the server rejects any other entity, any service outside a fixed allow-list (lights, switches, fans, covers, scenes, scripts, media players, climate and similar; never locks, alarms or `homeassistant.restart`), and any attempt to retarget a call through `data`.
 
 Anyone who can reach the port can also browse your Music Assistant library and the Plex home screen (titles and posters) through the add-on. The Music Assistant and Plex tokens never leave the add-on, with one exception: the Plex stream link sent to an Apple TV or DLNA player contains the Plex token (see [Stream links](#stream-links-apple-tv-dlna)). Keep the port on your trusted LAN, remove the port mapping under *Network* if you only use the sidebar entry, or enable `read_only`.
 
@@ -344,6 +346,31 @@ devices:
 * An appliance in the list replaces a found one that uses the same entities.
 * Starting a washing machine remotely only works when the machine allows it (LG: *remote start* enabled and a programme chosen on the machine).
 * The page appears on its own when there is a vacuum or an appliance. It uses the entities of the page only; their entities take part in entity mapping.
+
+## To-do lists
+
+A **To-do lists** entry in the menu (call it *Huskelister* with `title:`) lists every `todo` entity of Home Assistant as a card: the name, how many items are open and where the list comes from (shopping list, Local, CalDAV, ...). Tap a list to work on it:
+
+* **Add** an item with the field at the top (Enter works too).
+* **Tick** an item off with the circle on the left; ticked items move to *Completed*, where you can untick them or **Clear completed**.
+* **Edit** an item by tapping its text: change the text, and, when the list supports them, the description and the due date. Overdue items are shown in red. **Delete** an item in that sheet or with the **×** on the row.
+* What you can do follows the list: a CalDAV list that cannot delete items has no delete buttons, a shopping list has no due dates, and so on.
+* The list refreshes itself when it changes in Home Assistant (a voice command, another tablet).
+
+**New, rename and delete lists** work for lists of the **Local To-do** integration, which is what Home Assistant offers for lists of your own: *New list* creates one (through the integration's setup, as *Settings → Devices & services → Add integration → Local To-do* would), and open Local lists have a pencil (rename) and a bin (delete, with a confirmation; the list and everything on it is removed). Lists of other integrations (the *Shopping list*, CalDAV, Google Tasks, Todoist, ...) cannot be created or removed from here: they belong to the service they come from, and only their items can be edited. If the Local To-do integration is not available in your Home Assistant, creating a list says so.
+
+```yaml
+todo:
+  # enabled: false                       # remove the menu entry
+  title: Huskelister
+  # icon: format-list-checks
+  # lists: [todo.indkobsliste, todo.chores]   # default: every to-do list
+  # exclude: [todo.old_list]
+```
+
+* The page appears on its own when Home Assistant has a to-do list. The lists take part in entity mapping.
+* Creating and deleting lists needs Home Assistant's admin API: the app does it with its own Supervisor token. **Anyone who can open the tablet page can add, tick off and delete items and create, rename and delete Local lists.** Turn it off with the app option `allow_todo_management` (items can still be edited), or `read_only`.
+* Renaming a list changes the name of its entity in Home Assistant (the entity id stays).
 
 ## Areas
 

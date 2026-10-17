@@ -46,6 +46,7 @@ const ALLOWED_SERVICES = {
     "set_swing_mode",
     "set_preset_mode",
   ],
+  todo: ["add_item", "update_item", "remove_item", "remove_completed_items"],
   homeassistant: ["turn_on", "turn_off", "toggle"],
 };
 

@@ -18,7 +18,7 @@ export function connect(handlers) {
         retry = setTimeout(open, 3000);
       }
     };
-    for (const event of ["hello", "status", "config", "areas", "music", "ev", "climate", "plex", "devices", "lastplayed", "snapshot", "state"]) {
+    for (const event of ["hello", "status", "config", "areas", "music", "ev", "climate", "plex", "devices", "todo", "lastplayed", "snapshot", "state"]) {
       source.addEventListener(event, (e) => handlers[event]?.(JSON.parse(e.data)));
     }
   };
@@ -123,4 +123,12 @@ export async function playPlex(entityId, item) {
     const body = await response.json().catch(() => ({}));
     throw new Error(body.error ?? `Request failed (${response.status})`);
   }
+}
+
+/** Create, rename or delete a to-do list ("create" | "rename" | "delete"); throws with the server's message. */
+export async function manageTodoList(action, body) {
+  const response = await fetch(`./api/todo/${action}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error ?? `Request failed (${response.status})`);
+  return data;
 }

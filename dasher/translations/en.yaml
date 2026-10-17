@@ -8,6 +8,9 @@ configuration:
   allow_entity_mapping:
     name: Allow mapping of missing entities
     description: "Lets the dashboard on a tablet map entities of dashboard.yaml that your Home Assistant does not have to entities it does have (saved in entity-map.yaml). Turn off to forbid changes from the tablets."
+  allow_todo_management:
+    name: Allow changing to-do lists
+    description: "Lets people at a tablet create, rename and delete to-do lists of the Local To-do integration (editing the items of a list is always possible). Turn off to forbid it."
   music_assistant_url:
     name: Music Assistant address
     description: "Address of your Music Assistant server, for example http://192.168.1.10:8095. Leave empty when Music Assistant runs as a Home Assistant app: Dasher then finds it itself. Needed for the Discover, Albums, Artists, Podcasts and Search tabs otherwise."

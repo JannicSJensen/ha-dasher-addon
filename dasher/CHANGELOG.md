@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.20.0
+
+- New **To-do lists** page (call it *Huskelister* with `todo: title:`): every to-do list of Home Assistant as a card with its open items. Open a list to add, tick off, edit (text, description, due date where supported) and delete items, and clear completed ones. Lists of the Local To-do integration can be created, renamed and deleted; the new app option `allow_todo_management` (default on) can forbid changing lists.
+
 ## 0.19.0
 
 - A robot vacuum that needs its water changed now shows a **Change the water** status message on the front page: *Refill the clean water tank* and/or *Empty the dirty water tank*, with the vacuum's name. It appears automatically on a hero tile with `messages:` (`vacuum_water: false` turns it off) and is also shown on the vacuum's card on the Devices page. Doubled Dreame names such as "Robbie Robbie" are shown once.
