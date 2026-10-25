@@ -473,7 +473,11 @@ Which entities appear follows Home Assistant: an entity belongs to the area it i
 
 ### Pictures
 
-Put pictures in the `assets/areas/` folder of the app's configuration folder and name them after the area id (`living_room.jpg`) or area name (`living-room.jpg`). `jpg`, `jpeg`, `png`, `webp`, `avif`, `gif` and `svg` work. New files are picked up within a few seconds. Without a file, the picture uploaded to the area in Home Assistant is used, and otherwise a symbol.
+Put pictures in the `assets/areas/` folder of the app's configuration folder and name them after the area id (`living_room.jpg`) or area name (`living-room.jpg`). `jpg`, `jpeg`, `png`, `webp`, `avif`, `gif` and `svg` work. New files are picked up within a few seconds. Without a file, the picture uploaded to the area in Home Assistant is used, and otherwise a **built-in room picture**: a dark illustration of a living room, kitchen, dining room, bedroom, kids' room, bathroom, office, hallway, garage, garden, laundry room or storage room, chosen from the name of the area (Danish and English names, e.g. *Stue*, *Køkken*, *Soveværelse*, *Bryggers*, *Living room*, *Garden*). Anything else gets a neutral room.
+
+![The built-in room pictures](https://raw.githubusercontent.com/JannicSJensen/ha-dasher-addon/main/docs/screenshots/room-pictures.jpg)
+
+To pick another built-in picture for an area, give it a `room` (`living`, `kitchen`, `dining`, `bedroom`, `kids`, `bathroom`, `office`, `hallway`, `garage`, `garden`, `laundry`, `storage` or `room`); `default_images: false` switches the built-in pictures off. See [Options](#options) below.
 
 Tiles inside an area use the area picture, cropped differently for each device. To give a device its own picture, save it as `assets/entities/<entity_id>.jpg` (e.g. `assets/entities/light.floor_lamp.jpg`).
 
@@ -486,11 +490,13 @@ areas:
   icon: floor-plan
   hide: [home, "Fridge"]    # area ids or names to leave out
   domains: [light, fan, cover, media_player, climate]   # the default; also allowed: switch, input_boolean
+  default_images: true      # false = no built-in room pictures for areas without a picture
   overrides:
     living_room:
       name: Lounge
       icon: mdi:sofa
       image: lounge.jpg                       # file in assets/ (or assets/areas/ by bare name)
+      room: living                            # built-in picture to use when there is no image
       temperature_entity: sensor.lounge_temp  # replaces the detected sensors
       humidity_entity: sensor.lounge_humidity
       window_entities: [binary_sensor.lounge_window]

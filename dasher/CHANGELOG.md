@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.26.0
+
+- **Built-in room pictures for the areas.** Areas without a picture of their own now get a dark illustration of a living room, kitchen, dining room, bedroom, kids' room, bathroom, office, hallway, garage, garden, laundry room or storage room, chosen from the area's name (Danish or English). Your own pictures in `assets/areas/` and pictures uploaded in Home Assistant still come first. `areas: overrides: <area>: { room: kitchen }` picks another one and `areas: default_images: false` switches them off.
+
 ## 0.25.0
 
 - **Mealie cookbook.** When Mealie and Home Assistant's Mealie integration are set up, the meal plan gets a **Cookbook** tab: search your Mealie recipes, plan one on a day (ingredients and steps are copied, scaled to your household) and import a recipe from a web page into Mealie. *New plan* can prefer your own Mealie recipes, which then need no AI call for the recipe. Nothing to configure; `meals: mealie:` can turn it off or pick the Mealie entry.

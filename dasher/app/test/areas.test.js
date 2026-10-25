@@ -169,3 +169,12 @@ test("removed devices move to hidden_entities, stay tracked, and an area with on
   assert.ok(model.entities.has("light.stue_a") && model.entities.has("light.hjem_only"));
   assert.deepEqual(byId(build(), "stuen").hidden_entities, []);
 });
+
+test("built-in room pictures follow the area name, can be chosen or switched off", () => {
+  const model = build({});
+  assert.equal(byId(model, "stuen").default_image, "img/rooms/living.svg");
+  assert.equal(byId(model, "bad").default_image, "img/rooms/bathroom.svg");
+  assert.equal(byId(build({ overrides: { stuen: { room: "kitchen" } } }), "stuen").default_image, "img/rooms/kitchen.svg");
+  assert.equal(byId(build({ default_images: false }), "stuen").default_image, null);
+  assert.equal(byId(build({ overrides: { stuen: { room: "unknown" } } }), "stuen").default_image, "img/rooms/room.svg");
+});

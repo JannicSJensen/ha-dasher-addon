@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { ROOM_TYPES, roomImage, roomType } from "./room-images.js";
 
 export const DEFAULT_AREA_DOMAINS = ["light", "fan", "cover", "media_player", "climate"];
 /** Domains the toggle tile (and the service policy) can handle in area pages. */
@@ -134,6 +135,7 @@ export function buildAreaModel({ registries, deviceClasses = new Map(), settings
       icon: override.icon ?? area.icon ?? null,
       image: imageFile,
       picture: area.picture ?? null,
+      default_image: settings.default_images === false ? null : roomImage(override.room ?? roomType(area.name, area.area_id)),
       entities: tiles,
       hidden_entities: hiddenTiles,
       entity_images: entityImages,

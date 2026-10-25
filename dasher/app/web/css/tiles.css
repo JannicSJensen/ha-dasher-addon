@@ -315,3 +315,5 @@
 .heromsg__badge { flex: none; padding: 0.9cqmin 2.4cqmin; border-radius: 99px; background: rgba(255, 255, 255, 0.12); font-size: 2.7cqmin; font-weight: 600; }
 .heromsg.is-urgent .heromsg__badge { background: #f59e0b; color: #2b1a00; }
 @keyframes heromsg-in { from { opacity: 0; transform: translateY(-6px); } }
+.tile--area.is-builtin .photo__img { filter: brightness(0.85) saturate(1); }
+.tile--area.is-builtin.is-on .photo__img { filter: brightness(1.1); }

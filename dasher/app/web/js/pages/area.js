@@ -7,7 +7,7 @@ import { format } from "../lib/i18n.js";
 import { createAreaClimateTile } from "../tiles/areaclimate.js";
 import { friendlyName, pressable } from "../tiles/common.js";
 import { createToggleTile } from "../tiles/toggle.js";
-import { areaImageUrl } from "./areas.js";
+import { areaImageUrl, isBuiltinImage } from "./areas.js";
 
 const DEVICE_ICONS = { light: "lightbulb", fan: "fan", cover: "window-shutter", media_player: "speaker", climate: "radiator", switch: "toggle-switch", input_boolean: "toggle-switch" };
 
@@ -24,7 +24,7 @@ export function createAreaPage(initialArea, ctx) {
   let area = initialArea;
   let editing = false;
   const url = areaImageUrl(area);
-  const bg = h("div", { class: "area__bg" });
+  const bg = h("div", { class: `area__bg${isBuiltinImage(area) ? " is-builtin" : ""}` });
   if (url) bg.style.backgroundImage = `url("${url.replace(/"/g, "%22")}")`;
 
   const temperature = stat(ctx.t("temperature"));

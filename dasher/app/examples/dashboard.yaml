@@ -19,14 +19,16 @@ gap: 8
 
 # Area pages: adds a menu entry that lists every area in Home Assistant as a picture.
 # Tapping one opens the area with its lights, players, temperature, humidity and windows.
-# Pictures: put <area_id>.jpg (or the area name, e.g. living-room.jpg) in assets/areas/.
+# Pictures: put <area_id>.jpg (or the area name, e.g. living-room.jpg) in assets/areas/. Areas without a picture
+# get a built-in room picture chosen from the name (living room, kitchen, bedroom, bathroom, garden ...).
 areas:
   # enabled: false          # remove the menu entry completely
   # title: Areas
   # hide: [home]            # area ids or names to leave out
+  # default_images: false   # no built-in room pictures
   # domains: [light, fan, cover, media_player]   # also: switch, input_boolean
   # overrides:
-  #   living_room: { name: Lounge, icon: mdi:sofa, image: lounge.jpg, temperature_entity: sensor.lounge_temperature }
+  #   living_room: { name: Lounge, icon: mdi:sofa, image: lounge.jpg, room: living, temperature_entity: sensor.lounge_temperature }
 
 # Music page: radio stations, discover, albums, artists, podcasts and search from Music Assistant,
 # played on its speakers. Appears automatically when the Music Assistant integration is installed.

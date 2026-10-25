@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import YAML from "yaml";
 import { AREA_DOMAINS, DEFAULT_AREA_DOMAINS } from "./areas.js";
+import { ROOM_TYPES } from "./room-images.js";
 import { DEFAULT_TABS, MUSIC_TABS } from "./music.js";
 import { collectEntities, describeUsage, mapEntities } from "../web/js/lib/entities.js";
 import { STOCK_EXAMPLE_HASHES, hashDashboard } from "./stock-examples.js";
@@ -52,6 +53,10 @@ function parseAreas(raw, errors) {
     if (o.name != null) clean.name = String(o.name);
     if (o.icon != null) clean.icon = String(o.icon);
     if (o.image != null) clean.image = String(o.image);
+    if (o.room != null) {
+      if (ROOM_TYPES.includes(String(o.room))) clean.room = String(o.room);
+      else errors.push(`areas.overrides.${areaId}.room: "${o.room}" is not a room type. Use: ${ROOM_TYPES.join(", ")}.`);
+    }
     if (o.hide === true) clean.hide = true;
     for (const key of ["temperature_entity", "humidity_entity"]) {
       if (o[key] == null) continue;
@@ -72,6 +77,7 @@ function parseAreas(raw, errors) {
     title: a.title != null ? String(a.title) : null,
     icon: String(a.icon ?? "floor-plan"),
     hide: toList(a.hide),
+    default_images: a.default_images !== false,
     domains: domains.length ? domains : DEFAULT_AREA_DOMAINS,
     overrides,
   };

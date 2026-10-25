@@ -5,12 +5,16 @@ import { areaIcon, lightsOn } from "../lib/areas.js";
 import { format } from "../lib/i18n.js";
 import { pressable } from "../tiles/common.js";
 
-/** Picture of an area: file from the assets folder, else the picture set in Home Assistant. */
+/** Picture of an area: file from the assets folder, else the picture set in Home Assistant, else the built-in room picture. */
 export function areaImageUrl(area) {
   if (area.image) return assetUrl(area.image);
   if (area.picture) return pictureUrl(area.picture);
+  if (area.default_image) return `./${area.default_image}`;
   return "";
 }
+
+/** True when the picture is one of the built-in room pictures (they are drawn dark already). */
+export const isBuiltinImage = (area) => !area.image && !area.picture && Boolean(area.default_image);
 
 function createAreaCard(area, ctx) {
   const url = areaImageUrl(area);
@@ -20,7 +24,7 @@ function createAreaCard(area, ctx) {
   const caption = h("div", { class: "photo__status" });
   const el = h(
     "div",
-    { class: "tile tile--photo tile--area", role: "link", tabindex: "0", "aria-label": area.name },
+    { class: `tile tile--photo tile--area${isBuiltinImage(area) ? " is-builtin" : ""}`, role: "link", tabindex: "0", "aria-label": area.name },
     url ? layer : h("div", { class: "photo__fallback" }, icon(areaIcon(area))),
     h("div", { class: "photo__shade" }),
     h("div", { class: "photo__text" }, caption, h("div", { class: "photo__name" }, area.name), h("div", { class: "photo__rule" })),
