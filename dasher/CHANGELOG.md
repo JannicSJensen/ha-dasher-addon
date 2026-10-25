@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.21.0
+
+- **Entity mapping moved to the app configuration.** The *Map entities* screen and its sidebar entry are gone from the tablet; use the new app option **Entity mapping** (*Settings, Apps, Dasher, Configuration*): a list of rows with the entity id from `dashboard.yaml` and the entity of your Home Assistant to use instead. Restart the app after changing it.
+- The tablet notice for unknown entities now just names them and points to the app configuration; the app log lists each one with where it is used and the closest matches in Home Assistant.
+- Mappings made on the tablet earlier (`entity-map.yaml`) are still read and the log tells you which rows to copy to the option.
+- Removed: the app option `allow_entity_mapping` (nothing can be mapped from a tablet any more) and the screen's suggestions for newer features (see the example `dashboard.example.yaml` and the documentation instead).
+
 ## 0.20.1
 
 - Devices page: the appliance cards are a little wider so the *Delayed end* buttons no longer overflow.

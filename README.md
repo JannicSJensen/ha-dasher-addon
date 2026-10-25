@@ -15,7 +15,7 @@ This repository contains the **Dasher** app (add-on) for Home Assistant: a dark,
 * **To-do lists page (Huskelister):** every to-do list of Home Assistant; add, tick off, edit and delete items, and create, rename and delete Local To-do lists.
 * **Devices page:** robot vacuums with controls, and washing machines, dryers, dishwashers and clothes heaters (LG ThinQ found automatically, others listed in `dashboard.yaml`).
 * **Climate page:** a card per room with temperature, setpoint and power, built from your climate helpers.
-* **Missing entities:** when `dashboard.yaml` uses entities your Home Assistant does not have, a screen on the tablet suggests and lets you pick the right ones; the choices are kept in `entity-map.yaml`. The same screen offers the calendar tile and the car price from newer versions, with ready-made YAML to copy.
+* **Missing entities:** when `dashboard.yaml` uses entities your Home Assistant does not have, the tablet shows a notice and the app log suggests the likely ones; you choose the replacements in the app configuration (*Entity mapping*), and `dashboard.yaml` stays unchanged.
 * **Updates:** an unedited `dashboard.yaml` follows new versions of the example (the old one is saved as `dashboard.yaml.bak`); an edited one is never touched. The current example is always written to `dashboard.example.yaml`.
 * Vanilla JavaScript front end, one small Node.js server, no build step.
 * Commands from tablets are restricted to the entities in `dashboard.yaml`, the area pages, the climate page, the devices page, the to-do page, the media page and the music page, and to a fixed list of services.
@@ -40,8 +40,6 @@ All screenshots show the built-in fake Home Assistant and Music Assistant (see [
 | **To-do lists**<br>Every to-do list of Home Assistant (Huskelister). | **A to-do list**<br>Add, tick off, edit and delete items; rename or delete Local To-do lists. |
 | [![Devices](docs/screenshots/devices.png)](docs/screenshots/devices.png) | [![Car](docs/screenshots/car.png)](docs/screenshots/car.png) |
 | **Devices**<br>Robot vacuums, dishwashers, dryers, clothes heaters and washing machines. | **Car**<br>Charging, smart charging with its times, remote climate and a charger restart. |
-| [![Map missing entities](docs/screenshots/map-entities.png)](docs/screenshots/map-entities.png) | |
-| **Map missing entities**<br>Pick your own entities when the dashboard uses ones Home Assistant does not have. | |
 
 ## Install
 
@@ -84,6 +82,7 @@ Against a real Home Assistant, create a long-lived access token (Profile → Sec
 | Variable | Meaning |
 | --- | --- |
 | `HA_URL`, `HA_TOKEN` | Home Assistant address and long-lived token (inside the app the Supervisor token is used instead). |
+| `ENTITY_MAP` | The entity mapping for local runs, as `from=to,from=to` (the app option `entity_map`). |
 | `MA_URL`, `MA_TOKEN` | Music Assistant address and token (app options `music_assistant_url` / `music_assistant_token`). |
 | `PLEX_URL`, `PLEX_TOKEN` | Plex address and token for stream links (app options `plex_url` / `plex_token`); the mock Home Assistant also answers as a Plex server with token `tok`. |
 | `CONFIG_DIR` | Folder with `dashboard.yaml` and `assets/` (the app uses `/config`). |

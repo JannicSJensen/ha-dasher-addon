@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { mappingItems, parseEntityMap, rankCandidates, serializeEntityMap, validateMapping } from "../src/mapping.js";
+import { describeUnresolved, parseEntityMap, parseEntityMapOption, rankCandidates, unresolvedEntities } from "../src/mapping.js";
 
 const entry = (id, name, extra = {}) => [id, { id, name, domain: id.split(".")[0], ...extra }];
 const index = new Map([
@@ -27,43 +27,44 @@ sensor.x: 12
   assert.match(parseEntityMap("a: [").errors[0], /entity-map\.yaml/);
 });
 
-test("serializeEntityMap round-trips and starts with a comment", () => {
-  const text = serializeEntityMap({ "sensor.b": "sensor.y", "light.a": "light.x" });
-  assert.match(text, /^# Entity mapping/);
-  assert.deepEqual(parseEntityMap(text).map, { "light.a": "light.x", "sensor.b": "sensor.y" });
-  assert.equal(parseEntityMap(serializeEntityMap({})).map && Object.keys(parseEntityMap(serializeEntityMap({})).map).length, 0);
+test("parseEntityMapOption reads the app option, a from=to string, and reports bad rows", () => {
+  const { map, errors } = parseEntityMapOption([
+    { from: "sensor.car_range", to: "sensor.fordpass_elveh" },
+    { from: " light.a ", to: " light.b " },
+    { from: "light.same", to: "light.same" },
+    { from: "light.c", to: "switch.d" },
+    { from: "bad id", to: "light.e" },
+    { from: "", to: "" },
+    null,
+  ]);
+  assert.deepEqual(map, { "sensor.car_range": "sensor.fordpass_elveh", "light.a": "light.b" });
+  assert.equal(errors.length, 4);
+  assert.match(errors[0], /^entity_map\[4\]/);
+  assert.deepEqual(parseEntityMapOption("light.a=light.b, sensor.x=sensor.y").map, { "light.a": "light.b", "sensor.x": "sensor.y" });
+  assert.deepEqual(parseEntityMapOption(undefined), { map: {}, errors: [] });
+  assert.deepEqual(parseEntityMapOption([]), { map: {}, errors: [] });
 });
 
-test("validateMapping accepts only entities of the dashboard, same kind, known to Home Assistant", () => {
-  const rawEntities = new Set(["light.missing", "sensor.price"]);
-  const ok = (body) => validateMapping(body, { rawEntities, index });
-  assert.deepEqual(ok({ from: "light.missing", to: "light.hall" }), { ok: true, from: "light.missing", to: "light.hall" });
-  assert.deepEqual(ok({ from: "light.missing", to: null }), { ok: true, from: "light.missing", to: null });
-  assert.deepEqual(ok({ from: "light.missing", to: "light.missing" }), { ok: true, from: "light.missing", to: null });
-  for (const body of [
-    { from: "light.other", to: "light.hall" },
-    { from: "light.missing", to: "switch.plug" },
-    { from: "light.missing", to: "light.unknown" },
-    { from: "light.missing", to: "not an id" },
-    { from: 5, to: "light.hall" },
-    {},
-  ]) {
-    const result = ok(body);
-    assert.equal(result.ok, false, JSON.stringify(body));
-    assert.equal(result.status, 400);
-  }
+test("unresolvedEntities: unknown ids after the mapping, and mappings to unknown entities", () => {
+  const rawEntities = new Set(["light.gone", "light.hall", "sensor.old", "sensor.old2", "switch.plug"]);
+  const map = { "sensor.old": "sensor.energi_data_service", "sensor.old2": "sensor.nope" };
+  assert.deepEqual(unresolvedEntities({ rawEntities, map, index }), [
+    { id: "light.gone", mappedTo: null },
+    { id: "sensor.old2", mappedTo: "sensor.nope" },
+  ]);
+  assert.deepEqual(unresolvedEntities({ rawEntities, map, index: new Map() }), [], "nothing is reported before Home Assistant's entities are known");
 });
 
-test("mappingItems: unresolved first, then mapped, then the rest", () => {
-  const items = mappingItems({
-    rawEntities: new Set(["light.hall", "light.gone", "sensor.old", "switch.plug"]),
-    usage: new Map([["light.gone", ["Home: Lamp"]]]),
-    map: { "sensor.old": "sensor.energi_data_service" },
+test("describeUnresolved explains what to put in the option, with guesses", () => {
+  const lines = describeUnresolved({
+    unresolved: [{ id: "light.kitchen_lamp", mappedTo: null }, { id: "sensor.old2", mappedTo: "sensor.nope" }],
+    usage: new Map([["light.kitchen_lamp", ["Home: Kitchen"]]]),
     index,
+    registries: null,
   });
-  assert.deepEqual(items.map((i) => i.id), ["light.gone", "sensor.old", "light.hall", "switch.plug"]);
-  assert.deepEqual(items[0], { id: "light.gone", domain: "light", tiles: ["Home: Lamp"], mapped: null, found: false, name: null });
-  assert.deepEqual([items[1].mapped, items[1].found, items[1].name], ["sensor.energi_data_service", true, "Energi Data Service"]);
+  assert.match(lines[0], /^light\.kitchen_lamp is not known to Home Assistant \(used in: Home: Kitchen\)\. Maybe use: light\.kitchen_ceiling \(Kitchen ceiling\)/);
+  assert.match(lines[0], /app option "Entity mapping"\.$/);
+  assert.match(lines[1], /^sensor\.old2 is mapped to sensor\.nope, which Home Assistant does not know/);
 });
 
 test("rankCandidates: same kind only, words of the id and tile name rank first, search filters", () => {

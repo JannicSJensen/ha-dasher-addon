@@ -1,16 +1,12 @@
 import YAML from "yaml";
 
+/** The file older versions of the app wrote the mapping to; still read, but the app option wins. */
 export const MAP_FILE = "entity-map.yaml";
 
 const ENTITY_RE = /^[a-z0-9_]+\.[a-z0-9_]+$/;
 export const domainOf = (id) => id.slice(0, id.indexOf("."));
 
-const HEADER = `# Entity mapping, written by the "map entities" screen of the dashboard.
-# Left: an entity id used in dashboard.yaml. Right: the entity of your Home Assistant to use instead.
-# You can edit this file by hand; delete a line to undo a mapping.
-`;
-
-/** Read entity-map.yaml: { map, errors }. Entries that are not valid same-domain pairs are skipped. */
+/** Read entity-map.yaml (the file older versions wrote): { map, errors }. Entries that are not valid same-domain pairs are skipped. */
 export function parseEntityMap(text) {
   const errors = [];
   let raw;
@@ -22,49 +18,65 @@ export function parseEntityMap(text) {
   if (raw == null) return { map: {}, errors };
   if (typeof raw !== "object" || Array.isArray(raw)) return { map: {}, errors: ["entity-map.yaml must be a mapping of entity ids."] };
   const map = {};
-  for (const [from, to] of Object.entries(raw)) {
-    if (typeof to !== "string" || !ENTITY_RE.test(from) || !ENTITY_RE.test(to)) errors.push(`entity-map.yaml: "${from}: ${to}" is not a pair of entity ids`);
-    else if (domainOf(from) !== domainOf(to)) errors.push(`entity-map.yaml: ${from} and ${to} are of different kinds`);
-    else if (from !== to) map[from] = to;
+  for (const [from, to] of Object.entries(raw)) addPair(map, errors, from, to, "entity-map.yaml");
+  return { map, errors };
+}
+
+function addPair(map, errors, from, to, where) {
+  if (typeof from !== "string" || typeof to !== "string" || !ENTITY_RE.test(from) || !ENTITY_RE.test(to)) errors.push(`${where}: "${from}" -> "${to}" is not a pair of entity ids`);
+  else if (domainOf(from) !== domainOf(to)) errors.push(`${where}: ${from} and ${to} are of different kinds`);
+  else if (from !== to) map[from] = to;
+}
+
+/**
+ * The app option `entity_map`: a list of { from, to } (from: the entity id used in dashboard.yaml, to: the entity of
+ * Home Assistant to use instead). Also accepts "from=to,from=to" (the ENTITY_MAP variable of local runs).
+ */
+export function parseEntityMapOption(value) {
+  const errors = [];
+  const map = {};
+  let list = value;
+  if (typeof value === "string") {
+    list = value
+      .split(",")
+      .map((pair) => pair.trim())
+      .filter(Boolean)
+      .map((pair) => {
+        const [from, to] = pair.split("=").map((x) => x.trim());
+        return { from, to };
+      });
+  }
+  for (const [i, entry] of (Array.isArray(list) ? list : []).entries()) {
+    addPair(map, errors, String(entry?.from ?? "").trim(), String(entry?.to ?? "").trim(), `entity_map[${i + 1}]`);
   }
   return { map, errors };
 }
 
-export function serializeEntityMap(map) {
-  const entries = Object.entries(map).sort(([a], [b]) => a.localeCompare(b));
-  return HEADER + (entries.length ? YAML.stringify(Object.fromEntries(entries)) : "");
-}
-
 /**
- * Check a request to map `from` to `to` (or to remove the mapping with `to: null`).
- * `index` is the map of entities Home Assistant knows.
+ * The entity ids of dashboard.yaml that Home Assistant does not know once the mapping is applied, as
+ * [{ id, mappedTo }] (`mappedTo` is set when the id is mapped to an entity that does not exist either).
+ * Empty until Home Assistant's entity list is known.
  */
-export function validateMapping({ from, to }, { rawEntities, index }) {
-  if (typeof from !== "string" || !rawEntities.has(from)) return { ok: false, status: 400, error: "That entity is not used in dashboard.yaml." };
-  if (to == null || to === from) return { ok: true, from, to: null };
-  if (typeof to !== "string" || !ENTITY_RE.test(to)) return { ok: false, status: 400, error: "Not a valid entity id." };
-  if (domainOf(to) !== domainOf(from)) return { ok: false, status: 400, error: `${to} is not a ${domainOf(from)} entity.` };
-  if (!index.has(to)) return { ok: false, status: 400, error: `Home Assistant does not know ${to}.` };
-  return { ok: true, from, to };
+export function unresolvedEntities({ rawEntities, map, index }) {
+  if (!index || index.size === 0) return [];
+  const out = [];
+  for (const id of rawEntities) {
+    const target = Object.hasOwn(map, id) ? map[id] : id;
+    if (!index.has(target)) out.push({ id, mappedTo: target !== id ? target : null });
+  }
+  return out.sort((a, b) => a.id.localeCompare(b.id));
 }
 
-/** One row per entity of dashboard.yaml for the mapping screen, unresolved ones first. */
-export function mappingItems({ rawEntities, usage, map, index }) {
-  const items = [...rawEntities].map((id) => {
-    const mapped = Object.hasOwn(map, id) ? map[id] : null;
-    const effective = mapped ?? id;
-    const known = index.get(effective);
-    return {
-      id,
-      domain: domainOf(id),
-      tiles: usage.get(id) ?? [],
-      mapped,
-      found: Boolean(known),
-      name: known?.name ?? null,
-    };
+/** Log lines that help to fill in the `entity_map` option: what is unknown, where it is used and the best guesses. */
+export function describeUnresolved({ unresolved, usage, index, registries, limit = 3 }) {
+  return unresolved.map(({ id, mappedTo }) => {
+    const where = (usage.get(id) ?? []).slice(0, 3).join(", ");
+    const guesses = rankCandidates({ index, registries, from: id, usage: usage.get(id) ?? [], limit })
+      .filter((c) => c.score > 0)
+      .map((c) => `${c.id}${c.name ? ` (${c.name})` : ""}`);
+    const subject = mappedTo ? `${id} is mapped to ${mappedTo}, which Home Assistant does not know` : `${id} is not known to Home Assistant`;
+    return `${subject}${where ? ` (used in: ${where})` : ""}. ${guesses.length ? `Maybe use: ${guesses.join(", ")}. ` : ""}Set it in the app option "Entity mapping".`;
   });
-  const rank = (item) => (!item.found ? 0 : item.mapped ? 1 : 2);
-  return items.sort((a, b) => rank(a) - rank(b) || a.id.localeCompare(b.id));
 }
 
 const words = (text) =>

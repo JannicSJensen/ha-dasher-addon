@@ -6,7 +6,7 @@ import { DEFAULT_TABS, MUSIC_TABS } from "./music.js";
 import { collectEntities, describeUsage, mapEntities } from "../web/js/lib/entities.js";
 import { STOCK_EXAMPLE_HASHES, hashDashboard } from "./stock-examples.js";
 import { APPLIANCE_KINDS, APPLIANCE_ROLES } from "./devices.js";
-import { MAP_FILE, parseEntityMap, serializeEntityMap } from "./mapping.js";
+import { MAP_FILE, parseEntityMap, parseEntityMapOption } from "./mapping.js";
 
 export { collectEntities };
 
@@ -369,8 +369,11 @@ export function parseConfig(text, { entityMap = {} } = {}) {
 
 /** Watches dashboard.yaml and keeps the parsed result current. */
 export class ConfigStore {
-  constructor({ dir, onChange, logger }) {
+  /** `entityMapOption`: the app option `entity_map` (a list of { from, to }). */
+  constructor({ dir, onChange, logger, entityMapOption = [] }) {
     this.dir = dir;
+    this.optionMap = parseEntityMapOption(entityMapOption);
+    this._legacyLogged = false;
     this.file = path.join(dir, "dashboard.yaml");
     this.mapFile = path.join(dir, MAP_FILE);
     this.entityMap = {};
@@ -420,27 +423,28 @@ export class ConfigStore {
     return this.current;
   }
 
+  /** The mapping: the app option, over the entity-map.yaml that older versions wrote. */
   _readEntityMap() {
-    let text = "";
-    try {
-      text = fs.readFileSync(this.mapFile, "utf8");
-    } catch {
-      return {}; // no mapping yet
+    if (!this._optionLogged) {
+      this._optionLogged = true;
+      for (const e of this.optionMap.errors) this.log.warn(e);
     }
-    const { map, errors } = parseEntityMap(text);
-    for (const e of errors) this.log.warn(e);
-    return map;
-  }
-
-  /** Save the entity mapping (atomically) and reload the configuration with it. */
-  saveEntityMap(map) {
-    fs.mkdirSync(this.dir, { recursive: true });
-    const tmp = `${this.mapFile}.tmp`;
-    fs.writeFileSync(tmp, serializeEntityMap(map));
-    fs.renameSync(tmp, this.mapFile);
-    this.load();
-    this._signature = this._fileSignature();
-    this.onChange?.(this.current);
+    let legacy = {};
+    try {
+      const { map, errors } = parseEntityMap(fs.readFileSync(this.mapFile, "utf8"));
+      for (const e of errors) this.log.warn(e);
+      legacy = map;
+    } catch {
+      // no file: nothing to carry over
+    }
+    const unmoved = Object.keys(legacy).filter((id) => !Object.hasOwn(this.optionMap.map, id));
+    if (unmoved.length && !this._legacyLogged) {
+      this._legacyLogged = true;
+      this.log.warn(
+        `${MAP_FILE} is still used for ${unmoved.length} mapping(s). Copy them to the app option "Entity mapping" (Settings, Apps, Dasher, Configuration): ${unmoved.map((id) => `${id} -> ${legacy[id]}`).join(", ")}`,
+      );
+    }
+    return { ...legacy, ...this.optionMap.map };
   }
 
   _fileSignature() {

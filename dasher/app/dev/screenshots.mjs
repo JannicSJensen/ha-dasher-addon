@@ -3,10 +3,8 @@
  *
  *   npm install --no-save puppeteer-core          # once; a Chromium-based browser must be installed
  *   node dev/mock-ha.js & node dev/mock-ma.js &
- *   # one Dasher on the example dashboard (8098) and one whose dashboard uses entities the mock does not have (8097)
+ *   # one Dasher on the example dashboard (8098)
  *   CONFIG_DIR=/tmp/shots-a DATA_DIR=/tmp/shots-a-data PORT=8098 HA_URL=http://127.0.0.1:8123 HA_TOKEN=dev MA_URL=http://127.0.0.1:8095 MA_TOKEN=dev-token node src/index.js &
- *   CONFIG_DIR=/tmp/shots-b DATA_DIR=/tmp/shots-b-data PORT=8097 HA_URL=http://127.0.0.1:8123 HA_TOKEN=dev MA_URL=http://127.0.0.1:8095 MA_TOKEN=dev-token node src/index.js &
- *   # in /tmp/shots-b/dashboard.yaml rename a few entities (sensor.waste_*, input_boolean.good_night, sensor.car_range) to ones that do not exist
  *   BROWSER=/usr/bin/chromium node dev/screenshots.mjs
  */
 import path from "node:path";
@@ -59,6 +57,4 @@ await press(".tdcard", "Garage"); await page.waitForSelector(".tdrow"); await sl
 await go(8098, "#/ev", ".evcar"); await shot("car");
 await size(1180);
 await go(8098, "#/devices", ".devcard"); await shot("devices");
-await size();
-await go(8097, "#/entities", ".maprow"); await shot("map-entities");
 await browser.close();

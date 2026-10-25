@@ -11,9 +11,8 @@ import { TodoService, cleanListName, resolveTodo } from "./todo.js";
 import { deviceEntities, discoverDevices, resolveDevices } from "./devices.js";
 import { PlexService, plexBrowsers, plexConfigured, plexPlayers, validBrowse, validatePlay } from "./plex.js";
 import { PlexStreamer } from "./plex-stream.js";
-import { mappingItems, rankCandidates, validateMapping } from "./mapping.js";
+import { describeUnresolved, unresolvedEntities } from "./mapping.js";
 import { MusicService, availableTabs, DETAIL_TYPES } from "./music.js";
-import { PSEUDO_IDS, buildSuggestions } from "./suggestions.js";
 import { CalendarService, calendarScope, parseWindow } from "./calendar.js";
 import { NowPlayingStore } from "./nowplaying.js";
 import { RadioService, radioPlayers, validateGroupRequest } from "./radio.js";
@@ -50,9 +49,7 @@ const logger = Object.fromEntries(
 
 const PORT = Number(process.env.PORT ?? 8099);
 const READ_ONLY = options.read_only === true;
-// Tablets may map entities that are missing from Home Assistant to existing ones (see entity-map.yaml).
 const TODO_MANAGE = !READ_ONLY && options.allow_todo_management !== false && process.env.ALLOW_TODO_MANAGEMENT !== "0";
-const MAPPING_ENABLED = !READ_ONLY && options.allow_entity_mapping !== false && process.env.ALLOW_ENTITY_MAPPING !== "0";
 const configDir = process.env.CONFIG_DIR ?? "/config";
 
 const supervisorToken = process.env.SUPERVISOR_TOKEN;
@@ -77,6 +74,7 @@ const ha = new HAClient({ wsUrl: haWsUrl, token: haToken, logger });
 const configStore = new ConfigStore({
   dir: configDir,
   logger,
+  entityMapOption: options.entity_map ?? process.env.ENTITY_MAP ?? [],
   onChange: () => {
     rebuild({ refresh: true });
     broadcast("config", configPayload());
@@ -274,9 +272,23 @@ const configPayload = () => ({ config: configStore.current.config, errors: confi
 const statusPayload = () => ({
   ha: ha.connected,
   readOnly: READ_ONLY,
-  missing: ha.missing,
-  mapping: { enabled: MAPPING_ENABLED, mapped: Object.keys(configStore.entityMap).length },
+  missing: missingEntities().map((m) => m.id),
 });
+
+/** Entities of dashboard.yaml that Home Assistant does not know once the app option "Entity mapping" is applied. */
+function missingEntities() {
+  return unresolvedEntities({ rawEntities: configStore.current.rawEntities, map: configStore.entityMap, index: ha.entityIndex });
+}
+
+let missingSignature = "";
+/** Tell the log what is missing, with guesses to use in the option; once per distinct set. */
+function reportMissing() {
+  const unresolved = missingEntities();
+  const signature = JSON.stringify(unresolved);
+  if (signature === missingSignature) return;
+  missingSignature = signature;
+  for (const line of describeUnresolved({ unresolved, usage: configStore.current.usage, index: ha.entityIndex, registries: ha.registries })) logger.warn(line);
+}
 
 ha.on("registries", () => {
   rebuild({ refresh: false });
@@ -289,6 +301,7 @@ ha.on("state", (state) => {
 });
 ha.on("snapshot", (states) => {
   for (const state of states.values()) nowPlaying.observe(state);
+  reportMissing();
   broadcast("status", statusPayload());
   broadcast("snapshot", Object.fromEntries(states));
 });
@@ -456,57 +469,6 @@ async function handleRadioGroup(req, res) {
     logger.warn(`Speaker grouping failed: ${err.message}`);
     json(res, 502, { error: err.message });
   }
-}
-
-// ---- entity mapping -----------------------------------------------------------------
-
-const mappingState = () => {
-  const { rawEntities, usage } = configStore.current;
-  return { rawEntities, usage, map: configStore.entityMap, index: ha.entityIndex };
-};
-
-async function handleMappingGet(res, p, params) {
-  if (!MAPPING_ENABLED) return json(res, 403, { error: "Entity mapping is switched off." });
-  const state = mappingState();
-  if (p === "/api/entities/mapping") {
-    return json(res, 200, {
-      connected: ha.connected,
-      items: mappingItems(state),
-      suggestions: buildSuggestions({ config: configStore.current.config, index: ha.entityIndex }),
-    });
-  }
-  if (p === "/api/entities/candidates") {
-    const from = params.get("for");
-    if (!state.rawEntities.has(from) && !PSEUDO_IDS.has(from)) return json(res, 400, { error: "That entity is not used in dashboard.yaml." });
-    const q = String(params.get("q") ?? "").trim().slice(0, 80);
-    return json(res, 200, { items: rankCandidates({ index: ha.entityIndex, registries: ha.registries, from, usage: state.usage.get(from) ?? [], q }) });
-  }
-  return json(res, 404, { error: "Not found." });
-}
-
-async function handleMappingPut(req, res) {
-  if (!MAPPING_ENABLED) return json(res, 403, { error: "Entity mapping is switched off." });
-  let body;
-  try {
-    body = JSON.parse(await readBody(req));
-  } catch (err) {
-    return json(res, err.status ?? 400, { error: err.message || "Invalid JSON." });
-  }
-  const state = mappingState();
-  const check = validateMapping(body ?? {}, state);
-  if (!check.ok) return json(res, check.status, { error: check.error });
-  const next = { ...configStore.entityMap };
-  if (check.to) next[check.from] = check.to;
-  else delete next[check.from];
-  try {
-    configStore.saveEntityMap(next);
-  } catch (err) {
-    logger.error(`Could not save the entity mapping: ${err.message}`);
-    return json(res, 500, { error: "The mapping could not be saved." });
-  }
-  logger.info(check.to ? `Entity ${check.from} is now mapped to ${check.to}` : `Entity mapping of ${check.from} removed`);
-  const item = mappingItems(mappingState()).find((i) => i.id === check.from);
-  return json(res, 200, { ok: true, item });
 }
 
 const sendImage = (res, image) => {
@@ -721,7 +683,6 @@ const server = http.createServer(async (req, res) => {
       if (p === "/api/todo/items") return await handleTodoGet(res, url.searchParams);
       if (p.startsWith("/api/plex/")) return await handlePlexGet(res, p, url.searchParams);
       if (p === "/api/proxy") return await proxyImage(res, url.searchParams.get("path"));
-      if (p.startsWith("/api/entities/")) return await handleMappingGet(res, p, url.searchParams);
       if (p.startsWith("/api/nowplaying/art/")) return handleNowPlayingArt(res, p.slice("/api/nowplaying/art/".length));
       if (p.startsWith("/api/music/")) return await handleMusicGet(res, p, url.searchParams);
       if (p.startsWith("/api/radio/image/")) return await handleRadioImage(res, p.slice("/api/radio/image/".length));
@@ -740,7 +701,6 @@ const server = http.createServer(async (req, res) => {
       const longCache = rel.startsWith("fonts/");
       return serveFile(res, webRoot, rel, longCache ? "public, max-age=31536000, immutable" : "no-cache");
     }
-    if (req.method === "PUT" && p === "/api/entities/map") return await handleMappingPut(req, res);
     if (req.method === "POST" && p === "/api/service") return await handleService(req, res);
     if (req.method === "POST" && p === "/api/plex/play") return await handlePlexPlay(req, res);
     if (req.method === "POST" && ["/api/todo/create", "/api/todo/rename", "/api/todo/delete"].includes(p)) return await handleTodoManage(req, res, p.slice("/api/todo/".length));

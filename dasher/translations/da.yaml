@@ -5,9 +5,16 @@ configuration:
   read_only:
     name: Skrivebeskyttet
     description: "Vis tilstande på tabletterne, men afvis alle kommandoer fra dem."
-  allow_entity_mapping:
-    name: Tillad tilknytning af manglende entiteter
-    description: "Lader dashboardet på en tablet tilknytte entiteter fra dashboard.yaml, som din Home Assistant ikke har, til entiteter den har (gemmes i entity-map.yaml). Slå fra for at forbyde ændringer fra tabletterne."
+  entity_map:
+    name: Entitetstilknytning
+    description: "Brug entiteter fra din Home Assistant i stedet for dem, dashboard.yaml nævner, uden at redigere filen. Hver række har entitets-id'et som skrevet i dashboard.yaml (Fra) og den entitet der skal bruges i stedet (Til); begge skal være af samme slags (et lys til et lys, en sensor til en sensor). Dashboard-entiteter som Home Assistant ikke kender vises nederst på tabletsiden og står i appens log med forslag. Genstart appen efter ændring."
+    fields:
+      from:
+        name: Dashboard-entitet
+        description: "Entitets-id som skrevet i dashboard.yaml, fx sensor.car_range."
+      to:
+        name: Home Assistant-entitet
+        description: "Entiteten i din Home Assistant der skal bruges i stedet, fx sensor.fordpass_elveh."
   allow_todo_management:
     name: Tillad ændring af huskelister
     description: "Lader folk ved en tablet oprette, omdøbe og slette huskelister fra Local To-do-integrationen (at redigere en listes punkter kan altid lade sig gøre). Slå fra for at forbyde det."

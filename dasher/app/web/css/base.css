@@ -85,8 +85,6 @@ img { -webkit-user-drag: none; }
   font-size: 13px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
 }
-.banner__btn { margin-left: 12px; min-height: 30px; padding: 0 14px; border-radius: 999px; background: rgba(255, 255, 255, 0.16); color: inherit; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; vertical-align: middle; }
-.banner__btn:active { background: rgba(255, 255, 255, 0.3); }
 .banner--warn { background: #3b2f10; color: #fde68a; }
 .banner[hidden] { display: none; }
 

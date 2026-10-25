@@ -5,9 +5,16 @@ configuration:
   read_only:
     name: Read-only
     description: "Show states on the tablets but refuse every command from them."
-  allow_entity_mapping:
-    name: Allow mapping of missing entities
-    description: "Lets the dashboard on a tablet map entities of dashboard.yaml that your Home Assistant does not have to entities it does have (saved in entity-map.yaml). Turn off to forbid changes from the tablets."
+  entity_map:
+    name: Entity mapping
+    description: "Use entities of your Home Assistant in place of the ones dashboard.yaml names, without editing the file. Each row has the entity id as written in dashboard.yaml (From) and the entity to use instead (To); both must be of the same kind (a light for a light, a sensor for a sensor). Dashboard entities that Home Assistant does not know are shown at the bottom of the tablet page and listed in the app log with suggestions. Restart the app after changing."
+    fields:
+      from:
+        name: Dashboard entity
+        description: "The entity id as written in dashboard.yaml, for example sensor.car_range."
+      to:
+        name: Home Assistant entity
+        description: "The entity of your Home Assistant to use instead, for example sensor.fordpass_elveh."
   allow_todo_management:
     name: Allow changing to-do lists
     description: "Lets people at a tablet create, rename and delete to-do lists of the Local To-do integration (editing the items of a list is always possible). Turn off to forbid it."

@@ -201,36 +201,42 @@ test("parseConfig applies the entity map but remembers the entities as written",
   assert.deepEqual(usage.get("light.missing"), ["a: Lamp"]);
 });
 
-test("ConfigStore saves the mapping next to dashboard.yaml and reloads with it", async () => {
+test("ConfigStore applies the entity_map option over the old entity-map.yaml and says what is left in the file", async () => {
   const fs = await import("node:fs");
   const os = await import("node:os");
   const path = await import("node:path");
   const { ConfigStore } = await import("../src/config.js");
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "dasher-map-"));
+  const warnings = [];
+  const logger = { info() {}, warn: (m) => warnings.push(m), error() {}, debug() {} };
   try {
-    fs.writeFileSync(path.join(dir, "dashboard.yaml"), "pages:\n  - id: a\n    tiles:\n      - { type: toggle, entity: light.missing }\n");
-    let changes = 0;
-    const store = new ConfigStore({ dir, logger: { info() {}, warn() {}, error() {}, debug() {} }, onChange: () => changes++ });
-    store.load();
-    assert.deepEqual([...store.current.entities], ["light.missing"]);
+    fs.writeFileSync(path.join(dir, "dashboard.yaml"), "pages:\n  - id: a\n    tiles:\n      - { type: toggle, entity: light.missing }\n      - { type: toggle, entity: light.other }\n");
 
-    store.saveEntityMap({ "light.missing": "light.real" });
-    assert.equal(changes, 1);
-    assert.deepEqual([...store.current.entities], ["light.real"]);
-    assert.deepEqual([...store.current.rawEntities], ["light.missing"]);
-    assert.match(fs.readFileSync(path.join(dir, "entity-map.yaml"), "utf8"), /light\.missing: light\.real/);
-    assert.ok(!fs.existsSync(path.join(dir, "entity-map.yaml.tmp")));
+    const plain = new ConfigStore({ dir, logger });
+    plain.load();
+    assert.deepEqual([...plain.current.entities].sort(), ["light.missing", "light.other"]);
 
-    // a fresh store picks the mapping up from disk, an unparsable file is ignored
-    const other = new ConfigStore({ dir, logger: { info() {}, warn() {}, error() {}, debug() {} } });
-    other.load();
-    assert.deepEqual([...other.current.entities], ["light.real"]);
+    const optioned = new ConfigStore({ dir, logger, entityMapOption: [{ from: "light.missing", to: "light.real" }, { from: "light.x", to: "switch.y" }] });
+    optioned.load();
+    assert.deepEqual([...optioned.current.entities].sort(), ["light.other", "light.real"]);
+    assert.deepEqual([...optioned.current.rawEntities].sort(), ["light.missing", "light.other"]);
+    assert.ok(warnings.some((w) => /^entity_map\[2\]/.test(w)), "a bad row is reported");
 
-    store.saveEntityMap({});
-    assert.deepEqual([...store.current.entities], ["light.missing"]);
+    // the file older versions wrote still works, and the option wins over it
+    fs.writeFileSync(path.join(dir, "entity-map.yaml"), "light.missing: light.from_file\nlight.other: light.other_from_file\n");
+    warnings.length = 0;
+    const both = new ConfigStore({ dir, logger, entityMapOption: [{ from: "light.missing", to: "light.real" }] });
+    both.load();
+    assert.deepEqual([...both.current.entities].sort(), ["light.other_from_file", "light.real"]);
+    assert.equal(warnings.filter((w) => /still used for 1 mapping/.test(w) && /light\.other -> light\.other_from_file/.test(w)).length, 1);
+    both.load();
+    assert.equal(warnings.filter((w) => /still used for/.test(w)).length, 1, "said once");
+
+    // an unparsable file is ignored
     fs.writeFileSync(path.join(dir, "entity-map.yaml"), "{{{");
-    other.load();
-    assert.deepEqual([...other.current.entities], ["light.missing"]);
+    plain.load();
+    assert.deepEqual([...plain.current.entities].sort(), ["light.missing", "light.other"]);
+    assert.ok(!("saveEntityMap" in plain));
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

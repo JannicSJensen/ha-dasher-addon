@@ -12,7 +12,6 @@ import { createDevicesPage } from "./pages/devices.js";
 import { createEvPage } from "./pages/ev.js";
 import { createPlexPage } from "./pages/plex.js";
 import { createTodoPage } from "./pages/todo.js";
-import { createMappingPage } from "./pages/mapping.js";
 import { createMusicPage } from "./pages/music.js";
 import { TILE_FACTORIES } from "./tiles/index.js";
 
@@ -20,7 +19,6 @@ const store = new Store({
   link: "connecting", // connecting | online | offline
   ha: null,
   missing: [],
-  mapping: { enabled: false, mapped: 0 },
   readOnly: false,
   version: null,
   config: null,
@@ -142,7 +140,6 @@ function parseRoute(config) {
   if (raw === "media" && plex?.enabled) return { kind: "plex", id: null };
   if (raw === "ev" && ev?.enabled) return { kind: "ev", id: null };
   if (raw === "climate" && climate?.enabled) return { kind: "climate", id: null };
-  if (raw === "entities" && store.getState().mapping.enabled) return { kind: "entities", id: null };
   if ((raw === "music" || raw === "radio") && !musicOff) return { kind: "music", id: null };
   if (raw === "areas" && !areasOff) return { kind: "areas", id: null };
   if (raw.startsWith("area/") && !areasOff) return { kind: "area", id: decodeURIComponent(raw.slice(5)) };
@@ -187,10 +184,6 @@ function renderSidebar(config) {
   if (plex?.enabled) items.push({ href: "#/media", title: plex.title ?? t("plex_media"), icon: plex.icon, active: route.kind === "plex" });
   const { ev } = store.getState();
   if (ev?.enabled) items.push({ href: "#/ev", title: ev.title ?? t("ev_car"), icon: ev.icon, active: route.kind === "ev" });
-  const { mapping, missing } = store.getState();
-  if (mapping.enabled && (missing.length || mapping.mapped)) {
-    items.push({ href: "#/entities", title: t("map_entities"), icon: "swap-horizontal", active: route.kind === "entities" });
-  }
   setChildren(
     sidebar,
     items.map((item) =>
@@ -226,8 +219,6 @@ function renderRoute() {
     mountSingle(createClimatePage(climate, ctx));
   } else if (route.kind === "ev") {
     mountSingle(createEvPage(ev, ctx));
-  } else if (route.kind === "entities") {
-    mountSingle(createMappingPage(ctx));
   } else if (route.kind === "music") {
     if (music) mountSingle(createMusicPage(music, ctx));
     else setChildren(stage); // the music data has not arrived yet
@@ -302,26 +293,17 @@ function renderConfigError(errors) {
 }
 
 function renderBanner() {
-  const { link, ha, errors, config, missing, mapping } = store.getState();
+  const { link, ha, errors, config, missing } = store.getState();
   let message = "";
-  let canMap = false;
   if (link === "offline") message = t("reconnecting");
   else if (link === "online" && ha === false) message = t("ha_offline");
   else if (config && errors.length) message = `${t("config_error")}: ${errors[0]}`;
   else if (config && missing.length) {
     const shown = missing.slice(0, 3).join(", ");
-    message = `${t("unknown_entities")}: ${shown}${missing.length > 3 ? ` +${missing.length - 3}` : ""}`;
-    // On the mapping screen itself the banner would only be in the way.
-    if (route.kind === "entities") message = "";
-    canMap = mapping.enabled && Boolean(message);
+    message = `${t("unknown_entities")}: ${shown}${missing.length > 3 ? ` +${missing.length - 3}` : ""}. ${t("unknown_entities_fix")}`;
   }
   banner.hidden = !message;
   banner.replaceChildren(message);
-  if (canMap) {
-    const fix = h("button", { class: "banner__btn", type: "button" }, t("map_entities"));
-    fix.addEventListener("click", () => (location.hash = "#/entities"));
-    banner.append(fix);
-  }
   banner.classList.toggle("banner--warn", Boolean(message) && link === "online" && ha !== false);
 }
 
@@ -366,8 +348,7 @@ store.subscribe((s) => s.config, applyConfig);
 store.subscribe((s) => s.errors, () => {
   if (!store.getState().config) applyConfig();
 });
-for (const key of ["link", "ha", "errors", "config", "missing", "mapping"]) store.subscribe((s) => s[key], renderBanner);
-for (const key of ["missing", "mapping"]) store.subscribe((s) => s[key], () => store.getState().config && renderSidebar(store.getState().config));
+for (const key of ["link", "ha", "errors", "config", "missing"]) store.subscribe((s) => s[key], renderBanner);
 
 store.subscribe((s) => s.areas, () => {
   const { config } = store.getState();
@@ -447,7 +428,7 @@ connect({
     loadedVersion = version;
     store.setState({ version });
   },
-  status: ({ ha, readOnly, missing, mapping }) => store.setState({ ha, readOnly, missing: missing ?? [], mapping: mapping ?? { enabled: false, mapped: 0 } }),
+  status: ({ ha, readOnly, missing }) => store.setState({ ha, readOnly, missing: missing ?? [] }),
   config: ({ config, errors }) => store.setState({ config, errors }),
   areas: (areas) => setIfChanged("areas", areas),
   music: (music) => setIfChanged("music", music),
