@@ -62,6 +62,7 @@ export function createTodoPage(model, ctx, listId = null) {
           count.textContent = n == null ? "–" : num(n);
           label.textContent = n == null ? t("unavailable") : n === 0 ? t("todo_all_done") : format(t, "todo_open", { n });
           el.classList.toggle("is-empty", n === 0);
+          el.classList.toggle("has-open", n > 0);
           el.classList.toggle("is-unavailable", n == null);
         },
       };

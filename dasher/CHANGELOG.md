@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.34.0
+
+- **To-do overview:** lists with open items glow in the accent colour, finished lists are calm.
+- **Media page:** a poster that is missing or does not load gets a colour made from the title with its initials, and items you can resume get a play mark.
+- Updated screenshots for the redesigned pages and a new one for the ambient screen.
+
 ## 0.33.0
 
 - **Area tiles show a little more.** Small chips in the corner of each area picture show the temperature, a window that is open and music that is playing in the area.

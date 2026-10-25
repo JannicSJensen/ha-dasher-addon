@@ -63,8 +63,21 @@ export function createPlexPage(model, ctx) {
   function createCard(item) {
     const wide = WIDE_TYPES.has(item.type);
     const art = h("div", { class: "plcard__art" });
-    if (item.image) art.style.backgroundImage = bg(`./${item.image}`);
-    else art.append(icon("movie-open-outline"));
+    const fallback = () => {
+      // no picture (or it did not load): a colour made from the title, with its initials
+      let hash = 0;
+      for (const ch of item.title ?? "") hash = (hash * 31 + ch.charCodeAt(0)) % 360;
+      art.style.backgroundImage = `linear-gradient(155deg, hsl(${hash} 45% 32%), hsl(${(hash + 40) % 360} 50% 16%))`;
+      art.classList.add("is-fallback");
+      art.replaceChildren(h("span", { class: "plcard__initials" }, (item.title ?? "").split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase()));
+    };
+    if (item.image) {
+      art.style.backgroundImage = bg(`./${item.image}`);
+      const probe = new Image();
+      probe.onerror = fallback;
+      probe.src = `./${item.image}`;
+    } else fallback();
+    if (item.resume) art.append(h("span", { class: "plcard__resume" }, icon("play")));
     const card = h(
       "button",
       { class: `plcard${wide ? " plcard--wide" : ""}`, type: "button" },

@@ -207,6 +207,8 @@ A grid of icon buttons (`buttons`, same format as in `hero`) with an optional `t
 
 ## Ambient screen
 
+![The ambient screen](https://raw.githubusercontent.com/JannicSJensen/ha-dasher-addon/main/docs/screenshots/ambient.png)
+
 After a while without touch the tablet can show a calm clock instead of the last page: a big time, the date, a slowly breathing orb in the accent colour on black, and up to four quick buttons. A tap anywhere (except on a button) brings the dashboard back. The content moves a few pixels now and then, so a screen that stays on does not burn in. It is off until you set it up:
 
 ```yaml

@@ -904,3 +904,19 @@
 .devcard.is-active::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: linear-gradient(90deg, transparent, var(--accent), transparent) 0 0 / 40% 100% no-repeat; animation: dev-run 2.4s linear infinite; }
 @keyframes dev-run { from { background-position: -40% 0; } to { background-position: 140% 0; } }
 @media (prefers-reduced-motion: reduce) { .devcard.is-active::after, .devring.is-charging .dial__arc { animation: none; } }
+
+/* ---- to-do overview: lists with open items glow, finished lists are calm ---- */
+.tdcard::before { content: ""; position: absolute; inset: 0; background: radial-gradient(80% 70% at 100% 100%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 70%); opacity: 0; transition: opacity 0.5s; pointer-events: none; }
+.tdcard.has-open::before { opacity: 1; }
+.tdcard.has-open .tdcard__count { color: var(--accent); }
+.tdcard.is-empty .tdcard__top .icon { color: var(--muted); }
+.tdcard.is-empty .tdcard__label { color: #6ee7b7; }
+.tdcard > * { position: relative; }
+
+/* ---- Media: posters without a picture, and the resume mark ---- */
+.plcard__art.is-fallback { display: grid; place-items: center; }
+.plcard__initials { font-size: 34px; font-weight: 700; letter-spacing: 0.04em; color: rgba(255, 255, 255, 0.75); }
+.plcard__art { position: relative; }
+.plcard__resume { position: absolute; right: 8px; bottom: 8px; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: rgba(0, 0, 0, 0.62); backdrop-filter: blur(6px); color: #fff; font-size: 20px; }
+.plcard__art:has(.plcard__resume)::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 36%; background: linear-gradient(to top, rgba(0, 0, 0, 0.55), transparent); pointer-events: none; }
+.plcard__resume { z-index: 1; }

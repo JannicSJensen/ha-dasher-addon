@@ -15,8 +15,9 @@ This repository contains the **Dasher** app (add-on) for Home Assistant: a dark,
 * **To-do lists page (Huskelister):** every to-do list of Home Assistant; add, tick off, edit and delete items, and create, rename and delete Local To-do lists.
 * **Meal plan page (Madplan):** a week of dinners planned by Home Assistant's AI Task with your rules (vegetarian days, allergies, cooking time, fixed days), recipes with step timers, ingredients added to a shopping list, dinners written to a calendar, and a *tonight* tile; a cookbook from your Mealie (search, plan and import recipes). Inspired by [ha-middagsro](https://github.com/Dinnsen/ha-middagsro), without the REMA 1000 parts.
 * **Devices page:** robot vacuums with controls, and washing machines, dryers, dishwashers and clothes heaters (LG ThinQ found automatically, others listed in `dashboard.yaml`); cards you do not want can be removed with the pencil, and restored.
+* **Ambient screen:** an optional calm clock screen with a breathing orb and quick buttons after a while without touch.
 * **Area pictures:** areas without a picture of their own get a built-in room picture chosen from their name (living room, kitchen, bedroom, bathroom, garage, garden ...); your own pictures come first.
-* **Climate page:** a card per room with temperature, setpoint and power, built from your climate helpers.
+* **Climate page:** a ring dial per room (drag to set the temperature) with a big average at the top, built from your climate helpers.
 * **Missing entities:** when `dashboard.yaml` uses entities your Home Assistant does not have, the tablet shows a notice and the app log suggests the likely ones; you choose the replacements in the app configuration (*Entity mapping*), and `dashboard.yaml` stays unchanged.
 * **Updates:** an unedited `dashboard.yaml` follows new versions of the example (the old one is saved as `dashboard.yaml.bak`); an edited one is never touched. The current example is always written to `dashboard.example.yaml`.
 * Vanilla JavaScript front end, one small Node.js server, no build step.
@@ -50,6 +51,8 @@ All screenshots show the built-in fake Home Assistant and Music Assistant (see [
 | **Cookbook**<br>Your Mealie recipes: search, plan on a day, or import from a web page. | |
 | [![Shopping](docs/screenshots/meals-shopping.png)](docs/screenshots/meals-shopping.png) | [![Rules](docs/screenshots/meals-rules.png)](docs/screenshots/meals-rules.png) |
 | **Shopping**<br>The ingredients added up and put on a Home Assistant shopping list. | **Rules**<br>Vegetarian days, allergies, cooking time, fixed days and favourites. |
+| [![Ambient screen](docs/screenshots/ambient.png)](docs/screenshots/ambient.png) | |
+| **Ambient screen**<br>A calm clock with a breathing orb and quick buttons after a while without touch. | |
 | [![Built-in room pictures](docs/screenshots/room-pictures.jpg)](docs/screenshots/room-pictures.jpg) | |
 | **Built-in room pictures**<br>Areas without a picture get one that fits the name: living room, kitchen, bedroom, bathroom, garden and more. | |
 | [![Car](docs/screenshots/car.png)](docs/screenshots/car.png) | |
