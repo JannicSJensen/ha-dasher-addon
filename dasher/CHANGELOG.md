@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.32.0
+
+- **Devices page.** The sections now sit side by side instead of in one long column. Robot vacuums show their battery as a small ring (amber when low, pulsing while charging), and the time left of a running machine is large and coloured, with a moving line along the card while it runs.
+
 ## 0.31.0
 
 - **Car page battery ring.** The battery is now a big ring gauge with the charge in the middle, the range under it and a white dot at the charging target. While the car charges the ring glows and pulses; below 20 % it turns amber.

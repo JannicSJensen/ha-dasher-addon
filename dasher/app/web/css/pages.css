@@ -657,7 +657,9 @@
 /* ---- Devices ---- */
 .devpage { height: 100%; overflow-y: auto; overscroll-behavior: contain; padding: 18px 18px 24px; scrollbar-width: none; }
 .devpage::-webkit-scrollbar { display: none; }
-.devsection { margin-top: 20px; }
+.devbody { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); column-gap: 16px; align-items: start; }
+.devsection { margin-top: 20px; min-width: 0; }
+.devsection.is-wide { grid-column: 1 / -1; }
 .devsection__title { margin: 0 0 10px; font-size: 18px; font-weight: 500; }
 .devgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
 .devcard { position: relative; display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: var(--radius); background: var(--tile-bg); overflow: hidden; transition: background 0.4s, opacity 0.3s; }
@@ -671,7 +673,8 @@
 .devcard.is-active .devcard__top > .icon { color: var(--accent); }
 .devcard__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .devcard__row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.devcard__big { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.devcard__big { font-size: 40px; font-weight: 700; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.devcard.is-active .devcard__big { color: var(--accent); }
 .devcard__status { font-size: 14px; color: #d0d0d3; }
 .devcard__status:empty { display: none; }
 .devcard__error { font-size: 13px; color: #fca5a5; }
@@ -888,3 +891,16 @@
 @keyframes np-drift-b { to { transform: translate(-16vmax, 20vmax) scale(0.9); } }
 @keyframes np-drift-c { to { transform: translate(14vmax, -12vmax) scale(1.2); } }
 @media (prefers-reduced-motion: reduce) { .npscreen__field { animation: none; } }
+
+/* ---- devices: battery ring and the running glow ---- */
+.devring { position: relative; flex: none; width: 54px; height: 54px; }
+.devring .dial { width: 100%; }
+.devring .dial__track, .devring .dial__arc { stroke-width: 22; }
+.devring__text { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.devring.is-low .dial__arc { stroke: #f59e0b; }
+.devring.is-charging .dial__arc { animation: ev-pulse 2.4s ease-in-out infinite; }
+.devring[hidden] { display: none; }
+.devcard { overflow: hidden; }
+.devcard.is-active::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: linear-gradient(90deg, transparent, var(--accent), transparent) 0 0 / 40% 100% no-repeat; animation: dev-run 2.4s linear infinite; }
+@keyframes dev-run { from { background-position: -40% 0; } to { background-position: 140% 0; } }
+@media (prefers-reduced-motion: reduce) { .devcard.is-active::after, .devring.is-charging .dial__arc { animation: none; } }

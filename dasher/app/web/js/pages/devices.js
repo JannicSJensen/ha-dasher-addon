@@ -1,9 +1,10 @@
+import { createDial } from "../components/dial.js";
 import { setDeviceCardHidden } from "../core/api.js";
 import { h } from "../core/h.js";
 import { icon, setIcon } from "../core/icons.js";
 import { formatNumber, isUnavailable } from "../lib/format.js";
 import { powerCall, stepTarget } from "../lib/climate.js";
-import { applianceInfo, batteryIcon, formatRemaining, tidyName, vacuumInfo, vacuumMainCall } from "../lib/devices.js";
+import { applianceInfo, formatRemaining, tidyName, vacuumInfo, vacuumMainCall } from "../lib/devices.js";
 import { translateState } from "../lib/i18n.js";
 import { friendlyName, pressable } from "../tiles/common.js";
 
@@ -35,9 +36,11 @@ export function createDevicesPage(initialModel, ctx) {
   function createVacuumCard(id) {
     const name = h("span", { class: "devcard__name" });
     const iconEl = icon("robot-vacuum");
-    const batteryIconEl = icon("battery-unknown");
-    const batteryText = h("span");
-    const battery = h("span", { class: "devchip" }, batteryIconEl, batteryText);
+    // the battery as a small ring with the charge in the middle
+    const gauge = createDial({ min: 0, max: 100, step: 1, knob: false, stops: [[0, "#f59e0b"], [0.35, "#2dd4bf"], [1, "#7af0dc"]] });
+    const batteryText = h("span", { class: "devring__text" });
+    gauge.center.append(batteryText);
+    const battery = h("span", { class: "devring", title: t("dev_battery") }, gauge.el);
     const status = h("div", { class: "devcard__status" });
     const error = h("div", { class: "devcard__error" });
     const mainIcon = icon("play");
@@ -67,8 +70,10 @@ export function createDevicesPage(initialModel, ctx) {
         setIcon(iconEl, info.cleaning ? "robot-vacuum" : info.docked ? "robot-vacuum" : info.status === "error" ? "robot-vacuum-alert" : "robot-vacuum-variant");
         battery.hidden = info.battery == null;
         if (info.battery != null) {
-          setIcon(batteryIconEl, batteryIcon(info.battery, info.charging));
-          batteryText.textContent = `${num(info.battery)}%`;
+          gauge.set({ value: info.battery });
+          batteryText.textContent = num(info.battery);
+          battery.classList.toggle("is-charging", Boolean(info.charging));
+          battery.classList.toggle("is-low", info.battery < 20);
         }
         status.textContent = info.usable ? (t(`dev_vac_${info.status}`) !== `dev_vac_${info.status}` ? t(`dev_vac_${info.status}`) : translateState(t, info.status)) : t(info.status === "unknown" ? "unknown" : "unavailable");
         const waterHint = [info.water.clean ? t("msg_vac_fill") : null, info.water.dirty ? t("msg_vac_empty") : null].filter(Boolean).join(" · ");
@@ -252,7 +257,7 @@ export function createDevicesPage(initialModel, ctx) {
       if (!groups[key].length) continue;
       cards.push(...groups[key]);
       if (editing) groups[key].forEach(addEditCover);
-      sections.push(h("section", { class: "devsection" }, h("h2", { class: "devsection__title" }, t(label)), h("div", { class: `devgrid${editing ? " is-editing" : ""}` }, groups[key].map((c) => c.el))));
+      sections.push(h("section", { class: `devsection${groups[key].length > 1 ? " is-wide" : ""}` }, h("h2", { class: "devsection__title" }, t(label)), h("div", { class: `devgrid${editing ? " is-editing" : ""}` }, groups[key].map((c) => c.el))));
     }
 
     const removed = [
