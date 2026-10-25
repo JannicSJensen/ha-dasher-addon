@@ -10,6 +10,7 @@ import { createNowPlayingScreen } from "./components/nowplaying-screen.js";
 import { createClimatePage } from "./pages/climate.js";
 import { createDevicesPage } from "./pages/devices.js";
 import { createEvPage } from "./pages/ev.js";
+import { createMealsPage } from "./pages/meals.js";
 import { createPlexPage } from "./pages/plex.js";
 import { createTodoPage } from "./pages/todo.js";
 import { createMusicPage } from "./pages/music.js";
@@ -29,6 +30,7 @@ const store = new Store({
   plex: null,
   devices: null,
   todo: null,
+  meals: null,
   lastPlayed: {},
   errors: [],
   entities: {},
@@ -73,6 +75,7 @@ function makeContext(config) {
     musicEnabled: () => Boolean(store.getState().music?.enabled),
     lastPlayed: () => store.getState().lastPlayed,
     evEnabled: () => Boolean(store.getState().ev?.enabled),
+    meals: () => store.getState().meals,
     devicesEditable: () => Boolean(store.getState().devices?.editable) && !store.getState().readOnly,
     areasEditable: () => Boolean(store.getState().areas?.editable) && !store.getState().readOnly,
     vacuums: () => store.getState().devices?.vacuums ?? [],
@@ -136,7 +139,8 @@ function parseRoute(config) {
   const areasOff = areas !== null && !areas.enabled; // known to be disabled, as opposed to not loaded yet
   const { music } = store.getState();
   const musicOff = music !== null && !music.enabled;
-  const { ev, climate, plex, devices, todo } = store.getState();
+  const { ev, climate, plex, devices, todo, meals } = store.getState();
+  if (raw === "meals" && meals?.enabled) return { kind: "meals", id: null };
   if ((raw === "todo" || raw.startsWith("todo/")) && todo?.enabled) return { kind: "todo", id: raw.startsWith("todo/") ? decodeURIComponent(raw.slice(5)) : null };
   if (raw === "devices" && devices?.enabled) return { kind: "devices", id: null };
   if (raw === "media" && plex?.enabled) return { kind: "plex", id: null };
@@ -178,6 +182,8 @@ function renderSidebar(config) {
     const { music } = store.getState();
     items.push({ href: "#/music", title: music.title ?? t("music"), icon: music.icon, active: route.kind === "music" });
   }
+  const { meals } = store.getState();
+  if (meals?.enabled) items.push({ href: "#/meals", title: meals.title ?? t("meals_title"), icon: meals.icon, active: route.kind === "meals" });
   const { todo } = store.getState();
   if (todo?.enabled) items.push({ href: "#/todo", title: todo.title ?? t("todo_title"), icon: todo.icon, active: route.kind === "todo" });
   const { devices } = store.getState();
@@ -203,7 +209,7 @@ function mountSingle(page) {
 }
 
 function renderRoute() {
-  const { config, areas, music, ev, climate, plex, devices, todo } = store.getState();
+  const { config, areas, music, ev, climate, plex, devices, todo, meals } = store.getState();
   destroyTiles();
   document.querySelectorAll(".modal").forEach((m) => m.remove());
   route = parseRoute(config);
@@ -211,7 +217,9 @@ function renderRoute() {
   stage.dataset.page = route.kind === "page" ? route.id : route.kind;
   const ctx = makeContext(config);
 
-  if (route.kind === "todo") {
+  if (route.kind === "meals") {
+    mountSingle(createMealsPage(meals, ctx));
+  } else if (route.kind === "todo") {
     mountSingle(createTodoPage(todo, ctx, route.id));
   } else if (route.kind === "devices") {
     mountSingle(createDevicesPage(devices, ctx));
@@ -423,6 +431,18 @@ store.subscribe((s) => s.todo, () => {
   else renderSidebar(config);
 });
 
+store.subscribe((s) => s.meals, () => {
+  const { config, meals } = store.getState();
+  if (!config) return;
+  const page = mounted[0]?.tile;
+  if (route.kind === "meals" && page?.setModel && meals?.enabled) page.setModel(meals); // redraw in place
+  else if (route.kind === "meals" || location.hash === "#/meals") renderRoute();
+  else if (route.kind === "page") {
+    renderSidebar(config);
+    refreshTiles(true); // a tonight tile follows the plan
+  } else renderSidebar(config);
+});
+
 store.subscribe((s) => s.lastPlayed, () => refreshTiles(true));
 
 window.addEventListener("hashchange", () => {
@@ -457,6 +477,7 @@ connect({
   plex: (plex) => setIfChanged("plex", plex),
   devices: (devices) => setIfChanged("devices", devices),
   todo: (todo) => setIfChanged("todo", todo),
+  meals: (meals) => setIfChanged("meals", meals),
   lastplayed: (lastPlayed) => setIfChanged("lastPlayed", lastPlayed),
   snapshot: (states) => store.setState({ entities: states }),
   state: (state) => store.setState((s) => ({ ...s, entities: { ...s.entities, [state.entity_id]: state } })),

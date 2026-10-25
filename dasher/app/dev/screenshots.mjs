@@ -63,6 +63,12 @@ await press(".np__art"); await page.waitForSelector(".npscreen.is-open"); await 
 await go(8098, "#/media", ".plcard"); await shot("media");
 await go(8098, "#/todo", ".tdcard"); await shot("todo");
 await press(".tdcard", "Garage"); await page.waitForSelector(".tdrow"); await sleep(1500); await shot("todo-list");
+await go(8098, "#/meals", ".mday"); await shot("meals");
+await press(".mday:not(.is-empty)"); await sleep(1500); await shot("meals-day");
+await page.evaluate(() => document.querySelectorAll(".modal").forEach((m) => m.remove())); await sleep(500);
+await press(".mtab", "Recipe"); await page.waitForSelector(".mrecipe, .mealspage__content"); await sleep(1500); await shot("meals-recipe");
+await press(".mtab", "Shopping"); await sleep(1500); await shot("meals-shopping");
+await press(".mtab", "Rules"); await sleep(1500); await shot("meals-rules");
 await go(8098, "#/ev", ".evcar"); await shot("car");
 await size(1180);
 await go(8098, "#/devices", ".devcard"); await shot("devices");

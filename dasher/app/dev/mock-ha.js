@@ -86,6 +86,10 @@ function todoCount(entityId) {
 todoCreate("todo.indkobsliste", "Indkøbsliste", "shopping_list", [{ summary: "Mælk" }, { summary: "Brød" }, { summary: "Æg", status: "completed" }]);
 todoCreate("todo.garage_chores", "Garage chores", "local_todo", [{ summary: "Clean the workbench", description: "Before the weekend", due: dayLabel(2) }, { summary: "Buy oil", due: dayLabel(-1) }]);
 todoCreate("todo.family", "Family ⚠️", "caldav", [{ summary: "Book the dentist" }]);
+// meal plan: an AI Task entity, a shopping list and a writable calendar
+put("ai_task.mock_ai", "unknown", { friendly_name: "Mock AI Task" });
+put("calendar.madplan", "off", { friendly_name: "Madplan" });
+const mealEvents = []; // { uid, calendar, summary, description, start, end }
 put("calendar.family", "off", { friendly_name: "Family" });
 put("calendar.privat", "off", { friendly_name: "Privat" });
 put("weather.forecast_home", "cloudy", { friendly_name: "Forecast Home", temperature: 11 });
@@ -198,6 +202,8 @@ let registry = {
     { ei: "todo.indkobsliste", pl: "shopping_list" },
     { ei: "todo.garage_chores", pl: "local_todo" },
     { ei: "todo.family", pl: "caldav" },
+    { ei: "ai_task.mock_ai", pl: "mock_ai" },
+    { ei: "calendar.madplan", pl: "local_calendar" },
     { ei: "calendar.family" },
     { ei: "calendar.privat" },
     { ei: "weather.forecast_home" },
@@ -313,6 +319,36 @@ const plexPoster = (key) => {
   const [w, h] = wide ? [320, 180] : [200, 300];
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}"><rect width="${w}" height="${h}" fill="hsl(${hue} 45% 32%)"/><text x="${w / 2}" y="${h / 2}" font-family="Arial,sans-serif" font-weight="700" font-size="20" fill="#fff" text-anchor="middle">${label}</text></svg>`;
 };
+
+// A tiny AI for the meal plan: it answers the three kinds of prompt the app sends, with a few rule-friendly dishes.
+const DISHES = [
+  ["Pasta med kødsovs", "Hakket oksekød", "okse", false, 35], ["Bagt laks med kartofler", "Laks", "laks", false, 40], ["Linsesuppe med brød", "Linser", "linser", true, 30],
+  ["Kylling i karry", "Kylling", "kylling", false, 35], ["Grøntsagslasagne", "Squash", "squash", true, 55], ["Frikadeller med kartofler", "Svinekød", "svin", false, 45],
+  ["Wokret tofu med nudler", "Tofu", "tofu", true, 25], ["Fiskefrikadeller med remoulade", "Torsk", "torsk", false, 30], ["Tacos med bønner", "Bønner", "bønner", true, 25],
+  ["Boller i karry", "Kalkun", "kalkun", false, 40], ["Risotto med svampe", "Svampe", "svampe", true, 40], ["Pizza med skinke", "Skinke", "skinke", false, 30],
+];
+let dishCursor = 0;
+function mockAi(prompt) {
+  const task = /^\[dasher:(\w+)\]/.exec(prompt)?.[1];
+  if (task === "plan") {
+    const dates = [...prompt.matchAll(/(\d{4}-\d{2}-\d{2}) \(\w{3}\)/g)].map((m) => m[1]);
+    const skip = (/Do NOT plan a dinner for: ([\d, -]+)/.exec(prompt)?.[1] ?? "").split(",").map((x) => x.trim());
+    const days = dates.filter((d) => !skip.includes(d)).map((date) => {
+      const [title, , main, vegetarian, minutes] = DISHES[dishCursor++ % DISHES.length];
+      return { date, kind: "dinner", title, description: `${title}, en god hverdagsret.`, minutes, vegetarian, double_portion: false, main_ingredient: main, from: null };
+    });
+    return "Here is the plan:\n```json\n" + JSON.stringify({ days }) + "\n```";
+  }
+  if (task === "recipe") {
+    const title = /for the dinner "([^"]+)"/.exec(prompt)?.[1] ?? "Aftensmad";
+    return JSON.stringify({ servings: 4, minutes: 35, vegetarian: false, ingredients: [{ name: "Hovedingrediens til " + title, amount: "500 g" }, { name: "Løg", amount: "2 stk" }, { name: "Hvidløg", amount: "2 fed" }, { name: "Salt", amount: "1 tsk", basic: true }, { name: "Olie", amount: "2 spsk", basic: true }], steps: ["Forbered alle ingredienserne.", "Steg løg og hvidløg i olie i 5 minutter.", "Tilsæt hovedingrediensen og lad det simre i 20 minutter.", "Smag til med salt og server."], tip: "Server med frisk salat." });
+  }
+  if (task === "alternatives") {
+    const picks = [DISHES[(dishCursor += 3) % DISHES.length], DISHES[(dishCursor += 2) % DISHES.length], DISHES[(dishCursor += 5) % DISHES.length]];
+    return JSON.stringify({ alternatives: picks.map(([title, , main, vegetarian, minutes]) => ({ title, description: `${title} som alternativ.`, minutes, vegetarian, main_ingredient: main })) });
+  }
+  return "{}";
+}
 
 // Music Assistant: radio stations (logos are served by this mock at /imageproxy).
 const STATIONS = [
@@ -583,6 +619,11 @@ wss.on("connection", (ws) => {
     if (msg.type === "config/floor_registry/list") return reply(registry.floors);
     if (msg.type === "config/device_registry/list") return reply(registry.devices);
     if (msg.type === "config/entity_registry/list_for_display") return reply({ entity_categories: {}, entities: registry.entities });
+    if (msg.type === "calendar/event/delete") {
+      const i = mealEvents.findIndex((e) => e.uid === msg.uid);
+      if (i >= 0) mealEvents.splice(i, 1);
+      return reply(null);
+    }
     if (msg.type === "todo/item/list") {
       const list = todoItems.get(msg.entity_id);
       return list ? reply({ items: list.map((i) => ({ ...i })) }) : ws.send(JSON.stringify({ id: msg.id, type: "result", success: false, error: { code: "not_found", message: "Entity not found" } }));
@@ -614,9 +655,20 @@ wss.on("connection", (ws) => {
         return ws.send(JSON.stringify({ id: msg.id, type: "result", success: false, error: { code: "failed", message: err.message } }));
       }
     }
+    if (msg.type === "call_service" && msg.domain === "ai_task" && msg.service === "generate_data") {
+      return setTimeout(() => reply({ context: {}, response: { data: mockAi(String(msg.service_data.instructions ?? "")), conversation_id: "mock" } }), Number(process.env.MOCK_AI_DELAY ?? 300));
+    }
+    if (msg.type === "call_service" && msg.domain === "calendar" && msg.service === "create_event") {
+      mealEvents.push({ uid: `ev${mealEvents.length + 1}-${Date.now()}`, calendar: [].concat(msg.target?.entity_id ?? [])[0], summary: msg.service_data.summary, description: msg.service_data.description, start: msg.service_data.start_date_time, end: msg.service_data.end_date_time });
+      console.log(`[mock-ha] calendar.create_event ${msg.service_data.start_date_time} ${msg.service_data.summary}`);
+      return reply({ context: {} });
+    }
     if (msg.type === "call_service" && msg.domain === "calendar" && msg.service === "get_events") {
       const wanted = msg.target?.entity_id ?? [];
-      return reply({ context: {}, response: Object.fromEntries(wanted.map((id) => [id, { events: calendarEvents(id) }])) });
+      const from = String(msg.service_data.start_date_time ?? "").slice(0, 10);
+      const to = String(msg.service_data.end_date_time ?? "").slice(0, 10);
+      const created = (id) => mealEvents.filter((e) => e.calendar === id && (!from || (e.start.slice(0, 10) >= from && e.start.slice(0, 10) < to))).map((e) => ({ uid: e.uid, summary: e.summary, description: e.description, start: e.start, end: e.end }));
+      return reply({ context: {}, response: Object.fromEntries(wanted.map((id) => [id, { events: id === "calendar.madplan" ? created(id) : calendarEvents(id) }])) });
     }
     if (msg.type === "call_service" && msg.domain === "weather" && msg.service === "get_forecasts") {
       const id = [msg.target?.entity_id].flat()[0];

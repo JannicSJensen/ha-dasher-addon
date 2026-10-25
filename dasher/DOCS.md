@@ -28,6 +28,7 @@ If the file has a mistake, the page shows what is wrong instead of failing silen
 | `allow_todo_management` | `true` | Lets people at a tablet create, rename and delete lists of the Local To-do integration on the [To-do page](#to-do-lists). Editing the items of a list is always possible. Turn off to forbid changing lists. Always off in read-only mode. |
 
 | `allow_area_editing` | `true` | Lets people at a tablet remove devices from the [area pages](#areas) and cards from the [Devices page](#devices), and bring them back. Turn off to forbid it. Always off in read-only mode. |
+| `allow_meal_editing` | `true` | Lets people at a tablet change the [meal plan](#meal-plan-madplan): edit days and rules, and start the AI (which may cost money with your AI provider). Off = the page only shows the plan. |
 
 Changes to the options take effect when the app is restarted.
 
@@ -397,6 +398,47 @@ todo:
 * The page appears on its own when Home Assistant has a to-do list. The lists take part in entity mapping.
 * Creating and deleting lists needs Home Assistant's admin API: the app does it with its own Supervisor token. **Anyone who can open the tablet page can add, tick off and delete items and create, rename and delete Local lists.** Turn it off with the app option `allow_todo_management` (items can still be edited), or `read_only`.
 * Renaming a list changes the name of its entity in Home Assistant (the entity id stays).
+
+## Meal plan (Madplan)
+
+![The meal plan](https://raw.githubusercontent.com/JannicSJensen/ha-dasher-addon/main/docs/screenshots/meals.png)
+
+A **Meal plan** entry in the menu (call it *Madplan* with `title:`) plans the family's dinners and ties them to Home Assistant's own features: the plan is written by **AI Task**, each dinner becomes an event in a **calendar**, and the ingredients go onto a **shopping list** (a `todo` list). The idea is taken from [ha-middagsro](https://github.com/Dinnsen/ha-middagsro), without anything that needs the REMA 1000 app or offers.
+
+**What you need**
+
+* An AI integration in Home Assistant that gives an `ai_task` entity (*Settings, Devices & services*: OpenAI, Google Generative AI, Ollama, Anthropic ...). Without it you can still plan by hand: add, edit and remove dinners yourself.
+* A calendar for the dinners (optional). A **Local Calendar** called *Madplan* is a good choice; set `calendar_entity`. Dasher only changes events it made itself (their description starts with "Dasher madplan").
+* A shopping list: Home Assistant's *Shopping list* or any other `todo` list (`shopping_list_entity`).
+
+**The page has four tabs**
+
+* **Week**: the days in weeks; tap a day to edit it, mark it as left-overs, eating out or no dinner, rate the dish (favourite / disliked), ask for **other dishes**, or have the AI write the recipe. **New plan** asks the AI for a week: pick the start day, the days without dinner, wishes and **Surprise me**.
+* **Recipe**: the dinner of a day with ingredients and steps to tick off, and a timer on steps that mention a time (it beeps when done).
+* **Shopping**: the ingredients of the chosen period added up (400 g + 0,5 kg = 900 g); what is already on the list is marked, and **Add to the shopping list** adds the rest. Pantry basics (salt, oil ...) are not added unless you tick them.
+* **Rules**: vegetarian dinners per week, left-over days, the longest cooking time on weekdays, things to avoid, **allergies**, fixed days ("Friday = pizza"), favourites that should come back every so often, free-text notes, and the dishes you have rated.
+
+Dasher checks every plan against the rules (no repeats of a dish or main ingredient within a few weeks, no disliked or avoided ingredient, cooking time, fixed days, vegetarian count, left-overs). When the AI breaks a rule it is told and tries again (up to three times); whatever is still broken is shown as a warning on the day instead of being hidden.
+
+```yaml
+meals:
+  # enabled: false                              # remove the menu entry
+  title: Madplan
+  shopping_list_entity: todo.shopping_list      # default: the Shopping list, or the first to-do list
+  calendar_entity: calendar.madplan
+  # ai_task_entity: ai_task.openai              # default: the first AI Task entity
+  household: 4                                  # people at the table
+  dinner_time: "18:00"                          # the time of the calendar event
+  # language: da                                # the language of dishes and recipes (default: the dashboard language)
+  # auto: { weekday: sun, time: "17:00", days: 7 }   # make next week's plan by itself
+```
+
+**Tonight's dinner tile**: put `- { type: dinner, col: 3, row: 2 }` on a page (optional `name`, `icon`). It shows today's dinner and tomorrow's, and a tap opens the recipe.
+
+* The plan is stored in `meals.json` in the app's data folder, so it is part of Home Assistant backups. Dinners are copied to the calendar whenever they change.
+* The AI is only called when someone presses a button (or with `auto`); each call is paid by your AI provider. The app option `allow_meal_editing` decides whether a tablet may do it.
+* `calendar_entity`, `shopping_list_entity` and `ai_task_entity` take part in entity mapping.
+* **Not included** (they need REMA 1000 or Tjek): matching ingredients to products and prices, sending the list to the REMA app, REMA's lists, favourites and recipes, offers from other chains and the offer sensors. Planned for later: a recipe collection with import from a link or Mealie, a food budget with manual bookings, health estimates, and history.
 
 ## Areas
 

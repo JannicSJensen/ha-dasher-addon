@@ -8,6 +8,9 @@ import { ConfigStore } from "./config.js";
 import { discoverMusicAssistant } from "./discovery.js";
 import { discoverEv, resolveEv } from "./ev.js";
 import { resolveClimate } from "./climate.js";
+import { MealsAI } from "./meals-ai.js";
+import { MealsStore, addDays, isDate, todayLocal, weekdayIndex, WEEKDAYS } from "./meals.js";
+import { MealsCalendar, eventSignature } from "./meals-sync.js";
 import { TodoService, cleanListName, resolveTodo } from "./todo.js";
 import { deviceEntities, deviceKeys, discoverDevices, resolveDevices } from "./devices.js";
 import { PlexService, plexBrowsers, plexConfigured, plexPlayers, validBrowse, validatePlay } from "./plex.js";
@@ -50,6 +53,7 @@ const logger = Object.fromEntries(
 
 const PORT = Number(process.env.PORT ?? 8099);
 const READ_ONLY = options.read_only === true;
+const MEALS_EDIT = !READ_ONLY && options.allow_meal_editing !== false && process.env.ALLOW_MEAL_EDITING !== "0";
 const AREA_EDIT = !READ_ONLY && options.allow_area_editing !== false && process.env.ALLOW_AREA_EDITING !== "0";
 const TODO_MANAGE = !READ_ONLY && options.allow_todo_management !== false && process.env.ALLOW_TODO_MANAGEMENT !== "0";
 const configDir = process.env.CONFIG_DIR ?? "/config";
@@ -246,6 +250,7 @@ function rebuild({ refresh }) {
     ...current.entities,
     ...(todoState.enabled ? todoState.lists.map((l) => l.id) : []),
     ...(devicesState.enabled ? deviceEntities(devicesState) : []),
+    ...(mealsEnabled() ? [mealsSettings().shopping].filter(Boolean) : []),
     ...areaModel.entities,
     ...radioPlayerIds,
     ...(evState.enabled ? Object.values(evState.roles) : []),
@@ -259,6 +264,8 @@ function rebuild({ refresh }) {
   broadcast("climate", climatePayload());
   broadcast("plex", plexPayload());
   broadcast("devices", devicesPayload());
+  broadcast("meals", mealsPayload());
+  syncMealsCalendar();
   broadcast("todo", todoPayload());
   if (radioPlayerIds.length && (radio.stations.length === 0 || radio.error)) radio.refresh();
 }
@@ -407,6 +414,7 @@ function handleEvents(req, res) {
   send(res, "climate", climatePayload());
   send(res, "plex", plexPayload());
   send(res, "devices", devicesPayload());
+  send(res, "meals", mealsPayload());
   send(res, "todo", todoPayload());
   send(res, "lastplayed", nowPlaying.payload());
   send(res, "snapshot", Object.fromEntries(ha.states));
@@ -529,7 +537,8 @@ const todoList = (id) => todoState.lists.find((l) => l.id === id);
 
 async function handleTodoGet(res, params) {
   const id = params.get("entity_id");
-  if (!todoState.enabled || !todoList(id)) return json(res, 404, { error: "Unknown list." });
+  const forMeals = mealsEnabled() && id === mealsSettings().shopping; // the meal plan reads its shopping list too
+  if (!forMeals && (!todoState.enabled || !todoList(id))) return json(res, 404, { error: "Unknown list." });
   try {
     return json(res, 200, await todo.items(id));
   } catch (err) {
@@ -571,6 +580,155 @@ async function handleTodoManage(req, res, action) {
     return json(res, 200, { ok: true });
   } catch (err) {
     logger.warn(`To-do ${action} failed: ${err.message}`);
+    return json(res, err.status ?? 502, { error: err.message });
+  }
+}
+
+// ---- meal plan (Madplan) ---------------------------------------------------------------------------
+
+const meals = new MealsStore({ dir: dataDir, logger });
+const mealsCalendar = new MealsCalendar({ ha, logger });
+
+/** What the meal plan uses from Home Assistant: the AI Task, the shopping list and the calendar. */
+function mealsSettings() {
+  const cfg = configStore.current.config?.meals;
+  const ids = [...ha.entityIndex.keys()];
+  const registry = ha.registries?.entities ?? [];
+  const todos = ids.filter((id) => id.startsWith("todo.")).sort();
+  const shopping = cfg?.shopping_list_entity ?? registry.find((e) => e.pl === "shopping_list" && e.ei.startsWith("todo."))?.ei ?? todos[0] ?? null;
+  return {
+    cfg,
+    ai: cfg?.ai_task_entity ?? ids.filter((id) => id.startsWith("ai_task.")).sort()[0] ?? null,
+    shopping,
+    calendar: cfg?.calendar_entity ?? null,
+    household: cfg?.household ?? 4,
+    dinner_time: cfg?.dinner_time ?? "18:00",
+    language: cfg?.language ?? configStore.current.config?.language ?? "da",
+  };
+}
+
+const mealsAi = new MealsAI({ ha, store: meals, logger, resolveEntity: () => mealsSettings().ai, settings: mealsSettings });
+
+const mealsEnabled = () => {
+  const { cfg, ai, shopping } = mealsSettings();
+  if (!cfg || cfg.enabled === false) return false;
+  return cfg.enabled === true || Boolean(ai || shopping);
+};
+
+const mealsPayload = () => {
+  if (!mealsEnabled()) return { enabled: false };
+  const s = mealsSettings();
+  const today = todayLocal();
+  const days = Object.fromEntries(Object.entries(meals.payload().days).filter(([date]) => date >= addDays(today, -14) && date <= addDays(today, 42)));
+  return {
+    enabled: true,
+    title: s.cfg.title,
+    icon: s.cfg.icon,
+    editable: MEALS_EDIT,
+    household: s.household,
+    dinner_time: s.dinner_time,
+    ai: Boolean(s.ai) && MEALS_EDIT,
+    shopping_list: s.shopping,
+    calendar: s.calendar,
+    calendar_error: mealsCalendar.error,
+    ...meals.payload(),
+    days,
+  };
+};
+
+/** Keep the calendar in step with the plan: only days from today on, only what changed. */
+const calendarSynced = new Map(); // date -> signature
+function syncMealsCalendar() {
+  const { calendar, dinner_time: time } = mealsSettings();
+  if (!calendar || !mealsEnabled()) return;
+  const today = todayLocal();
+  const dates = new Set([...meals.days.keys(), ...calendarSynced.keys()]);
+  for (const date of dates) {
+    if (date < today) continue;
+    const entry = meals.days.get(date);
+    const signature = eventSignature(entry, time);
+    if (calendarSynced.get(date) === signature || (signature === "null" && !calendarSynced.has(date))) continue;
+    calendarSynced.set(date, signature);
+    mealsCalendar.syncDay(calendar, date, entry, time).then((ok) => {
+      if (!ok) calendarSynced.delete(date);
+      else if (signature === "null") calendarSynced.delete(date);
+      broadcast("meals", mealsPayload());
+    });
+  }
+}
+meals.on("change", () => {
+  broadcast("meals", mealsPayload());
+  syncMealsCalendar();
+});
+
+let lastAutoPlan = "";
+/** `meals: auto:` makes next week's plan on the chosen weekday and time, when that week has no dinners yet. */
+function maybeAutoPlan() {
+  const { cfg, ai } = mealsSettings();
+  if (!cfg?.auto || !ai || !MEALS_EDIT || meals.job.status === "running") return;
+  const now = new Date();
+  const stamp = `${todayLocal(now)} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  if (WEEKDAYS[weekdayIndex(todayLocal(now))] !== cfg.auto.weekday || stamp.slice(11) < cfg.auto.time || lastAutoPlan === todayLocal(now)) return;
+  const monday = addDays(todayLocal(now), 7 - weekdayIndex(todayLocal(now)));
+  lastAutoPlan = todayLocal(now);
+  if ([...meals.days.values()].some((d) => d.kind === "dinner" && d.date >= monday && d.date < addDays(monday, 7))) return;
+  logger.info(`Making next week's meal plan (from ${monday})`);
+  mealsAi.generatePlan({ start: monday, days: cfg.auto.days }).catch(() => {});
+}
+setInterval(maybeAutoPlan, 60_000).unref();
+
+async function handleMealsPost(req, res, action) {
+  if (!mealsEnabled()) return json(res, 503, { error: "The meal plan is not available." });
+  if (!MEALS_EDIT) return json(res, 403, { error: "Editing the meal plan is switched off." });
+  let body;
+  try {
+    body = JSON.parse(await readBody(req, 64 * 1024));
+  } catch (err) {
+    return json(res, err.status ?? 400, { error: err.message || "Invalid JSON." });
+  }
+  try {
+    switch (action) {
+      case "day": {
+        if (!isDate(body?.date)) return json(res, 400, { error: "Invalid date." });
+        if (body.entry == null) {
+          meals.setDay(body.date, null);
+          return json(res, 200, { ok: true });
+        }
+        const entry = meals.setDay(body.date, { ...body.entry, source: body.entry.source === "ai" ? "ai" : "manual" });
+        return entry ? json(res, 200, { ok: true, entry }) : json(res, 400, { error: "A dinner needs a name." });
+      }
+      case "prefs":
+        return json(res, 200, { ok: true, prefs: meals.setPrefs(body?.prefs) });
+      case "rate":
+        return meals.rate(body?.name, body?.rating ?? null) ? json(res, 200, { ok: true }) : json(res, 400, { error: "Invalid rating." });
+      case "generate": {
+        if (!mealsAi.available) return json(res, 503, { error: "No AI Task is set up in Home Assistant." });
+        if (meals.job.status === "running") return json(res, 409, { error: "A plan is already being made." });
+        if (!isDate(body?.start)) return json(res, 400, { error: "Choose a start day." });
+        const request = {
+          start: body.start,
+          days: body.days,
+          skip: (Array.isArray(body.skip) ? body.skip : []).filter(isDate),
+          wishes: String(body.wishes ?? "").slice(0, 500),
+          surprise: body.surprise === true,
+        };
+        mealsAi.generatePlan(request).catch(() => {}); // runs on; the job state tells the tablets how it goes
+        return json(res, 202, { ok: true });
+      }
+      case "recipe":
+        if (!mealsAi.available) return json(res, 503, { error: "No AI Task is set up in Home Assistant." });
+        if (!isDate(body?.date)) return json(res, 400, { error: "Invalid date." });
+        await mealsAi.writeRecipe(body.date);
+        return json(res, 200, { ok: true });
+      case "alternatives":
+        if (!mealsAi.available) return json(res, 503, { error: "No AI Task is set up in Home Assistant." });
+        if (!isDate(body?.date)) return json(res, 400, { error: "Invalid date." });
+        return json(res, 200, { alternatives: await mealsAi.alternatives(body.date) });
+      default:
+        return json(res, 404, { error: "Not found." });
+    }
+  } catch (err) {
+    logger.warn(`Meal plan ${action} failed: ${err.message}`);
     return json(res, err.status ?? 502, { error: err.message });
   }
 }
@@ -723,6 +881,7 @@ const server = http.createServer(async (req, res) => {
       if (p === "/api/events") return handleEvents(req, res);
       if (p === "/api/config") return json(res, 200, configPayload());
       if (p === "/api/calendar") return await handleCalendar(res, url.searchParams);
+      if (p === "/api/meals") return json(res, 200, mealsPayload());
       if (p === "/api/todo/items") return await handleTodoGet(res, url.searchParams);
       if (p.startsWith("/api/plex/")) return await handlePlexGet(res, p, url.searchParams);
       if (p === "/api/proxy") return await proxyImage(res, url.searchParams.get("path"));
@@ -747,6 +906,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "POST" && p === "/api/service") return await handleService(req, res);
     if (req.method === "POST" && p === "/api/plex/play") return await handlePlexPlay(req, res);
     if (req.method === "POST" && p === "/api/areas/device") return await handleAreaDevice(req, res);
+    if (req.method === "POST" && p.startsWith("/api/meals/")) return await handleMealsPost(req, res, p.slice("/api/meals/".length));
     if (req.method === "POST" && p === "/api/devices/card") return await handleDevicesCard(req, res);
     if (req.method === "POST" && ["/api/todo/create", "/api/todo/rename", "/api/todo/delete"].includes(p)) return await handleTodoManage(req, res, p.slice("/api/todo/".length));
     if (req.method === "POST" && p === "/api/radio/play") return await handleRadioPlay(req, res);

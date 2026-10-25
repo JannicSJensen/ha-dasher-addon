@@ -57,14 +57,14 @@ export class HAClient extends EventEmitter {
     if (refresh && this.connected) await this._refreshStates().catch((e) => this.log.warn(`State refresh failed: ${e.message}`));
   }
 
-  request(message) {
+  request(message, { timeoutMs = 15_000 } = {}) {
     return new Promise((resolve, reject) => {
       if (!this.connected) return reject(new Error("Not connected to Home Assistant."));
       const id = this._nextId++;
       const timer = setTimeout(() => {
         this._pending.delete(id);
         reject(new Error("Home Assistant did not answer in time."));
-      }, 15_000);
+      }, timeoutMs);
       this._pending.set(id, { resolve, reject, timer });
       this.ws.send(JSON.stringify({ ...message, id }));
     });
@@ -81,15 +81,18 @@ export class HAClient extends EventEmitter {
   }
 
   /** Call an action that returns data (supports_response) and resolve with that data. */
-  async callServiceWithResponse(domain, service, data, target) {
-    const result = await this.request({
-      type: "call_service",
-      domain,
-      service,
-      service_data: data,
-      ...(target ? { target } : {}),
-      return_response: true,
-    });
+  async callServiceWithResponse(domain, service, data, target, options) {
+    const result = await this.request(
+      {
+        type: "call_service",
+        domain,
+        service,
+        service_data: data,
+        ...(target ? { target } : {}),
+        return_response: true,
+      },
+      options,
+    );
     return result?.response ?? null;
   }
 

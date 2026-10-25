@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.24.0
+
+- **Meal plan (Madplan).** A new page that plans the week's dinners with Home Assistant's **AI Task**, following your rules (vegetarian days, left-overs, allergies, things to avoid, cooking time, fixed days, favourites). Recipes with ingredients and steps, tick-off lists and step timers; the ingredients of a period are added up and put on a Home Assistant **shopping list**; each dinner is written to a **calendar**. Plans are checked and the AI is asked again when it breaks a rule. Edit, rate and swap dishes by hand. A `dinner` tile shows tonight's dinner on the front page. Configure it in the new `meals:` section of `dashboard.yaml`; the app option `allow_meal_editing` controls whether tablets may change the plan.
+- Based on the features of [ha-middagsro](https://github.com/Dinnsen/ha-middagsro), leaving out everything that needs the REMA 1000 app or offers (products, prices, sending the list, offers).
+
 ## 0.23.0
 
 - **Edit the Devices page.** A pencil next to the title lets you remove vacuum and appliance cards you do not want and bring them back; saved in the app and shared by all tablets. It is governed by the same app option as the area pages, `allow_area_editing`.

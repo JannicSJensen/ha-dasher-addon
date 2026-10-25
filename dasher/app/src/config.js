@@ -19,6 +19,7 @@ export const TILE_TYPES = new Set([
   "climate",
   "buttons",
   "calendar",
+  "dinner",
 ]);
 
 const ENTITY_RE = /^[a-z0-9_]+\.[a-z0-9_]+$/;
@@ -191,6 +192,38 @@ function parseDevices(raw, errors) {
   };
 }
 
+/** Normalise the optional `meals:` section (the meal plan page). */
+function parseMeals(raw, errors) {
+  const r = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+  const entity = (key, domain) => {
+    if (r[key] == null) return null;
+    const id = String(r[key]);
+    if (ENTITY_RE.test(id) && id.startsWith(`${domain}.`)) return id;
+    errors.push(`meals.${key}: "${id}" is not a ${domain} entity id`);
+    return null;
+  };
+  const time = /^([01]?\d|2[0-3]):[0-5]\d$/.test(String(r.dinner_time ?? "")) ? String(r.dinner_time).padStart(5, "0") : "18:00";
+  const auto = r.auto && typeof r.auto === "object" ? r.auto : null;
+  return {
+    enabled: r.enabled === false ? false : r.enabled === true ? true : "auto",
+    title: r.title != null ? String(r.title) : null,
+    icon: String(r.icon ?? "silverware-fork-knife"),
+    shopping_list_entity: entity("shopping_list_entity", "todo"),
+    calendar_entity: entity("calendar_entity", "calendar"),
+    ai_task_entity: entity("ai_task_entity", "ai_task"),
+    household: posInt(r.household, 4),
+    dinner_time: time,
+    language: r.language != null ? String(r.language).toLowerCase().slice(0, 2) : null,
+    auto: auto
+      ? {
+          weekday: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"].includes(auto.weekday) ? auto.weekday : "sat",
+          time: /^([01]?\d|2[0-3]):[0-5]\d$/.test(String(auto.time ?? "")) ? String(auto.time).padStart(5, "0") : "08:00",
+          days: Math.min(14, posInt(auto.days, 7)),
+        }
+      : null,
+  };
+}
+
 /** Normalise the optional `todo:` section (the to-do lists page). */
 function parseTodo(raw, errors) {
   const r = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
@@ -280,6 +313,7 @@ export function parseConfig(text, { entityMap = {} } = {}) {
   for (const id of toList(raw.plex?.players)) rawEntities.add(id);
   for (const id of toList(raw.devices?.vacuums)) rawEntities.add(id);
   for (const id of toList(raw.todo?.lists)) rawEntities.add(id);
+  collectEntities(raw.meals ?? {}, rawEntities);
   collectEntities(raw.devices?.appliances ?? [], rawEntities);
   for (const id of [...rawEntities]) if (!ENTITY_RE.test(id)) rawEntities.delete(id);
   const usage = describeUsage(raw);
@@ -338,6 +372,7 @@ export function parseConfig(text, { entityMap = {} } = {}) {
   const plex = parsePlex(raw.plex, errors);
   const devices = parseDevices(raw.devices, errors);
   const todo = parseTodo(raw.todo, errors);
+  const meals = parseMeals(raw.meals, errors);
 
   const config = {
     title: String(raw.title ?? "Dasher"),
@@ -352,6 +387,7 @@ export function parseConfig(text, { entityMap = {} } = {}) {
     plex,
     devices,
     todo,
+    meals,
     pages,
   };
 
@@ -362,6 +398,7 @@ export function parseConfig(text, { entityMap = {} } = {}) {
   for (const id of plex.players) entities.add(id);
   for (const id of devices.vacuums) entities.add(id);
   for (const id of todo.lists) entities.add(id);
+  for (const id of [meals.shopping_list_entity, meals.calendar_entity, meals.ai_task_entity]) if (id) entities.add(id);
   for (const a of devices.appliances) for (const id of Object.values(a.roles)) entities.add(id);
   for (const id of [...music.players, music.default_player]) if (id) entities.add(id);
   return { config, errors, entities, rawEntities, usage };

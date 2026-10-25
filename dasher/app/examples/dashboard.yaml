@@ -85,6 +85,20 @@ devices:
   #   - { kind: dishwasher, name: Dishwasher, status_entity: sensor.dishwasher_status, remaining_entity: sensor.dishwasher_remaining, power_entity: switch.dishwasher }
   #   - { kind: heater, name: Clothes heater, power_entity: switch.clothes_rack }   # kind: washer | dryer | dishwasher | heater
 
+# The Madplan page: a dinner plan for the week made with Home Assistant's AI Task (an AI integration such as
+# OpenAI, Google or Ollama must be set up), recipes, a shopping list and calendar entries. Everything is
+# optional; the page appears when Home Assistant has an AI Task entity, a to-do list or a calendar.
+meals:
+  # enabled: false
+  # title: Madplan
+  # shopping_list_entity: todo.shopping_list   # default: the Shopping list, or the first to-do list
+  # calendar_entity: calendar.madplan         # a dinner event is written here (a Local Calendar is a good choice)
+  # ai_task_entity: ai_task.openai            # default: the first AI Task entity
+  # household: 4                              # people at the table
+  # dinner_time: "18:00"
+  # language: da                              # the language of dishes and recipes
+  # auto: { weekday: sun, time: "17:00", days: 7 }   # plan the next week by itself
+
 pages:
   - id: home
     title: Home
@@ -112,6 +126,9 @@ pages:
           - { icon: weather-night, name: Good night, entity: input_boolean.good_night }   # toggles, lit while on
           - { icon: palm-tree, name: Vacation, entity: input_boolean.vacation }
           - { icon: lightbulb-group, name: All lights, entity: light.living_room_lamp }
+
+      # Tonight's dinner from the Madplan page; tap it to open the recipe:
+      # - { type: dinner, col: 3, row: 2 }
 
       - type: calendar                      # the next days with something planned, plus the forecast
         col: 3
