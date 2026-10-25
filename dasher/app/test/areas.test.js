@@ -110,14 +110,15 @@ test("overrides rename, re-icon and designate sensors", () => {
   assert.ok(model.entities.has("sensor.special"));
 });
 
-test("pictures: assets by area id or name, entity images, HA picture as fallback", () => {
+test("pictures: assets by area id or name for areas without a Home Assistant picture, entity images", () => {
   const images = {
     areas: new Map([["stuen", "areas/stuen.jpg"], ["bad", "areas/bad.png"]]),
     entities: new Map([["light.stue_a", "entities/light.stue_a.jpg"]]),
   };
   const model = build({}, images);
   const stue = byId(model, "stuen");
-  assert.equal(stue.image, "areas/stuen.jpg");
+  assert.equal(stue.image, null, "the picture of the area in Home Assistant is used instead");
+  assert.equal(byId(model, "bad").image, "areas/bad.png");
   assert.deepEqual(stue.entity_images, { "light.stue_a": "entities/light.stue_a.jpg" });
   assert.equal(stue.picture, "/api/image/serve/abc/512x512");
   assert.equal(byId(build(), "stuen").image, null);
@@ -177,4 +178,16 @@ test("built-in room pictures follow the area name, can be chosen or switched off
   assert.equal(byId(build({ overrides: { stuen: { room: "kitchen" } } }), "stuen").default_image, "img/rooms/kitchen.svg");
   assert.equal(byId(build({ default_images: false }), "stuen").default_image, null);
   assert.equal(byId(build({ overrides: { stuen: { room: "unknown" } } }), "stuen").default_image, "img/rooms/room.svg");
+});
+
+test("the picture in Home Assistant comes before files in assets/areas, and Dasher's own pictures are marked", () => {
+  const images = { areas: new Map([["stuen", "areas/stuen.jpg"], ["bad", "areas/bad.png"]]), entities: new Map() };
+  const model = buildAreaModel({ registries, deviceClasses, settings: settings(), images, builtinPictures: new Set(["stuen"]) });
+  const stue = byId(model, "stuen"); // has a picture in Home Assistant
+  assert.equal(stue.image, null);
+  assert.equal(stue.picture, "/api/image/serve/abc/512x512");
+  assert.equal(stue.builtin_picture, true);
+  assert.equal(byId(model, "bad").image, "areas/bad.png", "no picture in Home Assistant: the file is used");
+  assert.equal(byId(model, "bad").builtin_picture, false);
+  assert.equal(byId(build({ overrides: { stuen: { image: "areas/own.jpg" } } }, images), "stuen").image, "areas/own.jpg", "an override still wins");
 });

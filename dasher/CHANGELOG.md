@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.35.0
+
+- **Area pictures live in Home Assistant.** The dashboard now always uses the picture of the area in Home Assistant's own area settings. Areas that have none get a built-in room picture uploaded to Home Assistant by the app (once per kind of room, never over a picture you chose, and not again after you remove it). New app option `allow_area_picture_upload` (default on) can forbid the upload; without it the built-in pictures are shown by the app itself as before.
+- Pictures in `assets/areas/` are now only used for areas without a picture in Home Assistant (`image:` in `areas: overrides:` still wins).
+
 ## 0.34.0
 
 - **To-do overview:** lists with open items glow in the accent colour, finished lists are calm.

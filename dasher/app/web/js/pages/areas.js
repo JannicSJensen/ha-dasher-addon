@@ -15,7 +15,7 @@ export function areaImageUrl(area) {
 }
 
 /** True when the picture is one of the built-in room pictures (they are drawn dark already). */
-export const isBuiltinImage = (area) => !area.image && !area.picture && Boolean(area.default_image);
+export const isBuiltinImage = (area) => Boolean(area.builtin_picture) || (!area.image && !area.picture && Boolean(area.default_image));
 
 function createAreaCard(area, ctx) {
   const url = areaImageUrl(area);

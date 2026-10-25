@@ -29,8 +29,8 @@ gap: 8
 
 # Area pages: adds a menu entry that lists every area in Home Assistant as a picture.
 # Tapping one opens the area with its lights, players, temperature, humidity and windows.
-# Pictures: put <area_id>.jpg (or the area name, e.g. living-room.jpg) in assets/areas/. Areas without a picture
-# get a built-in room picture chosen from the name (living room, kitchen, bedroom, bathroom, garden ...).
+# Pictures: the picture of the area in Home Assistant (Settings, Areas) is used. Areas without one get a built-in
+# room picture (living room, kitchen, bedroom ...) uploaded there by the app; <area_id>.jpg in assets/areas/ also works.
 areas:
   # enabled: false          # remove the menu entry completely
   # title: Areas

@@ -28,6 +28,7 @@ If the file has a mistake, the page shows what is wrong instead of failing silen
 | `allow_todo_management` | `true` | Lets people at a tablet create, rename and delete lists of the Local To-do integration on the [To-do page](#to-do-lists). Editing the items of a list is always possible. Turn off to forbid changing lists. Always off in read-only mode. |
 
 | `allow_area_editing` | `true` | Lets people at a tablet remove devices from the [area pages](#areas) and cards from the [Devices page](#devices), and bring them back. Turn off to forbid it. Always off in read-only mode. |
+| `allow_area_picture_upload` | `true` | Lets the app give areas that have no picture a built-in room picture **in Home Assistant itself** (see [Pictures](#pictures)). Turn off to keep the pictures out of Home Assistant's area settings. |
 | `allow_meal_editing` | `true` | Lets people at a tablet change the [meal plan](#meal-plan-madplan): edit days and rules, and start the AI (which may cost money with your AI provider). Off = the page only shows the plan. |
 
 Changes to the options take effect when the app is restarted.
@@ -494,11 +495,15 @@ Which entities appear follows Home Assistant: an entity belongs to the area it i
 
 ### Pictures
 
-Put pictures in the `assets/areas/` folder of the app's configuration folder and name them after the area id (`living_room.jpg`) or area name (`living-room.jpg`). `jpg`, `jpeg`, `png`, `webp`, `avif`, `gif` and `svg` work. New files are picked up within a few seconds. Without a file, the picture uploaded to the area in Home Assistant is used, and otherwise a **built-in room picture**: a dark illustration of a living room, kitchen, dining room, bedroom, kids' room, bathroom, office, hallway, garage, garden, laundry room or storage room, chosen from the name of the area (Danish and English names, e.g. *Stue*, *Køkken*, *Soveværelse*, *Bryggers*, *Living room*, *Garden*). Anything else gets a neutral room.
+The picture of an area is the one in **Home Assistant's own area settings** (*Settings, Areas, Labels & zones, the area, Picture*). Dasher reads it from there, so a picture you choose in Home Assistant shows up on the tablets as well.
+
+Areas that have no picture get one from Dasher: after the app starts it uploads a built-in room picture to Home Assistant (once per kind of room, 40 KB each) and sets it as the area's picture. The picture is a dark illustration of a living room, kitchen, dining room, bedroom, kids' room, bathroom, office, hallway, garage, garden, laundry room or storage room, chosen from the name of the area (Danish and English names, e.g. *Stue*, *Køkken*, *Soveværelse*, *Bryggers*, *Living room*, *Garden*). Anything else gets a neutral room.
 
 ![The built-in room pictures](https://raw.githubusercontent.com/JannicSJensen/ha-dasher-addon/main/docs/screenshots/room-pictures.jpg)
 
-To pick another built-in picture for an area, give it a `room` (`living`, `kitchen`, `dining`, `bedroom`, `kids`, `bathroom`, `office`, `hallway`, `garage`, `garden`, `laundry`, `storage` or `room`); `default_images: false` switches the built-in pictures off. See [Options](#options) below.
+* Dasher only fills **empty** pictures and never changes one you chose. If you remove a picture it put there, it stays removed. To use another picture, replace it in Home Assistant.
+* To pick another built-in picture for an area give it a `room` (`living`, `kitchen`, `dining`, `bedroom`, `kids`, `bathroom`, `office`, `hallway`, `garage`, `garden`, `laundry`, `storage` or `room`) in `areas: overrides:` before the first start. `areas: default_images: false` switches the built-in pictures off, and the app option `allow_area_picture_upload: false` stops Dasher from writing them to Home Assistant (it then shows them itself on areas without a picture).
+* Pictures in `assets/areas/` (named after the area id or name, e.g. `living_room.jpg`; `jpg`, `jpeg`, `png`, `webp`, `avif`, `gif` and `svg` work) are used for areas that have no picture in Home Assistant, and `image:` in `areas: overrides:` still wins over everything.
 
 Tiles inside an area use the area picture, cropped differently for each device. To give a device its own picture, save it as `assets/entities/<entity_id>.jpg` (e.g. `assets/entities/light.floor_lamp.jpg`).
 

@@ -21,6 +21,9 @@ configuration:
   allow_area_editing:
     name: Allow editing the overview pages
     description: "Lets people at a tablet remove devices from the area pages and cards from the Devices page, and bring them back (kept in the app, shared by all tablets). Turn off to forbid it."
+  allow_area_picture_upload:
+    name: Put room pictures on the areas
+    description: "Lets the app give areas that have no picture a built-in room picture in Home Assistant itself (Settings, Areas), once per area. Pictures you choose yourself are never changed. Turn off to keep the pictures out of Home Assistant's area settings."
   allow_meal_editing:
     name: Allow editing the meal plan
     description: "Lets people at a tablet change the meal plan and the family rules, and ask the AI (Home Assistant AI Task) to plan, swap dishes and write recipes. Each AI request uses your AI provider. Turn off to forbid it."

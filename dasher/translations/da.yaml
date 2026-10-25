@@ -21,6 +21,9 @@ configuration:
   allow_area_editing:
     name: Tillad redigering af oversigtssiderne
     description: "Lader folk ved en tablet fjerne enheder fra områdesiderne og kort fra Enheder-siden og få dem tilbage (gemmes i appen og deles af alle tablets). Slå fra for at forbyde det."
+  allow_area_picture_upload:
+    name: Sæt rumbilleder på områderne
+    description: "Lader appen give områder uden billede et indbygget rumbillede i selve Home Assistant (Indstillinger, Områder), én gang pr. område. Billeder du selv har valgt ændres aldrig. Slå fra for at holde billederne ude af Home Assistants områdeindstillinger."
   allow_meal_editing:
     name: Tillad redigering af madplanen
     description: "Lader folk ved en tablet ændre madplanen og familiens regler og bede AI (Home Assistant AI Task) om at planlægge, bytte retter og skrive opskrifter. Hver AI-forespørgsel bruger din AI-udbyder. Slå fra for at forbyde det."

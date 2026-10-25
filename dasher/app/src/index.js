@@ -23,6 +23,7 @@ import { NowPlayingStore } from "./nowplaying.js";
 import { RadioService, radioPlayers, validateGroupRequest } from "./radio.js";
 import { HAClient } from "./ha-client.js";
 import { iconSvg } from "./icons.js";
+import { AreaPictures } from "./area-pictures.js";
 import { validateProxyPath, validateServiceCall } from "./policy.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -55,6 +56,7 @@ const logger = Object.fromEntries(
 const PORT = Number(process.env.PORT ?? 8099);
 const READ_ONLY = options.read_only === true;
 const MEALS_EDIT = !READ_ONLY && options.allow_meal_editing !== false && process.env.ALLOW_MEAL_EDITING !== "0";
+const AREA_PICTURES = !READ_ONLY && options.allow_area_picture_upload !== false && process.env.ALLOW_AREA_PICTURE_UPLOAD !== "0";
 const AREA_EDIT = !READ_ONLY && options.allow_area_editing !== false && process.env.ALLOW_AREA_EDITING !== "0";
 const TODO_MANAGE = !READ_ONLY && options.allow_todo_management !== false && process.env.ALLOW_TODO_MANAGEMENT !== "0";
 const configDir = process.env.CONFIG_DIR ?? "/config";
@@ -151,6 +153,15 @@ async function haRest(method, apiPath, body) {
   if (!response.ok) throw new Error(data?.message ?? `HTTP ${response.status}`);
   return data;
 }
+/** Upload a file through Home Assistant's image integration; resolves to the new image's id. */
+async function haUpload(name, buffer, type) {
+  const form = new FormData();
+  form.append("file", new Blob([buffer], { type }), name);
+  const response = await fetch(`${haHttpBase}/api/image/upload`, { method: "POST", headers: { Authorization: `Bearer ${haToken}` }, body: form, signal: AbortSignal.timeout(30_000) });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(data?.message ?? `HTTP ${response.status}`);
+  return data?.id ?? null;
+}
 const todo = new TodoService({ ha, rest: haRest, logger });
 const plexStreamer = new PlexStreamer({ url: options.plex_url ?? process.env.PLEX_URL, token: options.plex_token ?? process.env.PLEX_TOKEN, logger });
 const plex = new PlexService({
@@ -167,6 +178,20 @@ const plex = new PlexService({
 });
 const nowPlaying = new NowPlayingStore({ dir: dataDir, logger, fetchPicture });
 const hiddenDevices = new HiddenDevices({ dir: dataDir, logger });
+const areaPictures = new AreaPictures({
+  ha,
+  upload: haUpload,
+  exists: async (picture) => {
+    try {
+      return (await fetch(haHttpBase + picture, { method: "HEAD", headers: { Authorization: `Bearer ${haToken}` }, signal: AbortSignal.timeout(8000) })).ok;
+    } catch {
+      return false;
+    }
+  },
+  dir: dataDir,
+  imageDir: path.join(webRoot, "img", "rooms"),
+  logger,
+});
 nowPlaying.on("change", () => broadcast("lastplayed", nowPlaying.payload()));
 
 // ---- areas ------------------------------------------------------------------
@@ -223,6 +248,7 @@ function rebuild({ refresh }) {
     settings: current.config?.areas,
     images,
     hidden: hiddenDevices.ids,
+    builtinPictures: areaPictures.appliedAreas,
   });
   radioPlayerIds = radioPlayers(current.config?.music, ha.registries);
   radio.configure(current.config?.music);
@@ -303,8 +329,24 @@ function reportMissing() {
   for (const line of describeUnresolved({ unresolved, usage: configStore.current.usage, index: ha.entityIndex, registries: ha.registries })) logger.warn(line);
 }
 
+/** Give areas without a picture a built-in room picture in Home Assistant itself (once, after the registries load). */
+let pictureTimer = null;
+function scheduleAreaPictures() {
+  if (!AREA_PICTURES) return;
+  clearTimeout(pictureTimer);
+  pictureTimer = setTimeout(async () => {
+    const settings = configStore.current.config?.areas;
+    if (!settings || settings.enabled === false || settings.default_images === false || !ha.registries?.areas?.length) return;
+    const rooms = {};
+    for (const [key, o] of Object.entries(settings.overrides ?? {})) if (o.room) rooms[key.toLowerCase()] = o.room;
+    if ((await areaPictures.sync(ha.registries.areas, { rooms })) > 0) rebuild({ refresh: false });
+  }, 3000);
+  pictureTimer.unref?.();
+}
+
 ha.on("registries", () => {
   rebuild({ refresh: false });
+  scheduleAreaPictures();
   logger.info(`Area pages: ${areaModel.areas.length} areas, ${areaModel.entities.size} entities`);
 });
 ha.on("status", () => broadcast("status", statusPayload()));

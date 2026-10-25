@@ -1,5 +1,5 @@
 name: Dasher
-version: "0.34.0"
+version: "0.35.0"
 slug: dasher
 url: https://github.com/JannicSJensen/ha-dasher-addon
 description: Wall-tablet dashboard that serves a ready-to-use web page for tablets
@@ -27,6 +27,7 @@ options:
   entity_map: []
   allow_todo_management: true
   allow_area_editing: true
+  allow_area_picture_upload: true
   allow_meal_editing: true
 schema:
   log_level: list(debug|info|warning|error)
@@ -36,6 +37,7 @@ schema:
       to: str
   allow_todo_management: bool
   allow_area_editing: bool
+  allow_area_picture_upload: bool
   allow_meal_editing: bool
   music_assistant_url: url?
   music_assistant_token: password?

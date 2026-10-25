@@ -564,8 +564,35 @@ function callService({ domain, service, service_data = {}, target = {} }) {
 
 let flowCounter = 0;
 const slugOf = (name) => name.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "list";
+// Home Assistant's image integration: uploads are kept in memory and served back.
+const uploadedImages = new Map();
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, "http://localhost");
+  if (req.method === "POST" && url.pathname === "/api/image/upload") {
+    const chunks = [];
+    req.on("data", (c) => chunks.push(c));
+    req.on("end", () => {
+      const body = Buffer.concat(chunks);
+      const start = body.indexOf("\r\n\r\n") + 4;
+      const end = body.lastIndexOf("\r\n--");
+      const id = `img${uploadedImages.size + 1}${Date.now().toString(36)}`;
+      uploadedImages.set(id, body.subarray(start, end));
+      console.log(`[mock-ha] image uploaded ${id} (${end - start} bytes)`);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ id, content_type: "image/jpeg" }));
+    });
+    return;
+  }
+  const served = url.pathname.match(/^\/api\/image\/serve\/([^/]+)\/original$/);
+  if (served) {
+    const image = uploadedImages.get(served[1]);
+    if (!image) {
+      res.writeHead(404);
+      return res.end();
+    }
+    res.writeHead(200, { "Content-Type": "image/jpeg", "Content-Length": image.length });
+    return res.end(req.method === "HEAD" ? undefined : image);
+  }
   // Home Assistant's config entries API (creating and removing Local To-do lists)
   if (url.pathname.startsWith("/api/config/config_entries/")) {
     if (req.headers.authorization !== "Bearer dev") {
@@ -654,6 +681,15 @@ wss.on("connection", (ws) => {
     if (msg.type === "ping") return ws.send(JSON.stringify({ id: msg.id, type: "pong" }));
     if (msg.type === "get_states") return reply([...states.values()]);
     if (msg.type === "config/area_registry/list") return reply(registry.areas);
+    if (msg.type === "config/area_registry/update") {
+      const area = registry.areas.find((a) => a.area_id === msg.area_id);
+      if (!area) return ws.send(JSON.stringify({ id: msg.id, type: "result", success: false, error: { code: "not_found", message: "Area not found" } }));
+      if ("picture" in msg) area.picture = msg.picture;
+      console.log(`[mock-ha] area ${msg.area_id} picture ${msg.picture}`);
+      reply(area);
+      for (const { ws: other, subscription } of sockets) if (subscription) other.send(JSON.stringify({ id: subscription, type: "event", event: { event_type: "area_registry_updated", data: { action: "update", area_id: msg.area_id } } }));
+      return;
+    }
     if (msg.type === "config/floor_registry/list") return reply(registry.floors);
     if (msg.type === "config/device_registry/list") return reply(registry.devices);
     if (msg.type === "config/entity_registry/list_for_display") return reply({ entity_categories: {}, entities: registry.entities });

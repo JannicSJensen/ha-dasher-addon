@@ -63,7 +63,7 @@ const matchesAny = (list, area) => {
  *
  * Returns { areas, entities } where `entities` is every entity id the pages can show or control.
  */
-export function buildAreaModel({ registries, deviceClasses = new Map(), settings, images, hidden = new Set() }) {
+export function buildAreaModel({ registries, deviceClasses = new Map(), settings, images, hidden = new Set(), builtinPictures = new Set() }) {
   const empty = { areas: [], entities: new Set() };
   if (!registries || !settings?.enabled) return empty;
 
@@ -115,9 +115,12 @@ export function buildAreaModel({ registries, deviceClasses = new Map(), settings
     const floor = area.floor_id ? floors.get(area.floor_id) : null;
     const slug = slugify(area.name);
     const wanted = override.image ? slugify(override.image) : null;
+    // The picture of the area in Home Assistant comes first; files in assets/areas are for areas without one.
     const imageFile = override.image
       ? (/[./]/.test(override.image) ? override.image : (images.areas.get(wanted) ?? null))
-      : (images.areas.get(area.area_id.toLowerCase()) ?? images.areas.get(slug) ?? null);
+      : area.picture
+        ? null
+        : (images.areas.get(area.area_id.toLowerCase()) ?? images.areas.get(slug) ?? null);
 
     const entityImages = {};
     for (const id of allTiles) {
@@ -135,6 +138,7 @@ export function buildAreaModel({ registries, deviceClasses = new Map(), settings
       icon: override.icon ?? area.icon ?? null,
       image: imageFile,
       picture: area.picture ?? null,
+      builtin_picture: Boolean(area.picture) && builtinPictures.has(area.area_id),
       default_image: settings.default_images === false ? null : roomImage(override.room ?? roomType(area.name, area.area_id)),
       entities: tiles,
       hidden_entities: hiddenTiles,

@@ -516,3 +516,17 @@ for (const [name, make] of Object.entries(ROOMS)) {
   fs.writeFileSync(path.join(OUT, `${name}.svg`), make().replace(/\n{2,}/g, "\n").replace(/ {2,}/g, " "));
   console.log("wrote", name);
 }
+
+// With --png the pictures are also rendered as JPEG (Home Assistant's image upload does not take SVG).
+if (process.argv.includes("--jpg")) {
+  const { default: puppeteer } = await import("puppeteer-core");
+  const browser = await puppeteer.launch({ executablePath: process.env.BROWSER ?? "/usr/bin/chromium", headless: true, args: ["--no-sandbox", "--disable-gpu"] });
+  const page = await browser.newPage();
+  await page.setViewport({ width: 1280, height: 800 });
+  for (const name of Object.keys(ROOMS)) {
+    await page.goto(`file://${path.join(OUT, `${name}.svg`)}`);
+    await page.screenshot({ path: path.join(OUT, `${name}.jpg`), type: "jpeg", quality: 86 });
+    console.log("rendered", name);
+  }
+  await browser.close();
+}
