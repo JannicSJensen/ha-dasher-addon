@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.30.0
+
+- **Livelier full-screen player.** The colours of the cover are picked out and drift slowly behind the artwork as soft fields; the artwork and the play button glow in the same colours. Without readable artwork the player keeps a calm accent-coloured background.
+
 ## 0.29.0
 
 - **Ambient screen.** A new optional `ambient:` section in `dashboard.yaml`: after the set time without touch a calm clock screen takes over (large time, date, a breathing orb, and up to four quick buttons). A tap anywhere brings the dashboard back; the content drifts slowly to protect screens that stay on. Off by default.

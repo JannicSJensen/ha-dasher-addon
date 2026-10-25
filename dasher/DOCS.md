@@ -574,7 +574,7 @@ Music Assistant can play on several speakers in sync. Press **Group** at the top
 
 ![Full-screen player](https://raw.githubusercontent.com/JannicSJensen/ha-dasher-addon/main/docs/screenshots/now-playing.png)
 
-When a Music Assistant speaker **starts playing**, the tablet shows a full-screen player: big artwork on a blurred background, title, album or station, artist, a progress bar you can tap to seek, shuffle, previous, play/pause, next and repeat, a volume slider and the speaker's name (tap it to switch between speakers when several play; a sync group shows `+2`).
+When a Music Assistant speaker **starts playing**, the tablet shows a full-screen player: big artwork on a blurred background with slowly moving fields of the cover's own colours (and a matching glow around the artwork), title, album or station, artist, a progress bar you can tap to seek, shuffle, previous, play/pause, next and repeat, a volume slider and the speaker's name (tap it to switch between speakers when several play; a sync group shows `+2`).
 
 * **Close** with the arrow at the top left. After that it stays away until the music has stopped and starts again. The button at the top right closes it and opens the music library.
 * It closes by itself 15 seconds after nothing plays any more, and does not open when a tablet loads a page while music is already playing.

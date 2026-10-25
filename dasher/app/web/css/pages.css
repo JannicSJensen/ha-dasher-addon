@@ -860,3 +860,20 @@
 @keyframes ambient-breathe { 0%, 100% { transform: scale(0.94); opacity: 0.45; } 50% { transform: scale(1.04); opacity: 0.62; } }
 @keyframes ambient-drift { from { transform: translate(-14px, -10px); } to { transform: translate(14px, 10px); } }
 @media (prefers-reduced-motion: reduce) { .ambient__orb, .ambient__content { animation: none; } }
+
+/* ---- full-screen player: the cover's colours as slowly moving fields ---- */
+.npscreen { --np-a: var(--accent); --np-b: #6b7cff; --np-c: #ff8a5c; }
+.npscreen__fields { position: absolute; inset: 0; overflow: hidden; pointer-events: none; opacity: 0; transition: opacity 1.2s ease; }
+.npscreen.has-palette .npscreen__fields, .npscreen:not(.has-palette) .npscreen__fields { opacity: 1; }
+.npscreen__field { position: absolute; width: 75vmax; height: 75vmax; border-radius: 50%; filter: blur(36px); opacity: 0.6; mix-blend-mode: screen; transition: background 1.2s ease; will-change: transform; }
+.npscreen__field.is-a { left: -25vmax; top: -30vmax; background: radial-gradient(circle, var(--np-a) 0%, transparent 62%); animation: np-drift-a 26s ease-in-out infinite alternate; }
+.npscreen__field.is-b { right: -30vmax; top: 10vmax; background: radial-gradient(circle, var(--np-b) 0%, transparent 62%); animation: np-drift-b 32s ease-in-out infinite alternate; }
+.npscreen__field.is-c { left: 5vmax; bottom: -45vmax; background: radial-gradient(circle, var(--np-c) 0%, transparent 62%); animation: np-drift-c 38s ease-in-out infinite alternate; }
+.npscreen:not(.has-palette) .npscreen__field { opacity: 0.18; }
+.npscreen__art { box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55), 0 0 110px color-mix(in srgb, var(--np-a) 38%, transparent); }
+.npscreen__play { box-shadow: 0 0 34px color-mix(in srgb, var(--np-a) 55%, transparent); }
+.npscreen__title { letter-spacing: -0.01em; }
+@keyframes np-drift-a { to { transform: translate(18vmax, 14vmax) scale(1.15); } }
+@keyframes np-drift-b { to { transform: translate(-16vmax, 20vmax) scale(0.9); } }
+@keyframes np-drift-c { to { transform: translate(14vmax, -12vmax) scale(1.2); } }
+@media (prefers-reduced-motion: reduce) { .npscreen__field { animation: none; } }

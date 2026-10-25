@@ -1,4 +1,5 @@
 import { pictureUrl } from "../core/api.js";
+import { extractPalette } from "../lib/palette.js";
 import { h } from "../core/h.js";
 import { icon, setIcon } from "../core/icons.js";
 import { createSlider } from "../core/slider.js";
@@ -36,6 +37,9 @@ export function createNowPlayingScreen(ctx, { enabled = () => true } = {}) {
   const readyAt = Date.now() + STARTUP_MS;
 
   const background = h("div", { class: "npscreen__bg" });
+  // moving fields of the cover's colours on top of the blurred picture
+  const fields = h("div", { class: "npscreen__fields" }, h("span", { class: "npscreen__field is-a" }), h("span", { class: "npscreen__field is-b" }), h("span", { class: "npscreen__field is-c" }));
+  let paletteFor = null;
   const closeBtn = h("button", { class: "npscreen__icon", type: "button", "aria-label": t("close") }, icon("chevron-down"));
   const libraryBtn = h("button", { class: "npscreen__icon", type: "button", "aria-label": t("np_library") }, icon("music-box-multiple-outline"));
   const art = h("div", { class: "npscreen__art" }, icon("music"));
@@ -99,6 +103,7 @@ export function createNowPlayingScreen(ctx, { enabled = () => true } = {}) {
     "div",
     { class: "npscreen", hidden: true, role: "dialog", "aria-label": t("np_playing") },
     background,
+    fields,
     h("div", { class: "npscreen__top" }, closeBtn, libraryBtn),
     h("div", { class: "npscreen__main" }, art, h("div", { class: "npscreen__text" }, title, line2, line3)),
     h("div", { class: "npscreen__bottom" }, progress, controls, volumeRow, speaker),
@@ -200,6 +205,17 @@ export function createNowPlayingScreen(ctx, { enabled = () => true } = {}) {
     art.style.backgroundImage = picture ? bg(picture) : "";
     art.classList.toggle("has-art", Boolean(picture));
     background.style.backgroundImage = picture ? bg(picture) : "";
+    if (picture !== paletteFor) {
+      paletteFor = picture;
+      extractPalette(picture).then((colors) => {
+        if (paletteFor !== picture) return;
+        const [a, b = a, c = b] = colors.length ? colors : ["var(--accent)"];
+        el.style.setProperty("--np-a", a);
+        el.style.setProperty("--np-b", b);
+        el.style.setProperty("--np-c", c);
+        el.classList.toggle("has-palette", colors.length > 0);
+      });
+    }
     title.textContent = media.title;
     const album = attrs.media_album_name && attrs.media_album_name !== media.title ? attrs.media_album_name : media.station && media.station.name !== media.title ? media.station.name : "";
     line2.textContent = album;
