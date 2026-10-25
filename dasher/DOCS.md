@@ -27,7 +27,7 @@ If the file has a mistake, the page shows what is wrong instead of failing silen
 
 | `allow_todo_management` | `true` | Lets people at a tablet create, rename and delete lists of the Local To-do integration on the [To-do page](#to-do-lists). Editing the items of a list is always possible. Turn off to forbid changing lists. Always off in read-only mode. |
 
-| `allow_area_editing` | `true` | Lets people at a tablet remove devices from the [area pages](#areas) and bring them back. Turn off to forbid it. Always off in read-only mode. |
+| `allow_area_editing` | `true` | Lets people at a tablet remove devices from the [area pages](#areas) and cards from the [Devices page](#devices), and bring them back. Turn off to forbid it. Always off in read-only mode. |
 
 Changes to the options take effect when the app is restarted.
 
@@ -368,6 +368,7 @@ devices:
 * An appliance needs at least a `status_entity` or a `power_entity`; the other entities are optional and their controls are left out when they are missing.
 * An appliance in the list replaces a found one that uses the same entities.
 * Starting a washing machine remotely only works when the machine allows it (LG: *remote start* enabled and a programme chosen on the machine).
+* **Edit** (the pencil next to the title) lets you take cards off the page, like on the area pages: each card gets a **×**, the removed ones are listed under *Removed devices* with a **+**, and **Done** leaves edit mode. The choice is saved in the app (`hidden-devices.json`) and is the same on every tablet. An appliance is removed as a whole. Unavailable devices stay on the page, dimmed (an appliance that is switched off is often "unavailable"); remove one with **×** if you do not want it. The app option `allow_area_editing` switches the editing off here and on the area pages.
 * The page appears on its own when there is a vacuum or an appliance. It uses the entities of the page only; their entities take part in entity mapping.
 
 ## To-do lists

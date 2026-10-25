@@ -73,6 +73,7 @@ function makeContext(config) {
     musicEnabled: () => Boolean(store.getState().music?.enabled),
     lastPlayed: () => store.getState().lastPlayed,
     evEnabled: () => Boolean(store.getState().ev?.enabled),
+    devicesEditable: () => Boolean(store.getState().devices?.editable) && !store.getState().readOnly,
     areasEditable: () => Boolean(store.getState().areas?.editable) && !store.getState().readOnly,
     vacuums: () => store.getState().devices?.vacuums ?? [],
     /** Open the full-screen player; false when nothing is playing or paused. */
@@ -403,7 +404,14 @@ store.subscribe((s) => s.plex, () => {
 store.subscribe((s) => s.devices, () => {
   const { config } = store.getState();
   if (!config) return;
-  if (route.kind === "devices" || location.hash === "#/devices") renderRoute();
+  if (route.kind === "devices" && mounted[0]?.tile?.setModel && store.getState().devices?.enabled) {
+    // follow a removed or restored card in place, so the page keeps its scroll position and edit mode
+    const page = mounted[0].tile;
+    page.setModel(store.getState().devices);
+    mounted[0].entities = page.entities;
+    mounted[0].last = null;
+    refreshTiles(true);
+  } else if (route.kind === "devices" || location.hash === "#/devices") renderRoute();
   else if (route.kind === "page" && config.pages.find((p) => p.id === route.id)?.tiles.some((tile) => tile.type === "hero" && Array.isArray(tile.messages))) renderRoute(); // its messages follow the vacuums
   else renderSidebar(config);
 });

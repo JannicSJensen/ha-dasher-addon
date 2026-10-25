@@ -66,4 +66,5 @@ await press(".tdcard", "Garage"); await page.waitForSelector(".tdrow"); await sl
 await go(8098, "#/ev", ".evcar"); await shot("car");
 await size(1180);
 await go(8098, "#/devices", ".devcard"); await shot("devices");
+await press(".area__edit"); await sleep(1500); await shot("devices-edit");
 await browser.close();

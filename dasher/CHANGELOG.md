@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.23.0
+
+- **Edit the Devices page.** A pencil next to the title lets you remove vacuum and appliance cards you do not want and bring them back; saved in the app and shared by all tablets. It is governed by the same app option as the area pages, `allow_area_editing`.
+
 ## 0.22.0
 
 - **Thermostats on the area pages.** `climate` entities of an area now get a picture tile with the status and temperature, a tap to switch on/off and **+** / **−** for the setpoint. Members of a thermostat group are hidden behind the group, like light groups. `climate` is part of the default `areas: domains`.

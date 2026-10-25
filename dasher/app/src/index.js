@@ -9,7 +9,7 @@ import { discoverMusicAssistant } from "./discovery.js";
 import { discoverEv, resolveEv } from "./ev.js";
 import { resolveClimate } from "./climate.js";
 import { TodoService, cleanListName, resolveTodo } from "./todo.js";
-import { deviceEntities, discoverDevices, resolveDevices } from "./devices.js";
+import { deviceEntities, deviceKeys, discoverDevices, resolveDevices } from "./devices.js";
 import { PlexService, plexBrowsers, plexConfigured, plexPlayers, validBrowse, validatePlay } from "./plex.js";
 import { PlexStreamer } from "./plex-stream.js";
 import { describeUnresolved, unresolvedEntities } from "./mapping.js";
@@ -182,8 +182,9 @@ let radioPlayerIds = [];
 let evState = { enabled: false, roles: {} };
 let plexState = { enabled: false, players: [] };
 const plexPayload = () => (plexState.enabled ? plexState : { enabled: false, players: [] });
-let devicesState = { enabled: false, vacuums: [], appliances: [] };
-const devicesPayload = () => (devicesState.enabled ? devicesState : { enabled: false, vacuums: [], appliances: [] });
+const noDevices = { enabled: false, vacuums: [], appliances: [], removed: { vacuums: [], appliances: [] } };
+let devicesState = noDevices;
+const devicesPayload = () => (devicesState.enabled ? { ...devicesState, editable: AREA_EDIT } : noDevices);
 let todoState = { enabled: false, lists: [], manage: false };
 const todoPayload = () => (todoState.enabled ? todoState : { enabled: false, lists: [], manage: false });
 let climateState = { enabled: false, entities: [] };
@@ -239,7 +240,7 @@ function rebuild({ refresh }) {
     plex.configure(enabled ? players : [], enabled ? plexBrowsers(ha.registries) : []);
     plex.transcode = settings?.transcode ?? "auto";
   }
-  devicesState = resolveDevices({ settings: current.config?.devices, discovered: discoverDevices({ registries: ha.registries, index: ha.entityIndex }) });
+  devicesState = resolveDevices({ settings: current.config?.devices, discovered: discoverDevices({ registries: ha.registries, index: ha.entityIndex }), hidden: hiddenDevices.devices });
   todoState = resolveTodo({ settings: current.config?.todo, registries: ha.registries, index: ha.entityIndex, manage: TODO_MANAGE });
   allowed = new Set([
     ...current.entities,
@@ -593,6 +594,25 @@ async function handleAreaDevice(req, res) {
   return json(res, 200, { ok: true });
 }
 
+/** Remove a card from the Devices page, or bring it back. */
+async function handleDevicesCard(req, res) {
+  if (READ_ONLY || !AREA_EDIT) return json(res, 403, { error: "Editing the devices is switched off." });
+  let body;
+  try {
+    body = JSON.parse(await readBody(req));
+  } catch (err) {
+    return json(res, err.status ?? 400, { error: err.message || "Invalid JSON." });
+  }
+  if (!devicesState.enabled || !deviceKeys(devicesState).has(body?.key) || typeof body?.hidden !== "boolean") {
+    return json(res, 400, { error: "That device is not on the Devices page." });
+  }
+  if (hiddenDevices.set(body.key, body.hidden, "devices")) {
+    logger.info(`${body.key} ${body.hidden ? "removed from" : "restored to"} the Devices page`);
+    rebuild({ refresh: false });
+  }
+  return json(res, 200, { ok: true });
+}
+
 async function handleCalendar(res, params) {
   const scope = calendarScope(configStore.current.config, [...ha.entityIndex.keys()]);
   const window = parseWindow(params.get("start"), params.get("end"));
@@ -727,6 +747,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "POST" && p === "/api/service") return await handleService(req, res);
     if (req.method === "POST" && p === "/api/plex/play") return await handlePlexPlay(req, res);
     if (req.method === "POST" && p === "/api/areas/device") return await handleAreaDevice(req, res);
+    if (req.method === "POST" && p === "/api/devices/card") return await handleDevicesCard(req, res);
     if (req.method === "POST" && ["/api/todo/create", "/api/todo/rename", "/api/todo/delete"].includes(p)) return await handleTodoManage(req, res, p.slice("/api/todo/".length));
     if (req.method === "POST" && p === "/api/radio/play") return await handleRadioPlay(req, res);
     if (req.method === "POST" && p === "/api/music/play") return await handleMusicPlay(req, res);

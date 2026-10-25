@@ -13,7 +13,7 @@ This repository contains the **Dasher** app (add-on) for Home Assistant: a dark,
 * **Car page:** battery and range, start/stop charging, smart charging with its times, a charger restart, and remote climate (start, temperature, window heat); EV Smart Charging, Peblar and FordPass are recognised automatically.
 * **Media page:** Plex through Home Assistant's Plex integration: continue watching and recently added movies and series. Plays on Cast devices and Plex clients, and, with a Plex address and token in the app options, on Apple TVs and DLNA players with stream links.
 * **To-do lists page (Huskelister):** every to-do list of Home Assistant; add, tick off, edit and delete items, and create, rename and delete Local To-do lists.
-* **Devices page:** robot vacuums with controls, and washing machines, dryers, dishwashers and clothes heaters (LG ThinQ found automatically, others listed in `dashboard.yaml`).
+* **Devices page:** robot vacuums with controls, and washing machines, dryers, dishwashers and clothes heaters (LG ThinQ found automatically, others listed in `dashboard.yaml`); cards you do not want can be removed with the pencil, and restored.
 * **Climate page:** a card per room with temperature, setpoint and power, built from your climate helpers.
 * **Missing entities:** when `dashboard.yaml` uses entities your Home Assistant does not have, the tablet shows a notice and the app log suggests the likely ones; you choose the replacements in the app configuration (*Entity mapping*), and `dashboard.yaml` stays unchanged.
 * **Updates:** an unedited `dashboard.yaml` follows new versions of the example (the old one is saved as `dashboard.yaml.bak`); an edited one is never touched. The current example is always written to `dashboard.example.yaml`.
@@ -40,6 +40,8 @@ All screenshots show the built-in fake Home Assistant and Music Assistant (see [
 | **Media (Plex)**<br>Continue watching and recently added movies and series, played on Cast, Plex, Apple TV or DLNA players. | **To-do lists**<br>Every to-do list of Home Assistant (Huskelister). |
 | [![A to-do list](docs/screenshots/todo-list.png)](docs/screenshots/todo-list.png) | [![Devices](docs/screenshots/devices.png)](docs/screenshots/devices.png) |
 | **A to-do list**<br>Add, tick off, edit and delete items; rename or delete Local To-do lists. | **Devices**<br>Robot vacuums, dishwashers, dryers, clothes heaters and washing machines. |
+| [![Editing the devices page](docs/screenshots/devices-edit.png)](docs/screenshots/devices-edit.png) | |
+| **Editing the devices page**<br>Remove the cards you do not want, and bring them back. | |
 | [![Car](docs/screenshots/car.png)](docs/screenshots/car.png) | |
 | **Car**<br>Charging, smart charging with its times, remote climate and a charger restart. | |
 

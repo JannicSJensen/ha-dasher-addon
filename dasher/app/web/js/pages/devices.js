@@ -1,3 +1,4 @@
+import { setDeviceCardHidden } from "../core/api.js";
 import { h } from "../core/h.js";
 import { icon, setIcon } from "../core/icons.js";
 import { formatNumber, isUnavailable } from "../lib/format.js";
@@ -22,11 +23,13 @@ const button = (iconName, label, onTap, cls = "devbtn") => {
 };
 
 /** The Devices page: robot vacuums with their controls, and washing machines, dryers, dishwashers and clothes heaters. */
-export function createDevicesPage(model, ctx) {
+export function createDevicesPage(initialModel, ctx) {
+  let model = initialModel;
+  let editing = false;
   const { t, getState } = ctx;
   const num = (v, d = 0) => formatNumber(v, { locale: ctx.locale, decimals: d });
   const call = (id, service, data) => ctx.call(id.slice(0, id.indexOf(".")), service, id, data);
-  const cards = [];
+  let cards = [];
 
   // ---- vacuum ---------------------------------------------------------------------------
   function createVacuumCard(id) {
@@ -53,6 +56,7 @@ export function createDevicesPage(model, ctx) {
     });
 
     return {
+      key: id,
       entities: [id],
       el: card,
       update() {
@@ -166,6 +170,7 @@ export function createDevicesPage(model, ctx) {
     const card = h("section", { class: "devcard" }, h("div", { class: "devcard__top" }, iconEl, name, powerSwitch), h("div", { class: "devcard__row" }, big, statusChip), status, buttons.childElementCount ? buttons : null, delayRow);
 
     return {
+      key: app.key,
       entities: Object.values(roles),
       destroy: () => clearTimeout(delayTimer),
       el: card,
@@ -205,36 +210,110 @@ export function createDevicesPage(model, ctx) {
   }
 
   // ---- sections ------------------------------------------------------------------------------
-  const sections = [];
-  const groups = {
-    vacuums: model.vacuums.map(createVacuumCard),
-    dishwasher: model.appliances.filter((a) => a.kind === "dishwasher").map(createApplianceCard),
-    dryer: model.appliances.filter((a) => a.kind === "dryer" || a.kind === "heater").map(createApplianceCard),
-    washer: model.appliances.filter((a) => a.kind === "washer").map(createApplianceCard),
-  };
-  for (const [key, label] of SECTIONS) {
-    if (!groups[key].length) continue;
-    cards.push(...groups[key]);
-    sections.push(h("section", { class: "devsection" }, h("h2", { class: "devsection__title" }, t(label)), h("div", { class: "devgrid" }, groups[key].map((c) => c.el))));
+  const canEdit = () => ctx.devicesEditable?.() === true;
+  const applianceName = (app) => app.name ?? tidyName(friendlyName(getState(app.roles.status_entity ?? app.roles.power_entity), app.key).replace(/\s*(Current status|Power)$/i, ""));
+
+  async function setHidden(key, hidden) {
+    try {
+      await setDeviceCardHidden(key, hidden);
+    } catch (err) {
+      ctx.toast(err.message);
+    }
   }
-  const el = h(
-    "div",
-    { class: "devpage" },
-    h("h1", { class: "radio__title" }, model.title ?? t("dev_devices")),
-    sections.length ? sections : h("div", { class: "notice" }, icon("washing-machine"), h("h2", null, t("dev_none"))),
-  );
+
+  /** A cover over a card while editing: taps do nothing but the ×. */
+  function addEditCover(card) {
+    const remove = h("button", { class: "tile__remove", type: "button", "aria-label": t("area_remove") }, icon("close"));
+    pressable(remove, { onTap: () => setHidden(card.key, true) });
+    const cover = h("div", { class: "tile__edit" }, remove);
+    for (const type of ["pointerdown", "pointerup", "pointermove", "click"]) cover.addEventListener(type, (e) => e.stopPropagation());
+    card.el.append(cover);
+  }
+
+  const editIcon = icon("pencil-outline");
+  const editLabel = h("span", null, t("area_edit"));
+  const editBtn = h("button", { class: "btn area__edit", type: "button" }, editIcon, editLabel);
+  pressable(editBtn, { onTap: () => ((editing = !editing), build(), update()) });
+  const hint = h("p", { class: "area__hint", hidden: true }, t("dev_edit_hint"));
+  const body = h("div", { class: "devbody" });
+  const el = h("div", { class: "devpage" }, h("div", { class: "radio__titlebar" }, h("h1", { class: "radio__title" }, model.title ?? t("dev_devices")), editBtn), hint, body);
+
+  function build() {
+    for (const c of cards) c.destroy?.();
+    cards = [];
+    const groups = {
+      vacuums: model.vacuums.map(createVacuumCard),
+      dishwasher: model.appliances.filter((a) => a.kind === "dishwasher").map(createApplianceCard),
+      dryer: model.appliances.filter((a) => a.kind === "dryer" || a.kind === "heater").map(createApplianceCard),
+      washer: model.appliances.filter((a) => a.kind === "washer").map(createApplianceCard),
+    };
+    const sections = [];
+    for (const [key, label] of SECTIONS) {
+      if (!groups[key].length) continue;
+      cards.push(...groups[key]);
+      if (editing) groups[key].forEach(addEditCover);
+      sections.push(h("section", { class: "devsection" }, h("h2", { class: "devsection__title" }, t(label)), h("div", { class: `devgrid${editing ? " is-editing" : ""}` }, groups[key].map((c) => c.el))));
+    }
+
+    const removed = [
+      ...model.removed.vacuums.map((id) => ({ key: id, label: tidyName(friendlyName(getState(id), id)), icon: "robot-vacuum" })),
+      ...model.removed.appliances.map((a) => ({ key: a.key, label: applianceName(a), icon: KIND_ICONS[a.kind] ?? "washing-machine" })),
+    ];
+    const editable = canEdit();
+    if (!editable) editing = false;
+    if (editing) {
+      sections.push(
+        h(
+          "section",
+          { class: "devsection area__removed" },
+          h("h3", { class: "area__removedtitle" }, t("area_removed")),
+          removed.length
+            ? h(
+                "div",
+                { class: "area__chips" },
+                removed.map((r) => {
+                  const chip = h("button", { class: "area__chip", type: "button" }, icon(r.icon), h("span", null, r.label), icon("plus"));
+                  pressable(chip, { onTap: () => setHidden(r.key, false) });
+                  return chip;
+                }),
+              )
+            : h("p", { class: "view__hint" }, t("area_removed_none")),
+        ),
+      );
+    }
+    body.replaceChildren(...(sections.length ? sections : [h("div", { class: "notice" }, icon("washing-machine"), h("h2", null, t("dev_none")))]));
+
+    hint.hidden = !editing;
+    editBtn.hidden = !editable || (cards.length === 0 && removed.length === 0);
+    setIcon(editIcon, editing ? "check" : "pencil-outline");
+    editLabel.textContent = t(editing ? "area_done" : "area_edit");
+    editBtn.classList.toggle("btn--primary", editing);
+  }
+
+  const trackedEntities = () => [...new Set([...cards.flatMap((c) => c.entities), ...model.removed.vacuums, ...model.removed.appliances.flatMap((a) => Object.values(a.roles))])];
+  build();
+
+  function update() {
+    for (const c of cards) {
+      try {
+        c.update();
+      } catch (err) {
+        console.error(err); // one broken card must not stop the others
+      }
+    }
+  }
 
   return {
     el,
-    entities: [...new Set(cards.flatMap((c) => c.entities))],
-    update() {
-      for (const c of cards) {
-        try {
-          c.update();
-        } catch (err) {
-          console.error(err); // one broken card must not stop the others
-        }
-      }
+    get entities() {
+      return trackedEntities();
+    },
+    update,
+    /** A changed device list (a card removed or restored): rebuild in place, so the scroll position and edit mode stay. */
+    setModel(next) {
+      model = next;
+      build();
+      update();
     },
     destroy() {
       for (const c of cards) c.destroy?.();

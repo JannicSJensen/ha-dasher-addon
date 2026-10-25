@@ -139,3 +139,10 @@ export async function setAreaDeviceHidden(entityId, hidden) {
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error ?? `Request failed (${response.status})`);
 }
+
+/** Remove a card from the Devices page (`hidden` true) or bring it back; throws with the server's message. */
+export async function setDeviceCardHidden(key, hidden) {
+  const response = await fetch("./api/devices/card", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key, hidden }) });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error ?? `Request failed (${response.status})`);
+}

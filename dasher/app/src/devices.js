@@ -65,20 +65,37 @@ export function discoverDevices({ registries, index = new Map() }) {
   return { vacuums, appliances };
 }
 
-/** The Devices page as tablets get it: explicit settings win over discovered devices. */
-export function resolveDevices({ settings, discovered }) {
-  if (!settings || settings.enabled === false) return { enabled: false, vacuums: [], appliances: [] };
-  const hidden = new Set(settings.exclude);
-  const vacuums = (settings.vacuums.length ? settings.vacuums : discovered.vacuums).filter((id) => !hidden.has(id));
+/** The key under which a card of the Devices page is removed and restored: a vacuum's entity id, an appliance's status (else power) entity. */
+export const applianceKey = (appliance) => appliance.roles.status_entity ?? appliance.roles.power_entity ?? null;
+
+/**
+ * The Devices page as tablets get it: explicit settings win over discovered devices. `hidden` (a Set of keys) holds the
+ * cards people removed; they stay in `removed` so they can be brought back.
+ */
+export function resolveDevices({ settings, discovered, hidden = new Set() }) {
+  if (!settings || settings.enabled === false) return { enabled: false, vacuums: [], appliances: [], removed: { vacuums: [], appliances: [] } };
+  const excluded = new Set(settings.exclude);
+  const allVacuums = (settings.vacuums.length ? settings.vacuums : discovered.vacuums).filter((id) => !excluded.has(id));
 
   const explicit = settings.appliances.map((a, i) => ({ id: `custom-${i}`, kind: a.kind, name: a.name, roles: a.roles }));
   const taken = new Set(explicit.flatMap((a) => Object.values(a.roles)));
-  const found = discovered.appliances.filter((a) => !Object.values(a.roles).some((id) => hidden.has(id) || taken.has(id)));
-  const appliances = [...found, ...explicit];
+  const found = discovered.appliances.filter((a) => !Object.values(a.roles).some((id) => excluded.has(id) || taken.has(id)));
+  const allAppliances = [...found, ...explicit].map((a) => ({ ...a, key: applianceKey(a) }));
 
-  const enabled = settings.enabled === true || vacuums.length > 0 || appliances.length > 0;
-  return { enabled, title: settings.title, icon: settings.icon, vacuums, appliances };
+  const vacuums = allVacuums.filter((id) => !hidden.has(id));
+  const appliances = allAppliances.filter((a) => !hidden.has(a.key));
+  const removed = { vacuums: allVacuums.filter((id) => hidden.has(id)), appliances: allAppliances.filter((a) => hidden.has(a.key)) };
+
+  const enabled = settings.enabled === true || allVacuums.length > 0 || allAppliances.length > 0;
+  return { enabled, title: settings.title, icon: settings.icon, vacuums, appliances, removed };
 }
 
-/** Every entity id of a resolved Devices page. */
-export const deviceEntities = (resolved) => [...resolved.vacuums, ...resolved.appliances.flatMap((a) => Object.values(a.roles))];
+/** Every entity id of a resolved Devices page, removed cards included (their names are shown when they can be restored). */
+export const deviceEntities = (resolved) => [
+  ...resolved.vacuums,
+  ...resolved.removed.vacuums,
+  ...[...resolved.appliances, ...resolved.removed.appliances].flatMap((a) => Object.values(a.roles)),
+];
+
+/** The keys that can be removed from the page now. */
+export const deviceKeys = (resolved) => new Set([...resolved.vacuums, ...resolved.removed.vacuums, ...[...resolved.appliances, ...resolved.removed.appliances].map((a) => a.key)].filter(Boolean));

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { parseConfig } from "../src/config.js";
-import { deviceEntities, detectKind, discoverDevices, resolveDevices } from "../src/devices.js";
+import { applianceKey, deviceEntities, deviceKeys, detectKind, discoverDevices, resolveDevices } from "../src/devices.js";
 import { applianceInfo, batteryIcon, formatRemaining, remainingMinutes, vacuumInfo, vacuumMainCall } from "../web/js/lib/devices.js";
 
 const row = (ei, di, pl, tk, extra = {}) => ({ ei, di, pl, tk, ...extra });
@@ -61,6 +61,7 @@ test("resolveDevices: explicit lists win, exclude removes, explicit appliances r
   assert.deepEqual(custom.appliances.filter((a) => a.kind === "washer").map((a) => a.name), ["Mine"]);
   assert.equal(resolveDevices({ settings: settings({ enabled: false }), discovered }).enabled, false);
   assert.equal(resolveDevices({ settings: settings(), discovered: { vacuums: [], appliances: [] } }).enabled, false);
+  assert.deepEqual(resolveDevices({ settings: settings({ enabled: false }), discovered }).removed, { vacuums: [], appliances: [] });
   assert.ok(deviceEntities(custom).includes("vacuum.robbie"));
 });
 
@@ -117,4 +118,24 @@ test("remaining time and appliance info", () => {
   states["sensor.s"] = { state: "unavailable", attributes: {} };
   assert.equal(applianceInfo(roles, (id) => states[id], now).unavailable, true);
   assert.equal(applianceInfo({ power_entity: "switch.p" }, (id) => states[id], now).active, true, "a heater with only a switch is active when on");
+});
+
+test("removed cards leave the page but stay listed so they can be restored", () => {
+  const discovered = discoverDevices({ registries });
+  const hidden = new Set(["vacuum.robbie", "sensor.vask_current_status"]);
+  const page = resolveDevices({ settings: settings(), discovered, hidden });
+  assert.deepEqual(page.vacuums, []);
+  assert.deepEqual(page.removed.vacuums, ["vacuum.robbie"]);
+  assert.equal(page.appliances.some((a) => a.kind === "washer"), false);
+  assert.deepEqual(page.removed.appliances.map((a) => [a.kind, a.key]), [["washer", "sensor.vask_current_status"]]);
+  assert.ok(page.appliances.every((a) => a.key === applianceKey(a)));
+  assert.ok(deviceEntities(page).includes("vacuum.robbie") && deviceEntities(page).includes("switch.vask_power"), "removed cards still stream their states");
+  assert.ok(deviceKeys(page).has("vacuum.robbie") && deviceKeys(page).has("sensor.vask_current_status"));
+  assert.ok(!deviceKeys(page).has("sensor.nope"));
+  // everything removed: the page stays so the cards can be brought back
+  const all = resolveDevices({ settings: settings(), discovered, hidden: deviceKeys(page) });
+  assert.equal(all.enabled, true);
+  assert.deepEqual([all.vacuums.length, all.appliances.length], [0, 0]);
+  // a heater with only a switch is keyed by that switch
+  assert.equal(applianceKey({ roles: { power_entity: "switch.rack" } }), "switch.rack");
 });
