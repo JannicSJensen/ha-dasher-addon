@@ -6,6 +6,7 @@ import { collectEntities } from "./lib/entities.js";
 import { makeTranslator } from "./lib/i18n.js";
 import { createAreaPage } from "./pages/area.js";
 import { createAreasPage } from "./pages/areas.js";
+import { createAmbient } from "./components/ambient.js";
 import { createNowPlayingScreen } from "./components/nowplaying-screen.js";
 import { createClimatePage } from "./pages/climate.js";
 import { createDevicesPage } from "./pages/devices.js";
@@ -42,6 +43,8 @@ let mounted = []; // { tile, entities: string[], last: object[] }
 let route = { kind: "page", id: null };
 let idleTimer;
 let nowScreen = null; // the full-screen player
+let ambient = null; // the clock screen after a while without touch
+let ambientTimer;
 
 const root = document.getElementById("app");
 const sidebar = h("nav", { class: "sidebar", "aria-label": "Pages" });
@@ -331,8 +334,12 @@ function applyConfig() {
   nowScreen?.destroy();
   nowScreen = createNowPlayingScreen(makeContext(config), { enabled: () => store.getState().music?.fullscreen !== false });
   root.append(nowScreen.el);
+  ambient?.destroy();
+  ambient = config.ambient?.enabled ? createAmbient(config.ambient, makeContext(config)) : null;
+  if (ambient) root.append(ambient.el);
   renderRoute();
   resetIdle();
+  resetAmbient();
 }
 
 // ---- idle return --------------------------------------------------------------
@@ -348,11 +355,24 @@ function resetIdle() {
 
 for (const ev of ["pointerdown", "keydown"]) document.addEventListener(ev, resetIdle, { passive: true });
 
+// ---- ambient screen -----------------------------------------------------------
+
+function resetAmbient() {
+  clearTimeout(ambientTimer);
+  const after = store.getState().config?.ambient?.after;
+  if (!ambient || !after) return;
+  ambientTimer = setTimeout(() => ambient?.show(), after * 1000);
+}
+
+// In the capture phase, so it also counts a touch the ambient screen itself stops.
+for (const ev of ["pointerdown", "keydown"]) document.addEventListener(ev, resetAmbient, { passive: true, capture: true });
+
 // ---- wiring -------------------------------------------------------------------
 
 store.subscribe((s) => s.entities, () => {
   refreshTiles();
   nowScreen?.update();
+  ambient?.update();
 });
 store.subscribe((s) => s.config, applyConfig);
 store.subscribe((s) => s.errors, () => {

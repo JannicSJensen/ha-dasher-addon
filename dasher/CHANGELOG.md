@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.29.0
+
+- **Ambient screen.** A new optional `ambient:` section in `dashboard.yaml`: after the set time without touch a calm clock screen takes over (large time, date, a breathing orb, and up to four quick buttons). A tap anywhere brings the dashboard back; the content drifts slowly to protect screens that stay on. Off by default.
+
 ## 0.28.0
 
 - **The front page tile has a scene.** Without a picture of its own the tile now shows a built-in room illustration behind the clock, dim, and lit up while one of the `scene_entities` (for instance your living room lights) is on. `scene:` picks another room or `false` for the old plain look; `backgrounds` can use `scene:<room>` too.

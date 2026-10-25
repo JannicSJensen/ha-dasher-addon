@@ -205,6 +205,22 @@ Heat pump or air conditioner with a vertical target-temperature slider.
 #### `buttons`
 A grid of icon buttons (`buttons`, same format as in `hero`) with an optional `title`.
 
+## Ambient screen
+
+After a while without touch the tablet can show a calm clock instead of the last page: a big time, the date, a slowly breathing orb in the accent colour on black, and up to four quick buttons. A tap anywhere (except on a button) brings the dashboard back. The content moves a few pixels now and then, so a screen that stays on does not burn in. It is off until you set it up:
+
+```yaml
+ambient:
+  after: 600            # seconds without touch (at least 10); `ambient: 600` is the short form
+  brightness: 0.8       # 0.1 - 1, lower is darker
+  time_format: 24h      # or 12h
+  buttons:              # up to four; icon, name, entity, tap and active_when like the front page buttons
+    - { icon: weather-night, name: Good night, entity: input_boolean.good_night }
+    - { icon: lightbulb-group, name: All lights, entity: light.living_room_lamp }
+```
+
+`ambient: false` (or no section) leaves it off. It works together with `idle_return`: the tablet first goes back to the first page, then the ambient screen takes over. The full-screen player is shown above it when music starts.
+
 ## Missing entities
 
 When `dashboard.yaml` uses entities that your Home Assistant does not have (for example after copying a dashboard from somewhere else, or after renaming a device), the tablet shows a notice at the bottom with the names, and the app log lists each one with the tile that uses it and the entities that look most alike. You fix it in the **app configuration**, not on the tablet:

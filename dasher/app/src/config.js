@@ -234,6 +234,37 @@ function parseMeals(raw, errors) {
   };
 }
 
+/**
+ * Normalise the optional `ambient:` section: the calm clock screen that takes over after a while without touch.
+ * `ambient: 600` (seconds) is the short form; `ambient: false` or no section leaves it off.
+ */
+function parseAmbient(raw, errors) {
+  const object = raw && typeof raw === "object" && !Array.isArray(raw);
+  const r = object ? raw : {};
+  const after = typeof raw === "number" || (typeof raw === "string" && raw.trim() !== "") ? Number(raw) : r.after != null ? Number(r.after) : object ? 600 : 0;
+  const buttons = [];
+  for (const [i, b] of (Array.isArray(r.buttons) ? r.buttons : []).entries()) {
+    if (!b || typeof b !== "object" || typeof b.icon !== "string") {
+      errors.push(`ambient.buttons[${i}]: a button needs an icon`);
+      continue;
+    }
+    if (b.entity != null && !ENTITY_RE.test(String(b.entity))) {
+      errors.push(`ambient.buttons[${i}].entity: invalid entity id "${b.entity}"`);
+      continue;
+    }
+    buttons.push({ icon: b.icon, name: b.name != null ? String(b.name) : null, ...(b.entity ? { entity: String(b.entity) } : {}), ...(b.tap != null ? { tap: b.tap } : {}), ...(b.active_when ? { active_when: b.active_when } : {}) });
+    if (buttons.length >= 4) break;
+  }
+  const enabled = r.enabled !== false && Number.isFinite(after) && after >= 10;
+  return {
+    enabled,
+    after: enabled ? Math.round(after) : 0,
+    buttons,
+    time_format: r.time_format === "12h" ? "12h" : "24h",
+    brightness: Number.isFinite(Number(r.brightness)) ? Math.min(1, Math.max(0.1, Number(r.brightness))) : 0.8,
+  };
+}
+
 /** Normalise the optional `todo:` section (the to-do lists page). */
 function parseTodo(raw, errors) {
   const r = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
@@ -324,6 +355,7 @@ export function parseConfig(text, { entityMap = {} } = {}) {
   for (const id of toList(raw.devices?.vacuums)) rawEntities.add(id);
   for (const id of toList(raw.todo?.lists)) rawEntities.add(id);
   collectEntities(raw.meals ?? {}, rawEntities);
+  collectEntities(raw.ambient ?? {}, rawEntities);
   collectEntities(raw.devices?.appliances ?? [], rawEntities);
   for (const id of [...rawEntities]) if (!ENTITY_RE.test(id)) rawEntities.delete(id);
   const usage = describeUsage(raw);
@@ -383,6 +415,7 @@ export function parseConfig(text, { entityMap = {} } = {}) {
   const devices = parseDevices(raw.devices, errors);
   const todo = parseTodo(raw.todo, errors);
   const meals = parseMeals(raw.meals, errors);
+  const ambient = parseAmbient(raw.ambient, errors);
 
   const config = {
     title: String(raw.title ?? "Dasher"),
@@ -398,6 +431,7 @@ export function parseConfig(text, { entityMap = {} } = {}) {
     devices,
     todo,
     meals,
+    ambient,
     pages,
   };
 
@@ -409,6 +443,7 @@ export function parseConfig(text, { entityMap = {} } = {}) {
   for (const id of devices.vacuums) entities.add(id);
   for (const id of todo.lists) entities.add(id);
   for (const id of [meals.shopping_list_entity, meals.calendar_entity, meals.ai_task_entity]) if (id) entities.add(id);
+  collectEntities(ambient, entities);
   for (const a of devices.appliances) for (const id of Object.values(a.roles)) entities.add(id);
   for (const id of [...music.players, music.default_player]) if (id) entities.add(id);
   return { config, errors, entities, rawEntities, usage };

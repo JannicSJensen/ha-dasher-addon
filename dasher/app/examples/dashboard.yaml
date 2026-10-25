@@ -17,6 +17,16 @@ columns: 4
 rows: 2
 gap: 8
 
+# The ambient screen: after a while without touch a calm clock fills the screen (orb, big time, a few quick
+# buttons). A tap brings the dashboard back. Off unless you set `after` (seconds) or `ambient: 600`.
+# ambient:
+#   after: 600
+#   brightness: 0.8         # 0.1 - 1, lower is darker
+#   time_format: 24h
+#   buttons:                # up to four, like the buttons of the front page tile
+#     - { icon: weather-night, name: Good night, entity: input_boolean.good_night }
+#     - { icon: lightbulb-group, name: All lights, entity: light.living_room_lamp }
+
 # Area pages: adds a menu entry that lists every area in Home Assistant as a picture.
 # Tapping one opens the area with its lights, players, temperature, humidity and windows.
 # Pictures: put <area_id>.jpg (or the area name, e.g. living-room.jpg) in assets/areas/. Areas without a picture

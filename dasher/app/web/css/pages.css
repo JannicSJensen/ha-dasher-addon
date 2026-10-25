@@ -843,3 +843,20 @@
 
 /* The built-in room pictures are dark already: dim them less than photos. */
 .area__bg.is-builtin { filter: brightness(0.95) saturate(1.05); }
+
+/* ---- ambient screen ---- */
+.ambient { position: fixed; inset: 0; z-index: 25; display: grid; place-items: center; background: #000; color: #fff; opacity: 0; transition: opacity 0.45s ease; overflow: hidden; touch-action: manipulation; }
+.ambient.is-open { opacity: 1; }
+.ambient[hidden] { display: none; }
+.ambient__orb { position: absolute; width: min(78vmin, 780px); aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--accent) 80%, #fff) 0%, color-mix(in srgb, var(--accent) 45%, #0b3d47) 28%, #0b2430 58%, rgba(0, 0, 0, 0) 72%); filter: blur(10px) brightness(var(--ambient-brightness, 0.8)); opacity: 0.55; animation: ambient-breathe 9s ease-in-out infinite; }
+.ambient__content { position: relative; display: grid; justify-items: center; gap: 1.4vmin; padding: 4vmin; animation: ambient-drift 900s ease-in-out infinite alternate; filter: brightness(var(--ambient-brightness, 0.8)); text-shadow: 0 2px 24px rgba(0, 0, 0, 0.6); }
+.ambient__clock { font-size: clamp(72px, 24vmin, 260px); font-weight: 700; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.ambient__date { font-size: clamp(16px, 3.6vmin, 36px); color: #d7d7da; letter-spacing: 0.04em; }
+.ambient__date::first-letter { text-transform: uppercase; }
+.ambient .button-row { margin-top: 5vmin; justify-content: center; gap: 4vmin; }
+.ambient .icon-btn.has-label { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 6px; width: clamp(84px, 17vmin, 150px); height: clamp(84px, 17vmin, 150px); border-radius: 22px; font-size: clamp(30px, 6vmin, 52px); background: rgba(22, 22, 24, 0.78); }
+.ambient .icon-btn__label { font-size: clamp(11px, 2vmin, 17px); }
+.ambient .icon-btn.has-label.is-active { box-shadow: 0 0 0 2px var(--accent), 0 0 28px color-mix(in srgb, var(--accent) 45%, transparent); }
+@keyframes ambient-breathe { 0%, 100% { transform: scale(0.94); opacity: 0.45; } 50% { transform: scale(1.04); opacity: 0.62; } }
+@keyframes ambient-drift { from { transform: translate(-14px, -10px); } to { transform: translate(14px, 10px); } }
+@media (prefers-reduced-motion: reduce) { .ambient__orb, .ambient__content { animation: none; } }
