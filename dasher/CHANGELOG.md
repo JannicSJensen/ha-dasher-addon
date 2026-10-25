@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.28.0
+
+- **The front page tile has a scene.** Without a picture of its own the tile now shows a built-in room illustration behind the clock, dim, and lit up while one of the `scene_entities` (for instance your living room lights) is on. `scene:` picks another room or `false` for the old plain look; `backgrounds` can use `scene:<room>` too.
+- **Labelled scene buttons.** The quick buttons under the clock are larger, show their name, and glow in the accent colour while active (`button_labels: false` hides the names).
+
 ## 0.27.0
 
 - **New look for the Climate page.** A big average temperature at the top with chips for what is on and heating, and a ring dial per room: the colour arc shows the setpoint (cool blue to warm orange), a small mark shows the measured temperature, and the room glows while it heats or cools. Drag the ring to set the temperature, or use the − and + buttons; the power button sits in the corner of the card.

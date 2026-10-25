@@ -14,7 +14,9 @@ export function createHeroTile(cfg, ctx) {
 
   const clock = h("div", { class: "hero__clock" });
   const date = h("div", { class: "hero__date" });
-  const buttons = createButtonRow(cfg.buttons, ctx);
+  const buttons = createButtonRow(cfg.buttons, ctx, { labels: cfg.button_labels !== false });
+  // With no picture of its own the tile shows a built-in room: dim, and lit while one of `scene_entities` is on.
+  const defaultScene = cfg.scene === false ? null : typeof cfg.scene === "string" ? cfg.scene : cfg.image || cfg.backgrounds?.length ? null : "living";
   const messages = h("div", { class: `hero__messages${cfg.show_clock === false ? " no-clock" : ""}`, "aria-live": "polite" });
   let messagesSignature = "";
 
@@ -54,6 +56,7 @@ export function createHeroTile(cfg, ctx) {
     currentUrl = url;
     const next = 1 - front;
     backgroundImage(layers[next], url);
+    layers[next].classList.toggle("is-scene", Boolean(url) && url.includes("img/rooms/"));
     layers[next].classList.add("is-visible");
     layers[front].classList.remove("is-visible");
     front = next;
@@ -89,7 +92,9 @@ export function createHeroTile(cfg, ctx) {
     update() {
       paintMessages();
       const match = pickFirst(cfg.backgrounds, ctx.getState);
-      setBackground(assetUrl(match?.image ?? cfg.image));
+      setBackground(assetUrl(match?.image ?? cfg.image ?? (defaultScene ? `scene:${defaultScene}` : null)));
+      const sources = cfg.scene_entities ?? [];
+      el.classList.toggle("is-lit", !sources.length || sources.some((id) => ctx.getState(id)?.state === "on"));
       buttons.update();
     },
     destroy() {

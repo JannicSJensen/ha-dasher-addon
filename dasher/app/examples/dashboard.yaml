@@ -118,6 +118,9 @@ pages:
         #     image: living-room-on.jpg
         #   - when: { entity: sun.sun, state: below_horizon }
         #     image: living-room-night.jpg
+        # With no image the tile shows a built-in room (scene: living | kitchen | bedroom ...; false = plain),
+        # dim, and lit while one of scene_entities is on. Button labels: button_labels: false hides them.
+        scene_entities: [light.living_room_lamp]
         messages:                       # status messages on the front page (shown only while they apply)
           - { entity: sensor.waste_general }       # a pick-up sensor: "Empty the trash can" today and tomorrow
           - { entity: sensor.waste_paper }

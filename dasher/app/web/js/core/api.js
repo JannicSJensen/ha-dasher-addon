@@ -99,6 +99,7 @@ export const proxyUrl = (path) => `./api/proxy?path=${encodeURIComponent(path)}`
 /** Resolve a configured image: absolute URLs stay, bare names come from the assets folder. */
 export function assetUrl(value) {
   if (!value) return "";
+  if (/^scene:[a-z]+$/.test(value)) return `./img/rooms/${value.slice(6)}.svg`; // a built-in room picture
   if (/^(https?:)?\/\//.test(value) || value.startsWith("data:")) return value;
   if (value.startsWith("./")) return value;
   if (value.startsWith("/")) return `.${value}`;

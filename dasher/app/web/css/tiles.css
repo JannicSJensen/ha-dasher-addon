@@ -54,6 +54,8 @@
 .tile--hero { background: radial-gradient(80% 55% at 30% 85%, rgba(255, 170, 90, 0.2), transparent 70%), linear-gradient(160deg, #262628, #131314); }
 .hero__img { position: absolute; inset: 0; background-size: cover; background-position: center bottom; opacity: 0; transition: opacity 0.9s ease; }
 .hero__img.is-visible { opacity: 1; }
+.hero__img.is-scene { inset: auto 0 0 0; height: 62%; background-size: 100% auto; background-repeat: no-repeat; background-position: center bottom; -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 38%); mask-image: linear-gradient(to bottom, transparent 0%, #000 38%); filter: brightness(0.5) saturate(0.9); transition: opacity 0.9s ease, filter 1.2s ease; }
+.tile--hero.is-lit .hero__img.is-scene { filter: brightness(0.95) saturate(1.05); }
 .hero__shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, 0.45) 0%, transparent 38%, rgba(0, 0, 0, 0.35) 100%); }
 .hero__top { position: absolute; top: 8cqmin; left: 8cqmin; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5); }
 .hero__clock { font-size: 14.5cqmin; font-weight: 700; line-height: 1.05; font-variant-numeric: tabular-nums; }
@@ -61,6 +63,11 @@
 .hero__date::first-letter { text-transform: uppercase; }
 .tile--hero .button-row { position: absolute; left: 7cqmin; right: 7cqmin; bottom: 7cqmin; z-index: 2; }
 .tile--hero .icon-btn { width: 14.5cqmin; height: 14.5cqmin; border-radius: 3.8cqmin; font-size: 7cqmin; }
+.tile--hero .icon-btn.has-label { display: flex; align-items: center; justify-content: center; width: 22cqmin; height: 22cqmin; flex-direction: column; gap: 1cqmin; background: rgba(14, 14, 16, 0.62); backdrop-filter: blur(10px); }
+.tile--hero .icon-btn.has-label .icon { font-size: 7.4cqmin; }
+.icon-btn__label { max-width: 100%; padding: 0 1cqmin; font-size: 2.6cqmin; font-weight: 500; line-height: 1.1; letter-spacing: 0.02em; color: #d9d9dc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.icon-btn.is-active .icon-btn__label { color: var(--accent); }
+.tile--hero .icon-btn.has-label.is-active { box-shadow: 0 0 0 0.5cqmin var(--accent), 0 0 5cqmin color-mix(in srgb, var(--accent) 45%, transparent); }
 
 /* ---- buttons tile ---- */
 .tile--buttons { display: flex; flex-direction: column; gap: 4cqmin; }

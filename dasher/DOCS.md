@@ -98,7 +98,10 @@ Large area picture with clock, date and quick buttons.
 | Key | Description |
 | --- | --- |
 | `image` | Default background. |
-| `backgrounds` | List of `{ when, image }`; the first match wins, an entry without `when` is the fallback. |
+| `backgrounds` | List of `{ when, image }`; the first match wins, an entry without `when` is the fallback. An image can also be `scene:<room>` (a built-in room picture, e.g. `scene:bedroom` for a night background). |
+| `scene` | Without `image` and `backgrounds` the tile shows a built-in room picture (`living` by default). Give another room (`kitchen`, `bedroom` ...) or `false` for a plain tile. |
+| `scene_entities` | Lights (or any entities) that light the scene up while one of them is `on`; otherwise the scene stays dim. |
+| `button_labels` | `false` to hide the names under the buttons. |
 | `buttons` | List of `{ icon, name, entity, tap, active_when }`. A button with `entity` toggles it and is highlighted while it is `on`. |
 | `messages` | [Status messages](#status-messages) shown under the clock while they apply. |
 | `show_clock` | `false` to hide clock and date. |

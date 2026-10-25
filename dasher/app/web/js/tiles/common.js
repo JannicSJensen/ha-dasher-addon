@@ -116,9 +116,10 @@ export function createHeader({ iconName, title }) {
 }
 
 /** Row of icon buttons (used by hero and the standalone "buttons" tile). */
-export function createButtonRow(buttons, ctx) {
+export function createButtonRow(buttons, ctx, { labels = false } = {}) {
   const items = (buttons ?? []).map((cfg) => {
-    const el = h("button", { class: "icon-btn", type: "button", title: cfg.name ?? "", "aria-label": cfg.name ?? cfg.icon }, icon(cfg.icon));
+    const label = labels && cfg.name ? h("span", { class: "icon-btn__label" }, cfg.name) : null;
+    const el = h("button", { class: `icon-btn${label ? " has-label" : ""}`, type: "button", title: cfg.name ?? "", "aria-label": cfg.name ?? cfg.icon }, icon(cfg.icon), label);
     pressable(el, { onTap: () => runAction(cfg.tap ?? "toggle", ctx, cfg.entity) });
     return { cfg, el };
   });
