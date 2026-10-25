@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.36.0
+
+- **Offers tab in the meal plan.** Follow products (for instance Pepsi Max, salmon or coffee) and see their cheapest offers per litre or kilo, one per store, read from tilbudsugen.dk about twice a day. Open an offer, put it on the shopping list, hide stores you do not want. Based on [ha-pepsi-max-tilbud](https://github.com/knuser666/ha-pepsi-max-tilbud) without needing the Scrape integration, sensors or Button Card. A new `offers` tile shows the cheapest offers on any page; `meals: offers:` can switch the tab off.
+
 ## 0.35.0
 
 - **Area pictures live in Home Assistant.** The dashboard now always uses the picture of the area in Home Assistant's own area settings. Areas that have none get a built-in room picture uploaded to Home Assistant by the app (once per kind of room, never over a picture you chose, and not again after you remove it). New app option `allow_area_picture_upload` (default on) can forbid the upload; without it the built-in pictures are shown by the app itself as before.

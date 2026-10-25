@@ -456,6 +456,7 @@ meals:
   # language: da                                # the language of dishes and recipes (default: the dashboard language)
   # auto: { weekday: sun, time: "17:00", days: 7 }   # make next week's plan by itself
   # mealie: false                                 # do not use Mealie, even when it is set up
+  # offers: { count: 5 }                          # stores shown per followed product; `offers: false` = no Offers tab
 ```
 
 **Tonight's dinner tile**: put `- { type: dinner, col: 3, row: 2 }` on a page (optional `name`, `icon`). It shows today's dinner and tomorrow's, and a tap opens the recipe.
@@ -464,6 +465,22 @@ meals:
 * The AI is only called when someone presses a button (or with `auto`); each call is paid by your AI provider. The app option `allow_meal_editing` decides whether a tablet may do it.
 * `calendar_entity`, `shopping_list_entity` and `ai_task_entity` take part in entity mapping.
 * **Not included** (they need REMA 1000 or Tjek): matching ingredients to products and prices, sending the list to the REMA app, REMA's lists, favourites and recipes, offers from other chains and the offer sensors. Planned for later: a food budget with manual bookings, health estimates, and history.
+
+### Offers (Tilbud)
+
+![Offers](https://raw.githubusercontent.com/JannicSJensen/ha-dasher-addon/main/docs/screenshots/meals-offers.png)
+
+An **Offers** tab follows products and shows their cheapest offers **per litre or kilo**, one per store, so a shop with a cheap price per kilo is not hidden behind one with a cheap single pack. The idea comes from [ha-pepsi-max-tilbud](https://github.com/knuser666/ha-pepsi-max-tilbud) (the five cheapest Pepsi Max offers), made general: you do not need the Scrape integration, any sensors or Button Card; the app reads the data itself.
+
+* **Follow a product** with the button: write its name as it is on tilbudsugen.dk (`pepsi-max`, `laks`, `kaffe`, `hakket oksekød` ...) or paste its address (`https://www.tilbudsugen.dk/offer/pepsi-max`). The app reads the page at once, so a wrong name is noticed. Up to 12 products.
+* Two optional filters keep the list to what you mean: words the product **must contain** (`pepsi`) and **must not contain** (`sodastream, koncentrat`), compared with the brand and name of the offer. The Pepsi Max example is one tap on an empty tab.
+* Every row shows the store, the product and package, the price, how long the offer lasts (or from when it starts), and the **price per litre/kilo** in large type. Expired offers and offers from border shops are left out, and only offers in the same unit are compared (litres are not mixed with pieces).
+* The round buttons open the offer on tilbudsugen.dk and put it on the **shopping list** (for instance *Pepsi Max Cola 1,5 l (Meny, 9,95 kr)*).
+* **Stores shown** lists the stores that have offers: tap one to hide it (small local shops, say), tap again to bring it back. The choice is shared by all tablets.
+* The offers are read about **twice a day** per product (and with the *Refresh* button, at most every few minutes); nothing is fetched until you follow a product. If the site does not answer, the last offers stay and the card says it could not update.
+* A **`offers` tile** puts the cheapest offers on any page: `- { type: offers, product: pepsi-max, count: 3 }` (`product` is the name or the first followed product, `count` the rows; `name` and `icon` as usual). A tap opens the tab.
+* `meals: offers: false` removes the tab; `meals: offers: { count: 8 }` shows up to 8 stores per product. Following and changing needs the app option `allow_meal_editing`.
+* The data is read from the public pages of tilbudsugen.dk, which has no official interface for it, so a change on their side can stop it working. The data belongs to tilbudsugen.dk and the stores.
 
 ### Cookbook (Mealie)
 

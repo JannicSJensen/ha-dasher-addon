@@ -13,7 +13,7 @@ This repository contains the **Dasher** app (add-on) for Home Assistant: a dark,
 * **Car page:** battery and range, start/stop charging, smart charging with its times, a charger restart, and remote climate (start, temperature, window heat); EV Smart Charging, Peblar and FordPass are recognised automatically.
 * **Media page:** Plex through Home Assistant's Plex integration: continue watching and recently added movies and series. Plays on Cast devices and Plex clients, and, with a Plex address and token in the app options, on Apple TVs and DLNA players with stream links.
 * **To-do lists page (Huskelister):** every to-do list of Home Assistant; add, tick off, edit and delete items, and create, rename and delete Local To-do lists.
-* **Meal plan page (Madplan):** a week of dinners planned by Home Assistant's AI Task with your rules (vegetarian days, allergies, cooking time, fixed days), recipes with step timers, ingredients added to a shopping list, dinners written to a calendar, and a *tonight* tile; a cookbook from your Mealie (search, plan and import recipes). Inspired by [ha-middagsro](https://github.com/Dinnsen/ha-middagsro), without the REMA 1000 parts.
+* **Meal plan page (Madplan):** a week of dinners planned by Home Assistant's AI Task with your rules (vegetarian days, allergies, cooking time, fixed days), recipes with step timers, ingredients added to a shopping list, dinners written to a calendar, and a *tonight* tile; a cookbook from your Mealie (search, plan and import recipes), and an Offers tab that follows products (e.g. Pepsi Max) and shows the cheapest offers per litre or kilo, one per store, from tilbudsugen.dk. Inspired by [ha-middagsro](https://github.com/Dinnsen/ha-middagsro), without the REMA 1000 parts.
 * **Devices page:** robot vacuums with controls, and washing machines, dryers, dishwashers and clothes heaters (LG ThinQ found automatically, others listed in `dashboard.yaml`); cards you do not want can be removed with the pencil, and restored.
 * **Ambient screen:** an optional calm clock screen with a breathing orb and quick buttons after a while without touch.
 * **Area pictures:** the dashboard uses the picture of each area in Home Assistant's area settings; areas without one get a built-in room picture (living room, kitchen, bedroom, bathroom, garage, garden ...) uploaded there by the app, chosen from the area's name. Pictures you choose are never changed.
@@ -49,6 +49,8 @@ All screenshots show the built-in fake Home Assistant and Music Assistant (see [
 | **Meal plan**<br>A week of dinners planned by AI Task within your rules; each dinner is a calendar event. | **Recipe**<br>Ingredients and steps to tick off, with timers. |
 | [![Cookbook](docs/screenshots/meals-cookbook.png)](docs/screenshots/meals-cookbook.png) | |
 | **Cookbook**<br>Your Mealie recipes: search, plan on a day, or import from a web page. | |
+| [![Offers](docs/screenshots/meals-offers.png)](docs/screenshots/meals-offers.png) | |
+| **Offers**<br>The cheapest offers per litre or kilo of the products you follow, one per store. | |
 | [![Shopping](docs/screenshots/meals-shopping.png)](docs/screenshots/meals-shopping.png) | [![Rules](docs/screenshots/meals-rules.png)](docs/screenshots/meals-rules.png) |
 | **Shopping**<br>The ingredients added up and put on a Home Assistant shopping list. | **Rules**<br>Vegetarian days, allergies, cooking time, fixed days and favourites. |
 | [![Ambient screen](docs/screenshots/ambient.png)](docs/screenshots/ambient.png) | |

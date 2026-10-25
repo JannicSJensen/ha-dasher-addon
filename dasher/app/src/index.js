@@ -10,6 +10,7 @@ import { discoverEv, resolveEv } from "./ev.js";
 import { resolveClimate } from "./climate.js";
 import { MealsAI, allergenWarnings } from "./meals-ai.js";
 import { Mealie } from "./mealie.js";
+import { OffersService } from "./offers.js";
 import { MealsStore, addDays, isDate, normalizeEntry, todayLocal, weekdayIndex, WEEKDAYS } from "./meals.js";
 import { MealsCalendar, eventSignature } from "./meals-sync.js";
 import { TodoService, cleanListName, resolveTodo } from "./todo.js";
@@ -650,6 +651,9 @@ function mealsSettings() {
   };
 }
 
+const offers = new OffersService({ dir: dataDir, logger, baseUrl: process.env.OFFERS_BASE_URL || undefined });
+offers.on("change", () => broadcast("meals", mealsPayload()));
+if (!process.env.NO_OFFERS) offers.start();
 const mealie = new Mealie({ ha, logger, settings: () => configStore.current.config?.meals?.mealie ?? {} });
 const mealsAi = new MealsAI({ ha, store: meals, logger, resolveEntity: () => mealsSettings().ai, settings: mealsSettings, mealie });
 const refreshMealie = () => mealie.refresh({ force: true }).then(() => broadcast("meals", mealsPayload()));
@@ -679,6 +683,7 @@ const mealsPayload = () => {
     calendar: s.calendar,
     calendar_error: mealsCalendar.error,
     mealie: mealie.available,
+    offers: s.cfg.offers?.enabled === false ? null : { ...offers.payload({ count: s.cfg.offers?.count ?? 5 }), editable: MEALS_EDIT },
     ...meals.payload(),
     days,
   };
@@ -779,6 +784,19 @@ async function handleMealsPost(req, res, action) {
         if (!isDate(body?.date)) return json(res, 400, { error: "Invalid date." });
         await mealsAi.writeRecipe(body.date);
         return json(res, 200, { ok: true });
+      case "offers-add": {
+        if (mealsSettings().cfg.offers?.enabled === false) return json(res, 404, { error: "Offers are switched off." });
+        const slug = await offers.add({ input: body?.input, name: body?.name, must: body?.must, not: body?.not });
+        return json(res, 200, { ok: true, slug });
+      }
+      case "offers-remove":
+        return offers.remove(String(body?.slug ?? "")) ? json(res, 200, { ok: true }) : json(res, 404, { error: "Unknown product." });
+      case "offers-chain":
+        return offers.setChain(body?.chain, body?.hidden === true) ? json(res, 200, { ok: true }) : json(res, 400, { error: "Unknown store." });
+      case "offers-refresh":
+        if (!offers.canRefreshNow) return json(res, 429, { error: "Offers were just refreshed. Try again in a few minutes." });
+        offers.refreshNow().catch((err) => logger.warn(`Offers refresh failed: ${err.message}`)); // runs on; the tablets get the result when it is in
+        return json(res, 202, { ok: true });
       case "mealie-use": {
         if (!isDate(body?.date)) return json(res, 400, { error: "Invalid date." });
         const entry = await mealie.recipe(body?.slug, mealsSettings().household);

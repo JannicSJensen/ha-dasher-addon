@@ -5,6 +5,7 @@ import { openModal } from "../core/modal.js";
 import { getPref, setPref } from "../core/prefs.js";
 import { confirmDialog } from "../components/dialogs.js";
 import { format } from "../lib/i18n.js";
+import { chainColor, money, offerListText, packText, validityText } from "../lib/offers.js";
 import { aggregateIngredients, addDays, clockText, dateObject, listItemText, mondayOf, onList, stepTimer, todayLocal, weeksFrom } from "../lib/meals.js";
 import { pressable } from "../tiles/common.js";
 
@@ -13,6 +14,7 @@ const TABS = [
   ["cookbook", "book-open-page-variant-outline", "meals_tab_cookbook"],
   ["recipe", "chef-hat", "meals_tab_recipe"],
   ["shopping", "cart-outline", "meals_tab_shopping"],
+  ["offers", "tag-outline", "meals_tab_offers"],
   ["rules", "tune-variant", "meals_tab_rules"],
 ];
 const KINDS = ["dinner", "leftovers", "eatout", "skip"];
@@ -40,7 +42,7 @@ export function createMealsPage(initialModel, ctx) {
   const { t } = ctx;
   let model = initialModel;
   let tab = TABS.some(([id]) => id === getPref("meals.tab")) ? getPref("meals.tab") : "week";
-  if (tab === "cookbook" && !model.mealie) tab = "week";
+  if ((tab === "cookbook" && !model.mealie) || (tab === "offers" && !model.offers)) tab = "week";
   let cookbook = null; // { q, recipes, error }, null until loaded
   let cookbookTimer = null;
   let selected = null;
@@ -79,7 +81,7 @@ export function createMealsPage(initialModel, ctx) {
   // ---- tabs -----------------------------------------------------------------------------------
   function paintTabs() {
     tabsEl.replaceChildren(
-      ...TABS.filter(([id]) => id !== "cookbook" || model.mealie).map(([id, iconName, label]) => {
+      ...TABS.filter(([id]) => (id !== "cookbook" || model.mealie) && (id !== "offers" || model.offers)).map(([id, iconName, label]) => {
         const el = h("button", { class: `mtab${id === tab ? " is-active" : ""}`, type: "button", role: "tab", "aria-selected": String(id === tab) }, icon(iconName), h("span", null, t(label)));
         pressable(el, { onTap: () => showTab(id) });
         return el;
@@ -358,6 +360,121 @@ export function createMealsPage(initialModel, ctx) {
     if (content.firstChild !== cookUi.shell) show(cookUi.shell);
   }
 
+  // ---- offers (tilbudsugen.dk) -------------------------------------------------------------------
+  const clockOf = (iso) => (iso ? new Intl.DateTimeFormat(ctx.locale, { weekday: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(iso)) : "");
+
+  function openFollow(preset = {}) {
+    const nameInput = input({ type: "text", maxlength: "80", value: preset.input ?? "", placeholder: t("offers_name_hint"), "aria-label": t("offers_name") });
+    const must = input({ type: "text", maxlength: "80", value: preset.must ?? "", placeholder: t("offers_must_hint"), "aria-label": t("offers_must") });
+    const not = input({ type: "text", maxlength: "80", value: preset.not ?? "", placeholder: t("offers_not_hint"), "aria-label": t("offers_not") });
+    let modal;
+    const go = async () => {
+      if (!nameInput.value.trim()) return nameInput.focus();
+      ctx.toast(t("offers_reading"));
+      modal.close();
+      const result = await post("offers-add", { input: nameInput.value, must: must.value, not: not.value }, { toastOk: t("offers_following") });
+      if (result) showTab("offers");
+    };
+    nameInput.addEventListener("keydown", (e) => e.key === "Enter" && go());
+    modal = openModal(
+      h(
+        "div",
+        { class: "modal__body dialog tdedit" },
+        h("div", { class: "modal__title" }, t("offers_follow")),
+        h("p", { class: "view__hint" }, t("offers_follow_hint")),
+        field(t("offers_name"), nameInput),
+        field(t("offers_must"), must),
+        field(t("offers_not"), not),
+        h("div", { class: "dialog__actions mealsactions" }, button("tag-plus-outline", t("offers_follow"), go, "btn btn--primary")),
+      ),
+    );
+    setTimeout(() => nameInput.focus(), 50);
+  }
+
+  function offerRow(offer, index, product) {
+    const today = todayLocal();
+    const badge = h("span", { class: "moffer__chain", style: { background: chainColor(offer.chain) } }, offer.chain.slice(0, 2).toUpperCase());
+    const text = h(
+      "div",
+      { class: "moffer__text" },
+      h("div", { class: "moffer__store" }, offer.chain),
+      h("div", { class: "moffer__what" }, [[offer.brand, offer.name].filter(Boolean).join(" "), packText(offer, ctx.locale)].filter(Boolean).join(" · ")),
+      h("div", { class: "moffer__when" }, [validityText(offer, today, { locale: ctx.locale, from: t("offers_from"), until: t("offers_until") }), `${money(offer.price, ctx.locale)} kr`].filter(Boolean).join(" · ")),
+    );
+    const price = h("div", { class: "moffer__unit" }, h("span", { class: "moffer__num" }, money(offer.unit_price, ctx.locale)), h("span", { class: "moffer__per" }, `kr/${offer.unit}`));
+    const row = h("div", { class: `moffer__row${index === 0 ? " is-best" : ""}` }, h("span", { class: "moffer__rank" }, String(index + 1)), badge, text, price);
+    const open = h("a", { class: "moffer__open", href: offer.url, target: "_blank", rel: "noopener noreferrer", "aria-label": t("offers_open") }, icon("open-in-new"));
+    row.append(open);
+    if (editable() && model.shopping_list) {
+      const add = h("button", { class: "moffer__add", type: "button", "aria-label": t("offers_add") }, icon("cart-plus"));
+      pressable(add, {
+        onTap: async () => {
+          await ctx.call("todo", "add_item", model.shopping_list, { item: offerListText(offer, ctx.locale) });
+          ctx.toast(format(t, "meals_added", { n: 1 }));
+        },
+      });
+      row.append(add);
+    }
+    return row;
+  }
+
+  function renderOffers() {
+    const offers = model.offers;
+    const out = [];
+    const bar = h("div", { class: "mealsbar" });
+    if (editable()) {
+      bar.append(button("tag-plus-outline", t("offers_follow"), () => openFollow(), "btn btn--primary"));
+      bar.append(button("refresh", t("offers_refresh"), async () => {
+        const result = await post("offers-refresh", {}, { toastOk: t("offers_refreshing") });
+        if (result) render();
+      }));
+    }
+    out.push(bar);
+    if (!offers.products.length) {
+      out.push(
+        h("div", { class: "notice" }, icon("tag-outline"), h("h2", null, t("offers_none")), h("p", null, t("offers_none_hint"))),
+        editable() ? h("div", { class: "moffer__presets" }, button("cup-water", "Pepsi Max", () => openFollow({ input: "Pepsi Max", must: "pepsi", not: "sodastream, koncentrat" }))) : null,
+      );
+    }
+    for (const product of offers.products) {
+      const head = h("div", { class: "moffer__head" }, h("h2", { class: "moffer__title" }, product.name), h("span", { class: "moffer__updated" }, product.error ? `${t("offers_error")}: ${product.error}` : product.updated ? `${t("offers_updated")} ${clockOf(product.updated)}` : ""));
+      if (editable()) {
+        const remove = h("button", { class: "moffer__remove", type: "button", "aria-label": t("todo_delete") }, icon("close"));
+        pressable(remove, { onTap: () => confirmDialog({ title: product.name, text: t("offers_remove_confirm"), confirmLabel: t("todo_delete"), cancelLabel: t("cancel"), danger: true, onConfirm: () => post("offers-remove", { slug: product.slug }) }) });
+        head.append(remove);
+      }
+      out.push(
+        h(
+          "section",
+          { class: `moffer${product.error ? " has-error" : ""}` },
+          head,
+          product.offers.length ? product.offers.map((o, i) => offerRow(o, i, product)) : h("p", { class: "view__hint" }, product.total ? t("offers_none_match") : t("offers_none_now")),
+        ),
+      );
+    }
+    if (offers.chains.length) {
+      out.push(
+        h(
+          "div",
+          { class: "moffer__stores" },
+          h("div", { class: "moffer__storetitle" }, t("offers_stores")),
+          h(
+            "div",
+            { class: "moffer__chips" },
+            offers.chains.map((chain) => {
+              const hidden = offers.hidden.includes(chain);
+              const chip = h("button", { class: `pchip${hidden ? "" : " is-active"}`, type: "button", "aria-pressed": String(!hidden) }, chain);
+              if (editable()) pressable(chip, { onTap: () => post("offers-chain", { chain, hidden: !hidden }) });
+              return chip;
+            }),
+          ),
+        ),
+      );
+    }
+    out.push(h("p", { class: "view__hint" }, `${t("offers_source")}: ${offers.source}`));
+    show(out);
+  }
+
   // ---- recipe ---------------------------------------------------------------------------------------
   const ticksKey = (date) => `meals.ticks.${date}`;
   const readTicks = (date) => {
@@ -623,6 +740,7 @@ export function createMealsPage(initialModel, ctx) {
     const scroll = reset ? 0 : root.scrollTop;
     if (tab === "week") renderWeek();
     else if (tab === "cookbook") renderCookbook();
+    else if (tab === "offers") renderOffers();
     else if (tab === "recipe") renderRecipe();
     else if (tab === "shopping") renderShopping();
     else renderRules();
@@ -642,7 +760,7 @@ export function createMealsPage(initialModel, ctx) {
     setModel(next) {
       const typing = root.contains(document.activeElement) && ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName);
       model = next;
-      if (tab === "cookbook" && !model.mealie) tab = "week";
+      if ((tab === "cookbook" && !model.mealie) || (tab === "offers" && !model.offers)) tab = "week";
       paintTabs();
       if (typing) return;
       if (tab === "shopping" && !shoppingItems) loadShopping();

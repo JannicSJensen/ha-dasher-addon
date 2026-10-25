@@ -21,6 +21,7 @@ export const TILE_TYPES = new Set([
   "buttons",
   "calendar",
   "dinner",
+  "offers",
 ]);
 
 const ENTITY_RE = /^[a-z0-9_]+\.[a-z0-9_]+$/;
@@ -220,6 +221,10 @@ function parseMeals(raw, errors) {
     household: posInt(r.household, 4),
     dinner_time: time,
     language: r.language != null ? String(r.language).toLowerCase().slice(0, 2) : null,
+    offers: {
+      enabled: r.offers === false || r.offers?.enabled === false ? false : true,
+      count: Math.min(10, Math.max(1, posInt(r.offers?.count, 5))),
+    },
     mealie: {
       enabled: r.mealie === false || r.mealie?.enabled === false ? false : "auto",
       config_entry_id: /^[A-Za-z0-9]{10,40}$/.test(String(r.mealie?.config_entry_id ?? "")) ? String(r.mealie.config_entry_id) : null,

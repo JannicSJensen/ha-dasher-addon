@@ -111,6 +111,7 @@ meals:
   # language: da                              # the language of dishes and recipes
   # auto: { weekday: sun, time: "17:00", days: 7 }   # plan the next week by itself
   # mealie: false                           # ignore Mealie (it is used when its Home Assistant integration is set up)
+  # offers: { count: 5 }                    # Offers tab: stores shown per product; false = no tab
 
 pages:
   - id: home
@@ -145,6 +146,8 @@ pages:
 
       # Tonight's dinner from the Madplan page; tap it to open the recipe:
       # - { type: dinner, col: 3, row: 2 }
+      # The cheapest offers per litre/kilo of a product you follow on the Offers tab:
+      # - { type: offers, product: pepsi-max, count: 3 }
 
       - type: calendar                      # the next days with something planned, plus the forecast
         col: 3

@@ -920,3 +920,41 @@
 .plcard__resume { position: absolute; right: 8px; bottom: 8px; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: rgba(0, 0, 0, 0.62); backdrop-filter: blur(6px); color: #fff; font-size: 20px; }
 .plcard__art:has(.plcard__resume)::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 36%; background: linear-gradient(to top, rgba(0, 0, 0, 0.55), transparent); pointer-events: none; }
 .plcard__resume { z-index: 1; }
+
+/* ---- Madplan: offers (Tilbud) ---- */
+.moffer { margin-top: 16px; padding: 14px 14px 10px; border-radius: var(--radius); background: var(--tile-bg); }
+.moffer.has-error { box-shadow: inset 0 0 0 1.5px rgba(248, 113, 113, 0.4); }
+.moffer__head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px; }
+.moffer__title { margin: 0; font-size: 20px; font-weight: 600; }
+.moffer__updated { flex: 1; font-size: 12.5px; color: var(--muted); }
+.moffer__remove { display: grid; place-items: center; width: 40px; height: 40px; margin: -6px -4px -6px 0; border-radius: 50%; color: var(--muted); font-size: 22px; }
+.moffer__row { position: relative; display: flex; align-items: center; gap: 12px; padding: 10px 6px; border-top: 1px solid rgba(255, 255, 255, 0.07); }
+.moffer__row:first-of-type { border-top: 0; }
+.moffer__rank { flex: none; width: 22px; text-align: center; font-size: 15px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+.moffer__row.is-best .moffer__rank { color: var(--accent); }
+.moffer__chain { flex: none; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 12px; font-size: 14px; font-weight: 700; letter-spacing: 0.02em; color: #fff; }
+.moffer__text { flex: 1; min-width: 0; }
+.moffer__store { font-size: 16px; font-weight: 600; }
+.moffer__what, .moffer__when { font-size: 13px; color: #c9c9cd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.moffer__when { color: var(--muted); }
+.moffer__unit { flex: none; text-align: right; font-variant-numeric: tabular-nums; }
+.moffer__num { font-size: 26px; font-weight: 700; line-height: 1; }
+.moffer__per { display: block; margin-top: 2px; font-size: 12px; color: var(--muted); }
+.moffer__row.is-best .moffer__num { color: var(--accent); }
+.moffer__open, .moffer__add { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: rgba(255, 255, 255, 0.07); color: #e4e4e6; font-size: 22px; transition: transform 0.12s, background 0.2s; }
+.moffer__add { color: var(--accent); }
+.moffer__add.is-pressed { transform: scale(0.92); }
+.moffer__stores { margin-top: 20px; }
+.moffer__storetitle { margin-bottom: 8px; font-size: 12.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+.moffer__chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.moffer__presets { display: flex; justify-content: center; margin-top: 12px; }
+.tile--offers { display: flex; flex-direction: column; overflow: hidden; cursor: pointer; }
+.offers__list { display: grid; gap: 2cqmin; margin: 4cqmin 6.5cqmin 0; min-height: 0; overflow: hidden; }
+.offers__row { display: flex; align-items: center; gap: 2.6cqmin; }
+.offers__badge { flex: none; display: grid; place-items: center; width: 8.4cqmin; height: 8.4cqmin; border-radius: 2.2cqmin; font-size: 3cqmin; font-weight: 700; color: #fff; }
+.offers__store { flex: 1; min-width: 0; font-size: 3.6cqmin; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.offers__store small { display: block; font-size: 2.6cqmin; font-weight: 400; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+.offers__unit { flex: none; font-size: 4.6cqmin; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+.offers__unit small { font-size: 2.6cqmin; font-weight: 400; color: var(--muted); }
+.offers__row:first-child .offers__unit { color: var(--accent); }
+.offers__empty { font-size: 4cqmin; color: var(--muted); }
