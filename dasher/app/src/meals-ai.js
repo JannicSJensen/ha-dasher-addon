@@ -140,7 +140,7 @@ function rulesText(prefs, household, ratings) {
   return lines.join("\n");
 }
 
-export function buildPlanPrompt({ language, dates, skip, prefs, household, ratings, history, due, wishes, surprise, feedback }) {
+export function buildPlanPrompt({ language, dates, skip, prefs, household, ratings, history, due, wishes, surprise, feedback, cookbook = [] }) {
   const wanted = dates.filter((d) => !skip.includes(d));
   const lines = [
     header("plan", language),
@@ -151,12 +151,13 @@ export function buildPlanPrompt({ language, dates, skip, prefs, household, ratin
     rulesText(prefs, household, ratings),
     due.length ? `These favourites must be on the plan: ${due.map((f) => f.name).join(", ")}.` : "",
     history.length ? `Dishes from the last weeks, do not repeat them (the main ingredient counts: salmon is salmon): ${history.map((h) => `${h.title}`).join("; ")}.` : "",
+    cookbook.length ? `The family's own recipe collection (slug | name | minutes). Use these for as many dinners as the rules allow, and give such a dinner exactly that name as title and its slug as "mealie_slug"; use "mealie_slug": null for any other dish:\n${cookbook.map((r) => `${r.slug} | ${r.name}${r.minutes ? ` | ${r.minutes}` : ""}`).join("\n")}` : "",
     wishes ? `Wishes for this plan: ${wishes}` : "",
     surprise ? "Surprise the family: dishes from other cuisines they have never had, exciting flavours and surprising combinations, still within every rule above." : "Vary the dinners: different main ingredients and cuisines, mostly everyday dishes a family cooks.",
     feedback?.length ? `\nYour previous answer broke these rules, fix them and keep everything else that was fine:\n${feedback.map((f) => `- ${f}`).join("\n")}` : "",
     "",
     `Return {"days":[...]} with exactly one object for each of the ${wanted.length} dates to plan:`,
-    `{"date":"YYYY-MM-DD","kind":"dinner"|"leftovers","title":"short dish name","description":"one sentence","minutes":number,"vegetarian":boolean,"double_portion":boolean,"main_ingredient":"the main protein or vegetable, one word","from":"YYYY-MM-DD or null"}`,
+    `{"date":"YYYY-MM-DD","kind":"dinner"|"leftovers","title":"short dish name","description":"one sentence","minutes":number,"vegetarian":boolean,"double_portion":boolean,"main_ingredient":"the main protein or vegetable, one word","from":"YYYY-MM-DD or null"${cookbook.length ? ',"mealie_slug":"slug or null"' : ""}}`,
   ];
   return lines.filter((l) => l !== "").join("\n");
 }
@@ -199,8 +200,9 @@ export function allergenWarnings(entry, prefs) {
 
 export class MealsAI {
   /** `resolveEntity()` gives the ai_task entity to use (or null when there is none). */
-  constructor({ ha, store, logger, resolveEntity, settings = () => ({}) }) {
+  constructor({ ha, store, logger, resolveEntity, settings = () => ({}), mealie = null }) {
     this.ha = ha;
+    this.mealie = mealie;
     this.store = store;
     this.log = logger;
     this.resolveEntity = resolveEntity;
@@ -231,7 +233,7 @@ export class MealsAI {
   }
 
   /** Make a plan for `days` days from `start`; resolves when the dinners are stored (recipes follow in the job). */
-  async generatePlan({ start, days = 7, skip = [], wishes = "", surprise = false }) {
+  async generatePlan({ start, days = 7, skip = [], wishes = "", surprise = false, cookbook = false }) {
     if (this.store.job.status === "running") throw Object.assign(new Error("A plan is already being made."), { status: 409 });
     if (!isDate(start)) throw Object.assign(new Error("Choose a start day."), { status: 400 });
     days = Math.min(14, Math.max(1, Number(days) || 7));
@@ -243,13 +245,26 @@ export class MealsAI {
     const due = dueFavourites(prefs.favourites, this.store.days, start);
     this.store.setJob({ status: "running", message: "plan" });
     try {
+      let recipes = [];
+      if (cookbook && this.mealie && (await this.mealie.refresh())) {
+        recipes = await this.mealie.search("", 150).catch((err) => {
+          this.log.warn(`Meal plan: the Mealie collection could not be read: ${err.message}`);
+          return [];
+        });
+      }
+      const known = new Map(recipes.map((r) => [r.slug, r]));
       let best = null;
       let feedback = [];
       for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
         this.store.setJob({ status: "running", message: attempt === 1 ? "plan" : "fix" });
-        const prompt = buildPlanPrompt({ language: this.language, dates, skip, prefs, household: this.household, ratings, history, due, wishes, surprise, feedback });
+        const prompt = buildPlanPrompt({ language: this.language, dates, skip, prefs, household: this.household, ratings, history, due, wishes, surprise, feedback, cookbook: recipes });
         const answer = await this._ask("plan", prompt);
-        const skeleton = (Array.isArray(answer?.days) ? answer.days : []).map((d) => normalizeEntry({ ...d, source: "ai", servings: this.household }, d?.date)).filter(Boolean);
+        const skeleton = (Array.isArray(answer?.days) ? answer.days : [])
+          .map((d) => {
+            const own = known.get(d?.mealie_slug);
+            return normalizeEntry({ ...d, ...(own ? { title: own.name, source: "mealie", mealie_slug: own.slug, minutes: d.minutes || own.minutes } : { source: "ai" }), servings: this.household }, d?.date);
+          })
+          .filter(Boolean);
         const violations = validatePlan({ days: skeleton, dates, skip, prefs, ratings, history, household: this.household });
         if (!best || violations.length < best.violations.length) best = { skeleton, violations };
         if (!violations.length) break;
@@ -299,6 +314,21 @@ export class MealsAI {
     const track = !quiet && this.store.job.status !== "running";
     if (track) this.store.setJob({ status: "running", message: "recipe" });
     try {
+      if (entry.mealie_slug && this.mealie) {
+        const fetched = await this.mealie.recipe(entry.mealie_slug, entry.double_portion ? this.household * 2 : this.household).catch((err) => {
+          if (!this.available) throw err;
+          this.log.warn(`Recipe ${entry.mealie_slug} from Mealie failed (${err.message}), asking the AI instead`);
+          return null;
+        });
+        if (fetched) {
+          const next = normalizeEntry({ ...entry, ...fetched, minutes: fetched.minutes || entry.minutes, vegetarian: fetched.vegetarian || entry.vegetarian, description: fetched.description || entry.description }, date);
+          if (!next?.ingredients.length && !next?.steps.length) throw new Error("The recipe in Mealie is empty.");
+          const warnings = [...(entry.warnings ?? []).filter((w) => !w.startsWith("Contains ")), ...allergenWarnings(next, this.store.prefs)];
+          this.store.setDay(date, { ...next, ...(warnings.length ? { warnings } : {}) });
+          if (track) this.store.setJob({ status: "ready", message: "ready" });
+          return;
+        }
+      }
       const answer = await this._ask("recipe", buildRecipePrompt({ language: this.language, entry, household: this.household, prefs: this.store.prefs }));
       const next = normalizeEntry({ ...entry, servings: answer.servings ?? entry.servings, minutes: answer.minutes ?? entry.minutes, vegetarian: answer.vegetarian ?? entry.vegetarian, ingredients: answer.ingredients, steps: answer.steps, tip: answer.tip, source: entry.source === "manual" ? "manual" : "ai" }, date);
       if (!next?.ingredients.length || !next.steps.length) throw new Error("The recipe was empty.");

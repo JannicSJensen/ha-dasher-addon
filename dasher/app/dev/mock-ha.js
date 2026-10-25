@@ -327,6 +327,42 @@ const DISHES = [
   ["Wokret tofu med nudler", "Tofu", "tofu", true, 25], ["Fiskefrikadeller med remoulade", "Torsk", "torsk", false, 30], ["Tacos med bønner", "Bønner", "bønner", true, 25],
   ["Boller i karry", "Kalkun", "kalkun", false, 40], ["Risotto med svampe", "Svampe", "svampe", true, 40], ["Pizza med skinke", "Skinke", "skinke", false, 30],
 ];
+// Mealie recipes as the mealie.* actions return them (dataclass fields).
+const ing = (quantity, unit, food, note = "") => ({ quantity, unit: unit ? { name: unit, abbreviation: unit } : null, food: food ? { name: food, plural_name: null } : null, note, display: `${quantity ?? ""} ${unit ?? ""} ${food ?? note}`.trim(), original_text: null });
+const MEALIE = [
+  { slug: "spaghetti-carbonara", name: "Spaghetti carbonara", description: "Klassisk romersk pasta med æg og bacon.", recipe_servings: 2, total_time_seconds: 1800, tags: [{ name: "Pasta" }, { name: "Hverdag" }], categories: [], rating: 5,
+    ingredients: [ing(200, "g", "Spaghetti"), ing(100, "g", "Bacon"), ing(2, null, "Æg"), ing(50, "g", "Parmesan"), ing(1, "tsk", "Salt"), ing(null, null, null, "Friskkværnet peber")],
+    instructions: [{ title: "", text: "Kog spaghetti i letsaltet vand i 10 minutter." }, { title: "", text: "Steg baconen sprød og rør æg og parmesan sammen." }, { title: "Server", text: "Bland det hele og server straks." }] },
+  { slug: "linsesuppe", name: "Linsesuppe", description: "Mættende vegetarsuppe.", recipe_servings: 4, total_time_seconds: 2400, tags: [{ name: "Vegetar" }], categories: [], rating: 4,
+    ingredients: [ing(300, "g", "Røde linser"), ing(1, null, "Løg"), ing(2, "fed", "Hvidløg"), ing(1, "l", "Grøntsagsbouillon"), ing(2, "spsk", "Olie")],
+    instructions: [{ title: "", text: "Svits løg og hvidløg i olie." }, { title: "", text: "Tilsæt linser og bouillon og kog i 20 minutter." }] },
+  { slug: "frikadeller", name: "Frikadeller", description: "Danske frikadeller.", recipe_servings: 4, total_time_seconds: 3000, tags: [{ name: "Klassiker" }], categories: [], rating: 4,
+    ingredients: [ing(500, "g", "Hakket svinekød"), ing(1, null, "Løg"), ing(1, null, "Æg"), ing(1, "dl", "Mælk"), ing(1, "tsk", "Salt"), ing(50, "g", "Smør")],
+    instructions: [{ title: "", text: "Rør farsen sammen med løg, æg og mælk." }, { title: "", text: "Steg frikadellerne i smør i 15 minutter." }] },
+  { slug: "tomatsuppe", name: "Tomatsuppe med brød", description: "", recipe_servings: 4, total_time_seconds: 1500, tags: [{ name: "Vegetar" }, { name: "Suppe" }], categories: [], rating: 3,
+    ingredients: [ing(800, "g", "Flåede tomater"), ing(1, null, "Løg"), ing(1, "dl", "Fløde")], instructions: [{ title: "", text: "Kog tomater og løg i 15 minutter og blend." }] },
+  { slug: "boeuf-bourguignon", name: "Boeuf bourguignon", description: "Langtidsstegt oksekød i rødvin.", recipe_servings: 6, total_time_seconds: 10800, tags: [{ name: "Weekend" }], categories: [], rating: 5,
+    ingredients: [ing(1, "kg", "Oksekød"), ing(3, "dl", "Rødvin"), ing(2, null, "Gulerødder")], instructions: [{ title: "", text: "Brun kødet og lad det simre i 2 timer." }] },
+];
+const mockMealie = (msg) => {
+  const d = msg.service_data ?? {};
+  if (msg.service === "get_recipes") {
+    const q = String(d.search_terms ?? "").toLowerCase();
+    const items = MEALIE.filter((r) => !q || r.name.toLowerCase().includes(q)).slice(0, d.result_limit ?? 10).map(({ ingredients, instructions, ...rest }) => rest);
+    return { recipes: { items, page: 1, per_page: items.length, total: items.length, total_pages: 1 } };
+  }
+  if (msg.service === "get_recipe") {
+    const r = MEALIE.find((x) => x.slug === d.recipe_id || x.name === d.recipe_id);
+    return r ? { recipe: r } : null;
+  }
+  if (msg.service === "import_recipe") {
+    if (!/^https?:\/\//.test(String(d.url))) return null;
+    const slug = "importeret-" + String(d.url).replace(/[^a-z0-9]+/gi, "-").slice(-24).toLowerCase();
+    MEALIE.unshift({ slug, name: "Importeret opskrift", description: String(d.url), recipe_servings: 4, total_time_seconds: 1200, tags: [], categories: [], rating: 0, ingredients: [ing(500, "g", "Kylling")], instructions: [{ title: "", text: "Steg kyllingen." }] });
+    return { recipe: MEALIE[0] };
+  }
+  return null;
+};
 let dishCursor = 0;
 function mockAi(prompt) {
   const task = /^\[dasher:(\w+)\]/.exec(prompt)?.[1];
@@ -335,7 +371,9 @@ function mockAi(prompt) {
     const skip = (/Do NOT plan a dinner for: ([\d, -]+)/.exec(prompt)?.[1] ?? "").split(",").map((x) => x.trim());
     const days = dates.filter((d) => !skip.includes(d)).map((date) => {
       const [title, , main, vegetarian, minutes] = DISHES[dishCursor++ % DISHES.length];
-      return { date, kind: "dinner", title, description: `${title}, en god hverdagsret.`, minutes, vegetarian, double_portion: false, main_ingredient: main, from: null };
+      const own = /recipe collection/.test(prompt) && dishCursor % 2 === 0 ? MEALIE[dishCursor % MEALIE.length] : null;
+      if (own) return { date, kind: "dinner", title: own.name, description: own.description, minutes: 30, vegetarian: false, double_portion: false, main_ingredient: own.slug.split("-")[0], from: null, mealie_slug: own.slug };
+      return { date, kind: "dinner", title, description: `${title}, en god hverdagsret.`, minutes, vegetarian, double_portion: false, main_ingredient: main, from: null, ...(/recipe collection/.test(prompt) ? { mealie_slug: null } : {}) };
     });
     return "Here is the plan:\n```json\n" + JSON.stringify({ days }) + "\n```";
   }
@@ -642,6 +680,7 @@ wss.on("connection", (ws) => {
       return reply(null);
     }
     if (msg.type === "config_entries/get") {
+      if (msg.domain === "mealie" && !process.env.MOCK_NO_MEALIE) return reply([{ entry_id: "01MOCKMEALIEENTRY", domain: "mealie", state: "loaded", title: "Mealie" }]);
       return reply(msg.domain === "music_assistant" ? [{ entry_id: "01MOCKMAENTRY", domain: "music_assistant", state: "loaded", title: "Music Assistant" }] : []);
     }
     if (msg.type === "call_service" && msg.domain === "music_assistant" && msg.service === "get_library") {
@@ -654,6 +693,12 @@ wss.on("connection", (ws) => {
       } catch (err) {
         return ws.send(JSON.stringify({ id: msg.id, type: "result", success: false, error: { code: "failed", message: err.message } }));
       }
+    }
+    if (msg.type === "call_service" && msg.domain === "mealie") {
+      const response = mockMealie(msg);
+      if (!response && msg.service !== "import_recipe" && msg.service !== "get_recipes") return ws.send(JSON.stringify({ id: msg.id, type: "result", success: false, error: { code: "service_validation_error", message: "Recipe not found in Mealie" } }));
+      if (!response) return ws.send(JSON.stringify({ id: msg.id, type: "result", success: false, error: { code: "service_validation_error", message: "Could not import recipe" } }));
+      return reply({ context: {}, response });
     }
     if (msg.type === "call_service" && msg.domain === "ai_task" && msg.service === "generate_data") {
       return setTimeout(() => reply({ context: {}, response: { data: mockAi(String(msg.service_data.instructions ?? "")), conversation_id: "mock" } }), Number(process.env.MOCK_AI_DELAY ?? 300));

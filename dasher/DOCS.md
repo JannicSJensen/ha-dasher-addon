@@ -408,12 +408,14 @@ A **Meal plan** entry in the menu (call it *Madplan* with `title:`) plans the fa
 **What you need**
 
 * An AI integration in Home Assistant that gives an `ai_task` entity (*Settings, Devices & services*: OpenAI, Google Generative AI, Ollama, Anthropic ...). Without it you can still plan by hand: add, edit and remove dinners yourself.
-* A calendar for the dinners (optional). A **Local Calendar** called *Madplan* is a good choice; set `calendar_entity`. Dasher only changes events it made itself (their description starts with "Dasher madplan").
-* A shopping list: Home Assistant's *Shopping list* or any other `todo` list (`shopping_list_entity`).
+* A calendar for the dinners (optional). Without `calendar_entity` the shared **`calendar.family`** is used when it exists, so the dinners show up with everything else the family has planned; set `calendar_entity` to use another one (a Local Calendar called *Madplan*, for instance) and the calendar has to accept new events. Dasher only changes events it made itself (their description starts with "Dasher madplan").
+* A shopping list: Home Assistant's *Shopping list* or any other `todo` list (`shopping_list_entity`), for instance a shopping list of **Mealie** (`todo.mealie_...`).
+* Optional: **Mealie** (the Mealie app and Home Assistant's *Mealie* integration) for your own recipe collection; see [Cookbook](#cookbook-mealie) below.
 
-**The page has four tabs**
+**The page has these tabs**
 
 * **Week**: the days in weeks; tap a day to edit it, mark it as left-overs, eating out or no dinner, rate the dish (favourite / disliked), ask for **other dishes**, or have the AI write the recipe. **New plan** asks the AI for a week: pick the start day, the days without dinner, wishes and **Surprise me**.
+* **Cookbook** (only when Mealie is set up): see below.
 * **Recipe**: the dinner of a day with ingredients and steps to tick off, and a timer on steps that mention a time (it beeps when done).
 * **Shopping**: the ingredients of the chosen period added up (400 g + 0,5 kg = 900 g); what is already on the list is marked, and **Add to the shopping list** adds the rest. Pantry basics (salt, oil ...) are not added unless you tick them.
 * **Rules**: vegetarian dinners per week, left-over days, the longest cooking time on weekdays, things to avoid, **allergies**, fixed days ("Friday = pizza"), favourites that should come back every so often, free-text notes, and the dishes you have rated.
@@ -425,12 +427,13 @@ meals:
   # enabled: false                              # remove the menu entry
   title: Madplan
   shopping_list_entity: todo.shopping_list      # default: the Shopping list, or the first to-do list
-  calendar_entity: calendar.madplan
+  calendar_entity: calendar.family              # default when that calendar exists
   # ai_task_entity: ai_task.openai              # default: the first AI Task entity
   household: 4                                  # people at the table
   dinner_time: "18:00"                          # the time of the calendar event
   # language: da                                # the language of dishes and recipes (default: the dashboard language)
   # auto: { weekday: sun, time: "17:00", days: 7 }   # make next week's plan by itself
+  # mealie: false                                 # do not use Mealie, even when it is set up
 ```
 
 **Tonight's dinner tile**: put `- { type: dinner, col: 3, row: 2 }` on a page (optional `name`, `icon`). It shows today's dinner and tomorrow's, and a tap opens the recipe.
@@ -438,7 +441,19 @@ meals:
 * The plan is stored in `meals.json` in the app's data folder, so it is part of Home Assistant backups. Dinners are copied to the calendar whenever they change.
 * The AI is only called when someone presses a button (or with `auto`); each call is paid by your AI provider. The app option `allow_meal_editing` decides whether a tablet may do it.
 * `calendar_entity`, `shopping_list_entity` and `ai_task_entity` take part in entity mapping.
-* **Not included** (they need REMA 1000 or Tjek): matching ingredients to products and prices, sending the list to the REMA app, REMA's lists, favourites and recipes, offers from other chains and the offer sensors. Planned for later: a recipe collection with import from a link or Mealie, a food budget with manual bookings, health estimates, and history.
+* **Not included** (they need REMA 1000 or Tjek): matching ingredients to products and prices, sending the list to the REMA app, REMA's lists, favourites and recipes, offers from other chains and the offer sensors. Planned for later: a food budget with manual bookings, health estimates, and history.
+
+### Cookbook (Mealie)
+
+![The cookbook](https://raw.githubusercontent.com/JannicSJensen/ha-dasher-addon/main/docs/screenshots/meals-cookbook.png)
+
+With the **Mealie** app running and Home Assistant's [Mealie integration](https://www.home-assistant.io/integrations/mealie/) set up (*Settings, Devices & services, Add integration, Mealie*; use the direct address with the port, for example `http://homeassistant.local:9090`, not the ingress address), a **Cookbook** tab appears. Dasher talks to Mealie through Home Assistant's `mealie.*` actions, so it needs no address or token of its own; the integration is found automatically (if you have several, give its id in `meals: mealie: { config_entry_id: ... }`).
+
+* **Search** your Mealie recipes and open one: choose a day and **Plan this dinner**. The ingredients and steps are copied to that day, with the amounts scaled to `household`; the recipe shows *From Mealie*.
+* **Import** a recipe from a web page: paste the address; Mealie reads the page and the recipe lands in your collection, ready to plan. Only web pages on the internet are accepted (no addresses on your home network). Needs the app option `allow_meal_editing`.
+* **New plan** has the choice *Prefer my recipes from Mealie*: the AI is shown the names of your recipes and uses them where the rules allow; those dinners get their recipe from Mealie, so no AI call is spent on them. The other dinners are written by the AI as usual.
+* Mealie's own shopping list can be the shopping list of the page (`shopping_list_entity: todo.mealie_...`).
+* Dinners are not written back to Mealie's meal plan: the calendar is where the plan lives.
 
 ## Areas
 

@@ -13,7 +13,7 @@ This repository contains the **Dasher** app (add-on) for Home Assistant: a dark,
 * **Car page:** battery and range, start/stop charging, smart charging with its times, a charger restart, and remote climate (start, temperature, window heat); EV Smart Charging, Peblar and FordPass are recognised automatically.
 * **Media page:** Plex through Home Assistant's Plex integration: continue watching and recently added movies and series. Plays on Cast devices and Plex clients, and, with a Plex address and token in the app options, on Apple TVs and DLNA players with stream links.
 * **To-do lists page (Huskelister):** every to-do list of Home Assistant; add, tick off, edit and delete items, and create, rename and delete Local To-do lists.
-* **Meal plan page (Madplan):** a week of dinners planned by Home Assistant's AI Task with your rules (vegetarian days, allergies, cooking time, fixed days), recipes with step timers, ingredients added to a shopping list, dinners written to a calendar, and a *tonight* tile. Inspired by [ha-middagsro](https://github.com/Dinnsen/ha-middagsro), without the REMA 1000 parts.
+* **Meal plan page (Madplan):** a week of dinners planned by Home Assistant's AI Task with your rules (vegetarian days, allergies, cooking time, fixed days), recipes with step timers, ingredients added to a shopping list, dinners written to a calendar, and a *tonight* tile; a cookbook from your Mealie (search, plan and import recipes). Inspired by [ha-middagsro](https://github.com/Dinnsen/ha-middagsro), without the REMA 1000 parts.
 * **Devices page:** robot vacuums with controls, and washing machines, dryers, dishwashers and clothes heaters (LG ThinQ found automatically, others listed in `dashboard.yaml`); cards you do not want can be removed with the pencil, and restored.
 * **Climate page:** a card per room with temperature, setpoint and power, built from your climate helpers.
 * **Missing entities:** when `dashboard.yaml` uses entities your Home Assistant does not have, the tablet shows a notice and the app log suggests the likely ones; you choose the replacements in the app configuration (*Entity mapping*), and `dashboard.yaml` stays unchanged.
@@ -45,6 +45,8 @@ All screenshots show the built-in fake Home Assistant and Music Assistant (see [
 | **Editing the devices page**<br>Remove the cards you do not want, and bring them back. | |
 | [![Meal plan](docs/screenshots/meals.png)](docs/screenshots/meals.png) | [![A dinner](docs/screenshots/meals-recipe.png)](docs/screenshots/meals-recipe.png) |
 | **Meal plan**<br>A week of dinners planned by AI Task within your rules; each dinner is a calendar event. | **Recipe**<br>Ingredients and steps to tick off, with timers. |
+| [![Cookbook](docs/screenshots/meals-cookbook.png)](docs/screenshots/meals-cookbook.png) | |
+| **Cookbook**<br>Your Mealie recipes: search, plan on a day, or import from a web page. | |
 | [![Shopping](docs/screenshots/meals-shopping.png)](docs/screenshots/meals-shopping.png) | [![Rules](docs/screenshots/meals-rules.png)](docs/screenshots/meals-rules.png) |
 | **Shopping**<br>The ingredients added up and put on a Home Assistant shopping list. | **Rules**<br>Vegetarian days, allergies, cooking time, fixed days and favourites. |
 | [![Car](docs/screenshots/car.png)](docs/screenshots/car.png) | |

@@ -10,6 +10,7 @@ import { pressable } from "../tiles/common.js";
 
 const TABS = [
   ["week", "calendar-week", "meals_tab_week"],
+  ["cookbook", "book-open-page-variant-outline", "meals_tab_cookbook"],
   ["recipe", "chef-hat", "meals_tab_recipe"],
   ["shopping", "cart-outline", "meals_tab_shopping"],
   ["rules", "tune-variant", "meals_tab_rules"],
@@ -39,6 +40,9 @@ export function createMealsPage(initialModel, ctx) {
   const { t } = ctx;
   let model = initialModel;
   let tab = TABS.some(([id]) => id === getPref("meals.tab")) ? getPref("meals.tab") : "week";
+  if (tab === "cookbook" && !model.mealie) tab = "week";
+  let cookbook = null; // { q, recipes, error }, null until loaded
+  let cookbookTimer = null;
   let selected = null;
   let shoppingItems = null; // items of the shopping list, null until loaded
   let shoppingRange = "week";
@@ -75,7 +79,7 @@ export function createMealsPage(initialModel, ctx) {
   // ---- tabs -----------------------------------------------------------------------------------
   function paintTabs() {
     tabsEl.replaceChildren(
-      ...TABS.map(([id, iconName, label]) => {
+      ...TABS.filter(([id]) => id !== "cookbook" || model.mealie).map(([id, iconName, label]) => {
         const el = h("button", { class: `mtab${id === tab ? " is-active" : ""}`, type: "button", role: "tab", "aria-selected": String(id === tab) }, icon(iconName), h("span", null, t(label)));
         pressable(el, { onTap: () => showTab(id) });
         return el;
@@ -89,6 +93,7 @@ export function createMealsPage(initialModel, ctx) {
     paintTabs();
     render({ reset: true });
     if (id === "shopping") loadShopping();
+    if (id === "cookbook" && !cookbook) loadCookbook("");
   }
 
   // ---- job banner ------------------------------------------------------------------------------
@@ -230,6 +235,7 @@ export function createMealsPage(initialModel, ctx) {
     const start = input({ type: "date", value: existing ? nextMonday : today, "aria-label": t("meals_first_day") });
     const count = input({ type: "number", min: "1", max: "14", value: "7", "aria-label": t("meals_days") });
     const wishes = h("textarea", { class: "msearch__input tdinput tdtextarea", rows: "3", placeholder: t("meals_wishes_hint"), "aria-label": t("meals_wishes") });
+    const useCookbook = h("input", { type: "checkbox", checked: true });
     const skipBox = h("div", { class: "mskips" });
     const skipped = new Set();
     const paintSkips = () => {
@@ -248,7 +254,7 @@ export function createMealsPage(initialModel, ctx) {
     let modal;
     const go = async (surprise) => {
       modal.close();
-      const ok = await post("generate", { start: start.value, days: Number(count.value) || 7, skip: [...skipped], wishes: wishes.value, surprise });
+      const ok = await post("generate", { start: start.value, days: Number(count.value) || 7, skip: [...skipped], wishes: wishes.value, surprise, cookbook: Boolean(model.mealie) && useCookbook.checked });
       if (ok) ctx.toast(t("meals_job_plan"));
     };
     modal = openModal(
@@ -260,9 +266,96 @@ export function createMealsPage(initialModel, ctx) {
         field(t("meals_days"), count),
         h("div", { class: "tdfield" }, h("span", null, t("meals_skip_days")), skipBox),
         field(t("meals_wishes"), wishes),
+        model.mealie ? h("label", { class: "mcheck" }, useCookbook, h("span", null, t("meals_use_cookbook"))) : null,
         h("div", { class: "dialog__actions mealsactions" }, button("dice-multiple-outline", t("meals_surprise"), () => go(true)), button("creation", t("meals_make_plan"), () => go(false), "btn btn--primary")),
       ),
     );
+  }
+
+  // ---- cookbook (Mealie) ---------------------------------------------------------------------------
+  async function loadCookbook(q) {
+    cookbook = { q, recipes: cookbook?.recipes ?? [], loading: true, error: null };
+    if (tab === "cookbook") render();
+    try {
+      const data = await getJson(`api/meals/cookbook?q=${encodeURIComponent(q)}`);
+      cookbook = { q, recipes: data.recipes ?? [], loading: false, error: null };
+    } catch (err) {
+      cookbook = { q, recipes: [], loading: false, error: err.message };
+    }
+    if (tab === "cookbook") render();
+  }
+
+  function openRecipeCard(recipe) {
+    const today = todayLocal();
+    const options = Array.from({ length: 14 }, (_, i) => addDays(today, i));
+    const firstFree = options.find((d) => !days()[d]) ?? today;
+    const pick = h(
+      "select",
+      { class: "msearch__input tdinput", "aria-label": t("meals_plan_on") },
+      options.map((d) => h("option", { value: d, selected: d === firstFree }, `${dateLabel(d, { weekday: "long", day: "numeric", month: "short" })}${days()[d]?.title ? ` · ${days()[d].title}` : ""}`)),
+    );
+    let modal;
+    const use = async () => {
+      modal.close();
+      const date = pick.value;
+      const result = await post("mealie-use", { slug: recipe.slug, date }, { toastOk: t("meals_planned") });
+      if (result) {
+        selected = date;
+        showTab("recipe");
+      }
+    };
+    modal = openModal(
+      h(
+        "div",
+        { class: "modal__body dialog tdedit" },
+        h("div", { class: "modal__title" }, recipe.name),
+        h("p", { class: "view__hint" }, [recipe.minutes ? `${recipe.minutes} min` : null, ...(recipe.tags ?? [])].filter(Boolean).join(" · ")),
+        recipe.description ? h("p", { class: "view__hint" }, recipe.description) : null,
+        editable() ? field(t("meals_plan_on"), pick) : null,
+        h("div", { class: "dialog__actions mealsactions" }, editable() ? button("calendar-check", t("meals_plan_it"), use, "btn btn--primary") : null),
+      ),
+    );
+  }
+
+  async function importRecipe(urlInput) {
+    const address = urlInput.value.trim();
+    if (!address) return urlInput.focus();
+    ctx.toast(t("meals_importing"));
+    const result = await post("mealie-import", { url: address });
+    if (!result) return;
+    urlInput.value = "";
+    await loadCookbook("");
+    openRecipeCard(cookbook.recipes.find((r) => r.slug === result.slug) ?? { slug: result.slug, name: result.slug.replace(/-/g, " "), tags: [] });
+  }
+
+  let cookUi = null; // built once, so typing in the search box is not interrupted by a redraw
+  function renderCookbook() {
+    if (!cookUi) {
+      const search = input({ type: "search", placeholder: t("meals_cookbook_search"), value: cookbook?.q ?? "", "aria-label": t("meals_cookbook_search") });
+      search.addEventListener("input", () => {
+        clearTimeout(cookbookTimer);
+        cookbookTimer = setTimeout(() => loadCookbook(search.value.trim()), 450);
+      });
+      const importUrl = input({ type: "url", placeholder: t("meals_import_hint"), "aria-label": t("meals_import_hint") });
+      importUrl.addEventListener("keydown", (e) => e.key === "Enter" && importRecipe(importUrl));
+      const status = h("div", { class: "mcook__status" });
+      const list = h("div", { class: "mcook" });
+      const shell = h("div", null, h("div", { class: "msearch" }, icon("magnify"), search), editable() ? h("div", { class: "msearch" }, icon("link-variant"), importUrl, button("download-outline", t("meals_import"), () => importRecipe(importUrl))) : null, status, list);
+      cookUi = { shell, status, list };
+    }
+    const { status, list } = cookUi;
+    if (cookbook?.error) status.replaceChildren(h("div", { class: "mealsjob is-error" }, icon("alert-circle-outline"), cookbook.error));
+    else if (cookbook?.loading && !cookbook.recipes.length) status.replaceChildren(h("p", { class: "view__hint" }, t("meals_loading")));
+    else if (!cookbook?.recipes.length) status.replaceChildren(h("div", { class: "notice" }, icon("book-open-page-variant-outline"), h("h2", null, t("meals_cookbook_empty"))));
+    else status.replaceChildren();
+    list.replaceChildren(
+      ...(cookbook?.recipes ?? []).map((r) => {
+        const el = h("button", { class: "mday mcook__item", type: "button" }, h("div", { class: "mday__text" }, h("div", { class: "mday__title" }, r.name), h("div", { class: "mday__meta" }, [r.minutes ? `${r.minutes} min` : null, ...r.tags.slice(0, 2)].filter(Boolean).join(" · "))));
+        pressable(el, { onTap: () => openRecipeCard(r) });
+        return el;
+      }),
+    );
+    if (content.firstChild !== cookUi.shell) show(cookUi.shell);
   }
 
   // ---- recipe ---------------------------------------------------------------------------------------
@@ -295,7 +388,7 @@ export function createMealsPage(initialModel, ctx) {
     const recipe = source ?? entry;
     const ticks = readTicks(selected);
     const saveTicks = () => setPref(ticksKey(selected), JSON.stringify([...ticks]));
-    const parts = [nav, jobBanner(), h("h2", { class: "mr__title" }, entry.title), h("div", { class: "mr__meta" }, [entry.kind === "leftovers" ? `${t("meals_kind_leftovers")} · ${dateLabel(entry.from ?? selected, { weekday: "long" })}` : null, recipe.minutes ? `${recipe.minutes} min` : null, `${recipe.servings} ${t("meals_servings")}`, recipe.vegetarian ? t("meals_vegetarian") : null].filter(Boolean).join(" · "))];
+    const parts = [nav, jobBanner(), h("h2", { class: "mr__title" }, entry.title), h("div", { class: "mr__meta" }, [entry.kind === "leftovers" ? `${t("meals_kind_leftovers")} · ${dateLabel(entry.from ?? selected, { weekday: "long" })}` : null, recipe.minutes ? `${recipe.minutes} min` : null, `${recipe.servings} ${t("meals_servings")}`, recipe.vegetarian ? t("meals_vegetarian") : null, recipe.source === "mealie" ? t("meals_from_mealie") : null].filter(Boolean).join(" · "))];
     for (const w of entry.warnings ?? []) parts.push(h("div", { class: "mealsjob is-error" }, icon("alert-outline"), w));
     if (!recipe.ingredients?.length) {
       parts.push(h("div", { class: "notice" }, icon("chef-hat"), h("h2", null, t("meals_no_recipe")), editable() && ai() ? button("text-box-edit-outline", t("meals_write_recipe"), async () => post("recipe", { date: recipe.date })) : null));
@@ -529,6 +622,7 @@ export function createMealsPage(initialModel, ctx) {
   function render({ reset = false } = {}) {
     const scroll = reset ? 0 : root.scrollTop;
     if (tab === "week") renderWeek();
+    else if (tab === "cookbook") renderCookbook();
     else if (tab === "recipe") renderRecipe();
     else if (tab === "shopping") renderShopping();
     else renderRules();
@@ -538,6 +632,7 @@ export function createMealsPage(initialModel, ctx) {
   paintTabs();
   render();
   if (tab === "shopping") loadShopping();
+  if (tab === "cookbook") loadCookbook("");
 
   return {
     el: root,
@@ -547,11 +642,14 @@ export function createMealsPage(initialModel, ctx) {
     setModel(next) {
       const typing = root.contains(document.activeElement) && ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName);
       model = next;
+      if (tab === "cookbook" && !model.mealie) tab = "week";
+      paintTabs();
       if (typing) return;
       if (tab === "shopping" && !shoppingItems) loadShopping();
       render();
     },
     destroy() {
+      clearTimeout(cookbookTimer);
       clearInterval(timerLoop);
     },
   };

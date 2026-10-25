@@ -77,7 +77,8 @@ export function normalizeEntry(raw, date) {
     ingredients: normalizeIngredients(raw.ingredients),
     steps,
     tip: text(raw.tip, 400),
-    source: ["manual", "ai"].includes(raw.source) ? raw.source : "manual",
+    source: ["manual", "ai", "mealie"].includes(raw.source) ? raw.source : "manual",
+    ...(raw.source === "mealie" && /^[\w-]{1,120}$/.test(String(raw.mealie_slug ?? "")) ? { mealie_slug: String(raw.mealie_slug) } : {}),
     ...(Array.isArray(raw.warnings) && raw.warnings.length ? { warnings: raw.warnings.map((w) => text(w, 200)).filter(Boolean).slice(0, 8) } : {}),
   };
 }

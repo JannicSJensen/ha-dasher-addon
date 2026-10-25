@@ -815,3 +815,8 @@
 .dinner__dish.is-empty { color: var(--muted); font-weight: 400; font-size: 7cqmin; }
 .dinner__meta { margin-top: 2cqmin; font-size: 4.6cqmin; color: var(--muted); }
 .dinner__next { margin: auto 6.5cqmin 6cqmin; font-size: 4.4cqmin; color: #b9b9be; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---- Madplan: the cookbook (Mealie) ---- */
+.mcook { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 8px; margin-top: 10px; }
+.mcook__item { width: 100%; border: 0; color: inherit; font: inherit; cursor: pointer; }
+.mcook__status:empty { display: none; }

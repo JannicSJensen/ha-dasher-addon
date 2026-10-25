@@ -8,8 +8,9 @@ import { ConfigStore } from "./config.js";
 import { discoverMusicAssistant } from "./discovery.js";
 import { discoverEv, resolveEv } from "./ev.js";
 import { resolveClimate } from "./climate.js";
-import { MealsAI } from "./meals-ai.js";
-import { MealsStore, addDays, isDate, todayLocal, weekdayIndex, WEEKDAYS } from "./meals.js";
+import { MealsAI, allergenWarnings } from "./meals-ai.js";
+import { Mealie } from "./mealie.js";
+import { MealsStore, addDays, isDate, normalizeEntry, todayLocal, weekdayIndex, WEEKDAYS } from "./meals.js";
 import { MealsCalendar, eventSignature } from "./meals-sync.js";
 import { TodoService, cleanListName, resolveTodo } from "./todo.js";
 import { deviceEntities, deviceKeys, discoverDevices, resolveDevices } from "./devices.js";
@@ -600,14 +601,18 @@ function mealsSettings() {
     cfg,
     ai: cfg?.ai_task_entity ?? ids.filter((id) => id.startsWith("ai_task.")).sort()[0] ?? null,
     shopping,
-    calendar: cfg?.calendar_entity ?? null,
+    calendar: cfg?.calendar_entity ?? (ids.includes("calendar.family") ? "calendar.family" : null), // the shared family calendar unless another is chosen
     household: cfg?.household ?? 4,
     dinner_time: cfg?.dinner_time ?? "18:00",
     language: cfg?.language ?? configStore.current.config?.language ?? "da",
   };
 }
 
-const mealsAi = new MealsAI({ ha, store: meals, logger, resolveEntity: () => mealsSettings().ai, settings: mealsSettings });
+const mealie = new Mealie({ ha, logger, settings: () => configStore.current.config?.meals?.mealie ?? {} });
+const mealsAi = new MealsAI({ ha, store: meals, logger, resolveEntity: () => mealsSettings().ai, settings: mealsSettings, mealie });
+const refreshMealie = () => mealie.refresh({ force: true }).then(() => broadcast("meals", mealsPayload()));
+ha.on("status", (up) => up && refreshMealie().catch(() => {}));
+setInterval(() => mealie.refresh().catch(() => {}), 5 * 60_000).unref();
 
 const mealsEnabled = () => {
   const { cfg, ai, shopping } = mealsSettings();
@@ -631,6 +636,7 @@ const mealsPayload = () => {
     shopping_list: s.shopping,
     calendar: s.calendar,
     calendar_error: mealsCalendar.error,
+    mealie: mealie.available,
     ...meals.payload(),
     days,
   };
@@ -677,6 +683,16 @@ function maybeAutoPlan() {
 }
 setInterval(maybeAutoPlan, 60_000).unref();
 
+/** The recipe collection in Mealie, searched with `?q=`. */
+async function handleCookbook(res, params) {
+  if (!mealsEnabled()) return json(res, 503, { error: "The meal plan is not available." });
+  try {
+    return json(res, 200, { recipes: await mealie.search(String(params.get("q") ?? "").slice(0, 100), 60) });
+  } catch (err) {
+    return json(res, err.status ?? 502, { error: err.message });
+  }
+}
+
 async function handleMealsPost(req, res, action) {
   if (!mealsEnabled()) return json(res, 503, { error: "The meal plan is not available." });
   if (!MEALS_EDIT) return json(res, 403, { error: "Editing the meal plan is switched off." });
@@ -694,7 +710,7 @@ async function handleMealsPost(req, res, action) {
           meals.setDay(body.date, null);
           return json(res, 200, { ok: true });
         }
-        const entry = meals.setDay(body.date, { ...body.entry, source: body.entry.source === "ai" ? "ai" : "manual" });
+        const entry = meals.setDay(body.date, { ...body.entry, source: ["ai", "mealie"].includes(body.entry.source) ? body.entry.source : "manual" });
         return entry ? json(res, 200, { ok: true, entry }) : json(res, 400, { error: "A dinner needs a name." });
       }
       case "prefs":
@@ -711,6 +727,7 @@ async function handleMealsPost(req, res, action) {
           skip: (Array.isArray(body.skip) ? body.skip : []).filter(isDate),
           wishes: String(body.wishes ?? "").slice(0, 500),
           surprise: body.surprise === true,
+          cookbook: body.cookbook === true,
         };
         mealsAi.generatePlan(request).catch(() => {}); // runs on; the job state tells the tablets how it goes
         return json(res, 202, { ok: true });
@@ -720,6 +737,17 @@ async function handleMealsPost(req, res, action) {
         if (!isDate(body?.date)) return json(res, 400, { error: "Invalid date." });
         await mealsAi.writeRecipe(body.date);
         return json(res, 200, { ok: true });
+      case "mealie-use": {
+        if (!isDate(body?.date)) return json(res, 400, { error: "Invalid date." });
+        const entry = await mealie.recipe(body?.slug, mealsSettings().household);
+        const warnings = allergenWarnings(normalizeEntry({ ...entry, date: body.date }, body.date), meals.prefs);
+        const saved = meals.setDay(body.date, { ...entry, kind: "dinner", ...(warnings.length ? { warnings } : {}) });
+        return saved ? json(res, 200, { ok: true, entry: saved }) : json(res, 400, { error: "The recipe could not be used." });
+      }
+      case "mealie-import": {
+        const slug = await mealie.importUrl(String(body?.url ?? "").trim());
+        return json(res, 200, { ok: true, slug });
+      }
       case "alternatives":
         if (!mealsAi.available) return json(res, 503, { error: "No AI Task is set up in Home Assistant." });
         if (!isDate(body?.date)) return json(res, 400, { error: "Invalid date." });
@@ -882,6 +910,7 @@ const server = http.createServer(async (req, res) => {
       if (p === "/api/config") return json(res, 200, configPayload());
       if (p === "/api/calendar") return await handleCalendar(res, url.searchParams);
       if (p === "/api/meals") return json(res, 200, mealsPayload());
+      if (p === "/api/meals/cookbook") return await handleCookbook(res, url.searchParams);
       if (p === "/api/todo/items") return await handleTodoGet(res, url.searchParams);
       if (p.startsWith("/api/plex/")) return await handlePlexGet(res, p, url.searchParams);
       if (p === "/api/proxy") return await proxyImage(res, url.searchParams.get("path"));

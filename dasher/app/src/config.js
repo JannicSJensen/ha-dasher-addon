@@ -214,6 +214,10 @@ function parseMeals(raw, errors) {
     household: posInt(r.household, 4),
     dinner_time: time,
     language: r.language != null ? String(r.language).toLowerCase().slice(0, 2) : null,
+    mealie: {
+      enabled: r.mealie === false || r.mealie?.enabled === false ? false : "auto",
+      config_entry_id: /^[A-Za-z0-9]{10,40}$/.test(String(r.mealie?.config_entry_id ?? "")) ? String(r.mealie.config_entry_id) : null,
+    },
     auto: auto
       ? {
           weekday: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"].includes(auto.weekday) ? auto.weekday : "sat",

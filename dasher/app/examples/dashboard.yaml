@@ -92,12 +92,13 @@ meals:
   # enabled: false
   # title: Madplan
   # shopping_list_entity: todo.shopping_list   # default: the Shopping list, or the first to-do list
-  # calendar_entity: calendar.madplan         # a dinner event is written here (a Local Calendar is a good choice)
+  # calendar_entity: calendar.family         # a dinner event is written here (default: calendar.family, when it exists)
   # ai_task_entity: ai_task.openai            # default: the first AI Task entity
   # household: 4                              # people at the table
   # dinner_time: "18:00"
   # language: da                              # the language of dishes and recipes
   # auto: { weekday: sun, time: "17:00", days: 7 }   # plan the next week by itself
+  # mealie: false                           # ignore Mealie (it is used when its Home Assistant integration is set up)
 
 pages:
   - id: home

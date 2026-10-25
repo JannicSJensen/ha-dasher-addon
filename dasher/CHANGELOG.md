@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.25.0
+
+- **Mealie cookbook.** When Mealie and Home Assistant's Mealie integration are set up, the meal plan gets a **Cookbook** tab: search your Mealie recipes, plan one on a day (ingredients and steps are copied, scaled to your household) and import a recipe from a web page into Mealie. *New plan* can prefer your own Mealie recipes, which then need no AI call for the recipe. Nothing to configure; `meals: mealie:` can turn it off or pick the Mealie entry.
+- **The family calendar is the default calendar for the dinners** (`calendar.family`, when it exists) unless `calendar_entity` says otherwise.
+
 ## 0.24.0
 
 - **Meal plan (Madplan).** A new page that plans the week's dinners with Home Assistant's **AI Task**, following your rules (vegetarian days, left-overs, allergies, things to avoid, cooking time, fixed days, favourites). Recipes with ingredients and steps, tick-off lists and step timers; the ingredients of a period are added up and put on a Home Assistant **shopping list**; each dinner is written to a **calendar**. Plans are checked and the AI is asked again when it breaks a rule. Edit, rate and swap dishes by hand. A `dinner` tile shows tonight's dinner on the front page. Configure it in the new `meals:` section of `dashboard.yaml`; the app option `allow_meal_editing` controls whether tablets may change the plan.
