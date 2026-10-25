@@ -73,6 +73,7 @@ function makeContext(config) {
     musicEnabled: () => Boolean(store.getState().music?.enabled),
     lastPlayed: () => store.getState().lastPlayed,
     evEnabled: () => Boolean(store.getState().ev?.enabled),
+    areasEditable: () => Boolean(store.getState().areas?.editable) && !store.getState().readOnly,
     vacuums: () => store.getState().devices?.vacuums ?? [],
     /** Open the full-screen player; false when nothing is playing or paused. */
     openNowPlaying: (speaker) => Boolean(nowScreen?.open(speaker)),
@@ -351,10 +352,21 @@ store.subscribe((s) => s.errors, () => {
 for (const key of ["link", "ha", "errors", "config", "missing"]) store.subscribe((s) => s[key], renderBanner);
 
 store.subscribe((s) => s.areas, () => {
-  const { config } = store.getState();
+  const { config, areas } = store.getState();
   if (!config) return;
-  if (route.kind === "page") renderSidebar(config);
-  else renderRoute();
+  if (route.kind === "page") return renderSidebar(config);
+  // An area page follows changes of its device list in place (so a removed device does not scroll the page away).
+  const page = mounted[0]?.tile;
+  if (route.kind === "area" && page?.setArea) {
+    const area = areas?.areas.find((a) => a.id === route.id);
+    if (area) {
+      page.setArea(area);
+      mounted[0].entities = page.entities;
+      mounted[0].last = null;
+      return refreshTiles(true);
+    }
+  }
+  renderRoute();
 });
 
 const followsMusic = (config) => config.pages.find((p) => p.id === route.id)?.tiles.some((tile) => tile.entities === "music");

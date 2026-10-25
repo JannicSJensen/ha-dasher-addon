@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.22.0
+
+- **Thermostats on the area pages.** `climate` entities of an area now get a picture tile with the status and temperature, a tap to switch on/off and **+** / **−** for the setpoint. Members of a thermostat group are hidden behind the group, like light groups. `climate` is part of the default `areas: domains`.
+- **Edit the devices of an area.** A pencil on the area page lets you remove devices you do not want in the overview and bring them back; the choice is saved in the app (`hidden-devices.json`) and shared by all tablets. New app option `allow_area_editing` (default on) can forbid it.
+- **Unavailable devices are no longer shown** on the area pages (they used to be listed last).
+
 ## 0.21.0
 
 - **Entity mapping moved to the app configuration.** The *Map entities* screen and its sidebar entry are gone from the tablet; use the new app option **Entity mapping** (*Settings, Apps, Dasher, Configuration*): a list of rows with the entity id from `dashboard.yaml` and the entity of your Home Assistant to use instead. Restart the app after changing it.

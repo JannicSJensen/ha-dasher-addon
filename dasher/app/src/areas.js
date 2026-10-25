@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 
-export const DEFAULT_AREA_DOMAINS = ["light", "fan", "cover", "media_player"];
+export const DEFAULT_AREA_DOMAINS = ["light", "fan", "cover", "media_player", "climate"];
 /** Domains the toggle tile (and the service policy) can handle in area pages. */
-export const AREA_DOMAINS = new Set(["light", "fan", "cover", "media_player", "switch", "input_boolean"]);
+export const AREA_DOMAINS = new Set(["light", "fan", "cover", "media_player", "climate", "switch", "input_boolean"]);
 
 const IMAGE_EXT = new Set([".jpg", ".jpeg", ".png", ".webp", ".avif", ".gif", ".svg"]);
 const WINDOW_CLASSES = new Set(["window", "door", "garage_door", "opening"]);
@@ -58,10 +58,11 @@ const matchesAny = (list, area) => {
  * deviceClasses: Map(entity_id -> device_class) taken from the live states
  * settings: the parsed `areas:` section of dashboard.yaml
  * images: result of scanImages()
+ * hidden: Set of device ids people removed from the overview; they stay in `hidden_entities` so they can be restored
  *
  * Returns { areas, entities } where `entities` is every entity id the pages can show or control.
  */
-export function buildAreaModel({ registries, deviceClasses = new Map(), settings, images }) {
+export function buildAreaModel({ registries, deviceClasses = new Map(), settings, images, hidden = new Set() }) {
   const empty = { areas: [], entities: new Set() };
   if (!registries || !settings?.enabled) return empty;
 
@@ -104,9 +105,11 @@ export function buildAreaModel({ registries, deviceClasses = new Map(), settings
     const temperature = designatedTemp ? [designatedTemp] : b.temperature.sort();
     const humidity = designatedHumidity ? [designatedHumidity] : b.humidity.sort();
     const windows = override.window_entities?.length ? override.window_entities : b.windows.sort();
-    const tiles = b.tiles.sort((x, y) => domainRank.get(domainOf(x)) - domainRank.get(domainOf(y)) || x.localeCompare(y));
+    const allTiles = b.tiles.sort((x, y) => domainRank.get(domainOf(x)) - domainRank.get(domainOf(y)) || x.localeCompare(y));
+    const tiles = allTiles.filter((id) => !hidden.has(id));
+    const hiddenTiles = allTiles.filter((id) => hidden.has(id));
 
-    if (!tiles.length && !temperature.length && !humidity.length && !windows.length) continue;
+    if (!allTiles.length && !temperature.length && !humidity.length && !windows.length) continue;
 
     const floor = area.floor_id ? floors.get(area.floor_id) : null;
     const slug = slugify(area.name);
@@ -116,12 +119,12 @@ export function buildAreaModel({ registries, deviceClasses = new Map(), settings
       : (images.areas.get(area.area_id.toLowerCase()) ?? images.areas.get(slug) ?? null);
 
     const entityImages = {};
-    for (const id of tiles) {
+    for (const id of allTiles) {
       const file = images.entities.get(id.toLowerCase());
       if (file) entityImages[id] = file;
     }
 
-    for (const id of [...tiles, ...temperature, ...humidity, ...windows]) all.add(id);
+    for (const id of [...allTiles, ...temperature, ...humidity, ...windows]) all.add(id);
 
     result.push({
       id: area.area_id,
@@ -132,6 +135,7 @@ export function buildAreaModel({ registries, deviceClasses = new Map(), settings
       image: imageFile,
       picture: area.picture ?? null,
       entities: tiles,
+      hidden_entities: hiddenTiles,
       entity_images: entityImages,
       temperature,
       humidity,

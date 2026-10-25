@@ -18,6 +18,9 @@ configuration:
   allow_todo_management:
     name: Tillad ændring af huskelister
     description: "Lader folk ved en tablet oprette, omdøbe og slette huskelister fra Local To-do-integrationen (at redigere en listes punkter kan altid lade sig gøre). Slå fra for at forbyde det."
+  allow_area_editing:
+    name: Tillad redigering af områdernes enheder
+    description: "Lader folk ved en tablet fjerne enheder fra områdesiderne og få dem tilbage (gemmes i appen og deles af alle tablets). Slå fra for at forbyde det."
   music_assistant_url:
     name: Music Assistant-adresse
     description: "Adressen på din Music Assistant-server, fx http://192.168.1.10:8095. Lad feltet stå tomt, når Music Assistant kører som Home Assistant-app: Dasher finder den så selv. Ellers kræves den til fanerne Udforsk, Album, Kunstnere, Podcasts og Søg."

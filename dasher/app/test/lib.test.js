@@ -70,13 +70,13 @@ test("i18n falls back to English and prettifies unknown states", () => {
   assert.equal(translateState(da, "some_odd_state"), "Some odd state");
 });
 
-import { areaIcon, areaStats, cropFor, lightsOn, visibleAreaEntities } from "../web/js/lib/areas.js";
+import { areaIcon, areaStats, cropFor, lightsOn, restorableEntities, visibleAreaEntities } from "../web/js/lib/areas.js";
 import { throttle } from "../web/js/lib/throttle.js";
 
 const stateMap = (obj) => (id) => obj[id];
 const mk = (state, attributes = {}) => ({ state, attributes });
 
-test("area tiles: group members are hidden and unavailable entities move last", () => {
+test("area tiles: group members are hidden behind their group and unavailable devices are not shown", () => {
   const getState = stateMap({
     "light.group": mk("on", { entity_id: ["light.a", "light.b"] }),
     "light.a": mk("on"),
@@ -85,8 +85,24 @@ test("area tiles: group members are hidden and unavailable entities move last", 
     "light.d": mk("off"),
   });
   const area = { entities: ["light.a", "light.b", "light.c", "light.d", "light.group"] };
-  assert.deepEqual(visibleAreaEntities(area, getState), ["light.d", "light.group", "light.c"]);
+  assert.deepEqual(visibleAreaEntities(area, getState), ["light.d", "light.group"]);
   assert.equal(lightsOn(area, getState), 1);
+  assert.deepEqual(visibleAreaEntities({ entities: ["light.nowhere"] }, getState), [], "an entity without a state is not shown");
+});
+
+test("area tiles: thermostat groups hide their members, also when the group itself was removed, but not when it is unavailable", () => {
+  const getState = stateMap({
+    "climate.stue": mk("heat", { entity_id: ["climate.stue_01", "climate.stue_02"] }),
+    "climate.stue_01": mk("heat"),
+    "climate.stue_02": mk("heat"),
+    "climate.kontor": mk("off"),
+    "climate.dead_group": mk("unavailable", { entity_id: ["climate.member"] }),
+    "climate.member": mk("heat"),
+  });
+  assert.deepEqual(visibleAreaEntities({ entities: ["climate.stue", "climate.stue_01", "climate.stue_02", "climate.kontor"] }, getState), ["climate.stue", "climate.kontor"]);
+  assert.deepEqual(visibleAreaEntities({ entities: ["climate.stue_01", "climate.stue_02", "climate.kontor"], hidden_entities: ["climate.stue"] }, getState), ["climate.kontor"]);
+  assert.deepEqual(visibleAreaEntities({ entities: ["climate.member"], hidden_entities: ["climate.dead_group"] }, getState), ["climate.member"]);
+  assert.deepEqual(restorableEntities({ entities: [], hidden_entities: ["climate.stue", "climate.dead_group", "light.gone"] }, getState), ["climate.stue"]);
 });
 
 test("area stats use the median and ignore unavailable sensors", () => {

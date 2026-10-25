@@ -27,6 +27,8 @@ If the file has a mistake, the page shows what is wrong instead of failing silen
 
 | `allow_todo_management` | `true` | Lets people at a tablet create, rename and delete lists of the Local To-do integration on the [To-do page](#to-do-lists). Editing the items of a list is always possible. Turn off to forbid changing lists. Always off in read-only mode. |
 
+| `allow_area_editing` | `true` | Lets people at a tablet remove devices from the [area pages](#areas) and bring them back. Turn off to forbid it. Always off in read-only mode. |
+
 Changes to the options take effect when the app is restarted.
 
 ## Security
@@ -402,7 +404,12 @@ todo:
 Every area in Home Assistant (Settings → Areas) gets a picture card on an **Areas** page, reachable from the extra entry at the bottom of the sidebar. A card shows the area name, its floor (or how many lights are on) and opens a sub-page with:
 
 * a large picture with the area name and its **temperature**, **humidity** and **windows** (shown only when the area has such sensors),
-* below it, a `photo` tile for every light, fan, cover and media player in the area. Lights have the brightness slider. Light group members are hidden behind their group, and unavailable devices are listed last.
+* below it, a `photo` tile for every light, fan, cover, media player and **thermostat** (`climate`) in the area. Lights have the brightness slider; a thermostat shows its status and temperature, switches on and off when tapped and has **+** / **−** for the setpoint. Members of a light group or thermostat group are hidden behind the group.
+* **Unavailable devices are not shown** (they come back by themselves when they are available again).
+* **Edit** (the pencil above the tiles) lets you take devices off the overview: each tile gets a **×**, and the removed ones are listed under *Removed devices* with a **+** to bring them back. Press **Done** to leave.
+
+![Editing an area](https://raw.githubusercontent.com/JannicSJensen/ha-dasher-addon/main/docs/screenshots/area-edit.png)
+ The choice is saved in the app and is the same on every tablet. Removing a group removes its members too.
 
 Which entities appear follows Home Assistant: an entity belongs to the area it is assigned to, or to the area of its device. Hidden, disabled, configuration and diagnostic entities are skipped. Temperature, humidity and window sensors are recognised by their device class (window, door, garage door or opening for the latter; "on" means open). Several sensors are combined with the median, so one odd sensor does not skew the figure. An area's own temperature/humidity sensor (set in Home Assistant) is used if it has one.
 
@@ -420,7 +427,7 @@ areas:
   title: Areas              # label of the menu entry
   icon: floor-plan
   hide: [home, "Fridge"]    # area ids or names to leave out
-  domains: [light, fan, cover, media_player]   # also allowed: switch, input_boolean
+  domains: [light, fan, cover, media_player, climate]   # the default; also allowed: switch, input_boolean
   overrides:
     living_room:
       name: Lounge
@@ -432,7 +439,7 @@ areas:
       hide: false
 ```
 
-Areas without any matching entity are not listed. If the app cannot read the area registry (for example when started outside Home Assistant with a restricted token) the Areas page stays empty and a warning is logged.
+Areas without any matching entity are not listed. Removed devices (see *Edit* above) are remembered in `hidden-devices.json` in the app's data folder. Editing can be switched off with the app option `allow_area_editing` (or `read_only`); anyone who can open the tablet page can otherwise remove and restore devices, which only changes what the overview shows. If the app cannot read the area registry (for example when started outside Home Assistant with a restricted token) the Areas page stays empty and a warning is logged.
 
 ## Music
 

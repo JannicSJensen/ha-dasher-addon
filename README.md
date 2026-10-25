@@ -7,7 +7,7 @@ This repository contains the **Dasher** app (add-on) for Home Assistant: a dark,
 * Tablets just open `http://<home-assistant>:8099/`; no Home Assistant login, no HACS cards.
 * Dashboards are described in one `dashboard.yaml` and hot-reload on save.
 * Tiles: area hero with clock, status messages (like waste pick-up reminders) and quick buttons, lights/switches (with brightness slider), electricity price timeline, calendar agenda with weather, vehicle, "now playing", heat pump/AC and button grids.
-* **Area pages:** every Home Assistant area as a clickable picture card; each opens a sub-page with its temperature, humidity, windows and a picture tile with brightness slider for every light and player.
+* **Area pages:** every Home Assistant area as a clickable picture card; each opens a sub-page with its temperature, humidity, windows and a picture tile for every light, player and thermostat (unavailable devices are left out). Devices you do not want can be removed from the overview with the pencil, and restored.
 * **Now playing tile and full-screen player:** the tile follows whichever speaker is playing, with controls, volume and progress; when everything is stopped it shows the last track that played (remembered by the app). When music starts, a full-screen player opens with big artwork, seeking, shuffle/repeat and volume.
 * **Music page:** swipeable tabs for Discover, Radio, Albums, Artists, Podcasts (with episodes), Party (QR code and live queue of Music Assistant's Party plugin) and Search, a speaker picker with Music Assistant grouping and a now-playing bar. Browsing uses Music Assistant's API with a read-only token in the app options; playback goes through Home Assistant.
 * **Car page:** battery and range, start/stop charging, smart charging with its times, a charger restart, and remote climate (start, temperature, window heat); EV Smart Charging, Peblar and FordPass are recognised automatically.
@@ -30,16 +30,18 @@ All screenshots show the built-in fake Home Assistant and Music Assistant (see [
 | **Front page**<br>Clock, status messages (waste pick-up and a vacuum that needs water), calendar with weather, now playing, car with the electricity price, and quick buttons. | **Climate**<br>A card per room, built from your climate helpers. |
 | [![Areas](docs/screenshots/areas.png)](docs/screenshots/areas.png) | [![An area](docs/screenshots/area.png)](docs/screenshots/area.png) |
 | **Areas**<br>Every Home Assistant area as a clickable picture. | **An area**<br>Temperature, humidity and windows over the area's picture; swipe up for the devices. |
-| [![An area, devices](docs/screenshots/area-devices.png)](docs/screenshots/area-devices.png) | [![Music: Discover](docs/screenshots/music-discover.png)](docs/screenshots/music-discover.png) |
-| **An area, devices**<br>A picture tile with a brightness slider for every light, and the area's players. | **Music: Discover**<br>Music Assistant's recommendations, with a speaker picker and grouping. |
-| [![Music: Radio](docs/screenshots/music-radio.png)](docs/screenshots/music-radio.png) | [![Music: Party](docs/screenshots/music-party.png)](docs/screenshots/music-party.png) |
-| **Music: Radio**<br>One button per radio station. | **Music: Party**<br>The guest QR code and live queue of Music Assistant's Party plugin. |
-| [![Full-screen player](docs/screenshots/now-playing.png)](docs/screenshots/now-playing.png) | [![Media (Plex)](docs/screenshots/media.png)](docs/screenshots/media.png) |
-| **Full-screen player**<br>Opens when music starts: big artwork, seeking, shuffle/repeat and volume. | **Media (Plex)**<br>Continue watching and recently added movies and series, played on Cast, Plex, Apple TV or DLNA players. |
-| [![To-do lists](docs/screenshots/todo.png)](docs/screenshots/todo.png) | [![A to-do list](docs/screenshots/todo-list.png)](docs/screenshots/todo-list.png) |
-| **To-do lists**<br>Every to-do list of Home Assistant (Huskelister). | **A to-do list**<br>Add, tick off, edit and delete items; rename or delete Local To-do lists. |
-| [![Devices](docs/screenshots/devices.png)](docs/screenshots/devices.png) | [![Car](docs/screenshots/car.png)](docs/screenshots/car.png) |
-| **Devices**<br>Robot vacuums, dishwashers, dryers, clothes heaters and washing machines. | **Car**<br>Charging, smart charging with its times, remote climate and a charger restart. |
+| [![An area, devices](docs/screenshots/area-devices.png)](docs/screenshots/area-devices.png) | [![Editing an area](docs/screenshots/area-edit.png)](docs/screenshots/area-edit.png) |
+| **An area, devices**<br>A picture tile for every light, player and thermostat; unavailable devices are left out. | **Editing an area**<br>Remove the devices you do not want in the overview, and bring them back. |
+| [![Music: Discover](docs/screenshots/music-discover.png)](docs/screenshots/music-discover.png) | [![Music: Radio](docs/screenshots/music-radio.png)](docs/screenshots/music-radio.png) |
+| **Music: Discover**<br>Music Assistant's recommendations, with a speaker picker and grouping. | **Music: Radio**<br>One button per radio station. |
+| [![Music: Party](docs/screenshots/music-party.png)](docs/screenshots/music-party.png) | [![Full-screen player](docs/screenshots/now-playing.png)](docs/screenshots/now-playing.png) |
+| **Music: Party**<br>The guest QR code and live queue of Music Assistant's Party plugin. | **Full-screen player**<br>Opens when music starts: big artwork, seeking, shuffle/repeat and volume. |
+| [![Media (Plex)](docs/screenshots/media.png)](docs/screenshots/media.png) | [![To-do lists](docs/screenshots/todo.png)](docs/screenshots/todo.png) |
+| **Media (Plex)**<br>Continue watching and recently added movies and series, played on Cast, Plex, Apple TV or DLNA players. | **To-do lists**<br>Every to-do list of Home Assistant (Huskelister). |
+| [![A to-do list](docs/screenshots/todo-list.png)](docs/screenshots/todo-list.png) | [![Devices](docs/screenshots/devices.png)](docs/screenshots/devices.png) |
+| **A to-do list**<br>Add, tick off, edit and delete items; rename or delete Local To-do lists. | **Devices**<br>Robot vacuums, dishwashers, dryers, clothes heaters and washing machines. |
+| [![Car](docs/screenshots/car.png)](docs/screenshots/car.png) | |
+| **Car**<br>Charging, smart charging with its times, remote climate and a charger restart. | |
 
 ## Install
 

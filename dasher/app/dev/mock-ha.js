@@ -24,6 +24,7 @@ const put = (entity_id, state, attributes = {}) =>
 put("light.living_room_lamp", "on", { friendly_name: "Living room lamp", brightness: 180, supported_color_modes: ["brightness"] });
 put("light.garage_spots", "off", { friendly_name: "Garage spots", supported_color_modes: ["onoff"] });
 put("light.carport", "off", { friendly_name: "Carport", supported_color_modes: ["onoff"] });
+put("light.garage_old", "unavailable", { friendly_name: "Old garage lamp" });
 put("input_boolean.good_night", "off", { friendly_name: "Good night" });
 put("input_boolean.vacation", "on", { friendly_name: "Vacation" });
 // waste pick-ups like the RenoWeb sensors: state = days left, plus the date and a bin colour
@@ -35,12 +36,13 @@ put("sun.sun", "above_horizon", {});
 // climate helpers (groups per room) and a device thermostat that the climate page leaves out
 const thermostat = (id, name, current, target, state = "heat", extra = {}) =>
   put(id, state, { friendly_name: name, current_temperature: current, temperature: target, hvac_modes: ["off", "heat"], min_temp: 5, max_temp: 30, target_temp_step: 0.5, supported_features: 1, ...extra });
-thermostat("climate.stue", "stue", 22.1, 20.5, "heat", { hvac_action: "heating" });
+thermostat("climate.stue", "stue", 22.1, 20.5, "heat", { hvac_action: "heating", entity_id: ["climate.climate_stue_01"] });
 thermostat("climate.rud", "rud", 23.6, 20, "heat", { hvac_action: "idle" });
 thermostat("climate.hjalte", "hjalte", 21.6, 19);
 thermostat("climate.bryggers", "bryggers", 22.1, 21.5, "off");
 thermostat("climate.bad", "bad", 23.7, 24, "heat", { hvac_modes: ["off"] });
 thermostat("climate.climate_stue_01", "climate-stue-01", 22.1, 22);
+thermostat("climate.old_heater", "Old heater", 18, 20, "unavailable");
 // Plex: two players that can play Plex media (a Cast TV and a Plex client) and one that is offline
 put("media_player.living_room_tv", "idle", { friendly_name: "Living room TV", supported_features: 152127 });
 put("media_player.plex_ipad", "idle", { friendly_name: "Plex (iPad)", supported_features: 152127 });
@@ -159,12 +161,14 @@ let registry = {
     { ei: "light.garage_spots", ai: "garage" },
     { ei: "light.carport", ai: "garage" },
     { ei: "binary_sensor.garage_door", ai: "garage" },
-    { ei: "climate.stue", pl: "climate_group_helper" },
+    { ei: "climate.stue", ai: "living_room", pl: "climate_group_helper" },
     { ei: "climate.rud", pl: "climate_group_helper" },
     { ei: "climate.hjalte", pl: "climate_group_helper" },
-    { ei: "climate.bryggers", pl: "climate_group_helper" },
+    { ei: "climate.bryggers", ai: "garage", pl: "climate_group_helper" },
+    { ei: "light.garage_old", ai: "garage" },
+    { ei: "climate.old_heater", ai: "garage", pl: "esphome" },
     { ei: "climate.bad", pl: "climate_group_helper" },
-    { ei: "climate.climate_stue_01", pl: "zwave_js" },
+    { ei: "climate.climate_stue_01", ai: "living_room", pl: "zwave_js" },
     { ei: "media_player.living_room_tv", pl: "cast" },
     { ei: "media_player.plex_ipad", pl: "plex" },
     { ei: "media_player.stuen_tv", pl: "apple_tv" },

@@ -150,3 +150,22 @@ test("listImages indexes image files only and tolerates missing folders", () => 
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("thermostats are area devices by default", () => {
+  const regs = { ...registries, entities: [...registries.entities, { ei: "climate.stue", ai: "stuen" }, { ei: "climate.hall_old", ai: "hjem" }] };
+  const model = buildAreaModel({ registries: regs, deviceClasses, settings: { enabled: true, hide: [], domains: ["light", "fan", "cover", "media_player", "climate"], overrides: {} }, images: noImages });
+  assert.ok(byId(model, "stuen").entities.includes("climate.stue"));
+  assert.ok(model.entities.has("climate.hall_old"));
+});
+
+test("removed devices move to hidden_entities, stay tracked, and an area with only removed devices stays", () => {
+  const hidden = new Set(["light.stue_a", "media_player.tv", "light.hjem_only"]);
+  const model = buildAreaModel({ registries, deviceClasses, settings: settings(), images: noImages, hidden });
+  const stue = byId(model, "stuen");
+  assert.deepEqual(stue.entities, ["light.bad_override", "light.stue_b"]);
+  assert.deepEqual(stue.hidden_entities, ["light.stue_a", "media_player.tv"]);
+  const hjem = byId(model, "hjem");
+  assert.deepEqual([hjem.entities, hjem.hidden_entities], [[], ["light.hjem_only"]]);
+  assert.ok(model.entities.has("light.stue_a") && model.entities.has("light.hjem_only"));
+  assert.deepEqual(byId(build(), "stuen").hidden_entities, []);
+});

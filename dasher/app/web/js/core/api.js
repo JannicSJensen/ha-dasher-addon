@@ -132,3 +132,10 @@ export async function manageTodoList(action, body) {
   if (!response.ok) throw new Error(data.error ?? `Request failed (${response.status})`);
   return data;
 }
+
+/** Remove a device from an area's overview (`hidden` true) or bring it back; throws with the server's message. */
+export async function setAreaDeviceHidden(entityId, hidden) {
+  const response = await fetch("./api/areas/device", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity_id: entityId, hidden }) });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error ?? `Request failed (${response.status})`);
+}

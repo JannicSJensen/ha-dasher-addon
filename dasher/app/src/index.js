@@ -3,6 +3,7 @@ import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildAreaModel, imageSignature, scanImages } from "./areas.js";
+import { HiddenDevices } from "./hidden.js";
 import { ConfigStore } from "./config.js";
 import { discoverMusicAssistant } from "./discovery.js";
 import { discoverEv, resolveEv } from "./ev.js";
@@ -49,6 +50,7 @@ const logger = Object.fromEntries(
 
 const PORT = Number(process.env.PORT ?? 8099);
 const READ_ONLY = options.read_only === true;
+const AREA_EDIT = !READ_ONLY && options.allow_area_editing !== false && process.env.ALLOW_AREA_EDITING !== "0";
 const TODO_MANAGE = !READ_ONLY && options.allow_todo_management !== false && process.env.ALLOW_TODO_MANAGEMENT !== "0";
 const configDir = process.env.CONFIG_DIR ?? "/config";
 
@@ -159,6 +161,7 @@ const plex = new PlexService({
   },
 });
 const nowPlaying = new NowPlayingStore({ dir: dataDir, logger, fetchPicture });
+const hiddenDevices = new HiddenDevices({ dir: dataDir, logger });
 nowPlaying.on("change", () => broadcast("lastplayed", nowPlaying.payload()));
 
 // ---- areas ------------------------------------------------------------------
@@ -172,7 +175,7 @@ let allowed = new Set();
 const areasPayload = () => {
   const settings = configStore.current.config?.areas;
   if (!settings?.enabled) return { enabled: false, areas: [] };
-  return { enabled: true, title: settings.title, icon: settings.icon, areas: areaModel.areas };
+  return { enabled: true, title: settings.title, icon: settings.icon, editable: AREA_EDIT, areas: areaModel.areas };
 };
 
 let radioPlayerIds = [];
@@ -213,6 +216,7 @@ function rebuild({ refresh }) {
     deviceClasses: ha.deviceClasses,
     settings: current.config?.areas,
     images,
+    hidden: hiddenDevices.ids,
   });
   radioPlayerIds = radioPlayers(current.config?.music, ha.registries);
   radio.configure(current.config?.music);
@@ -570,6 +574,25 @@ async function handleTodoManage(req, res, action) {
   }
 }
 
+/** Remove a device from an area's overview, or bring it back. */
+async function handleAreaDevice(req, res) {
+  if (READ_ONLY || !AREA_EDIT) return json(res, 403, { error: "Editing the area devices is switched off." });
+  let body;
+  try {
+    body = JSON.parse(await readBody(req));
+  } catch (err) {
+    return json(res, err.status ?? 400, { error: err.message || "Invalid JSON." });
+  }
+  const id = body?.entity_id;
+  const known = areaModel.areas.some((a) => a.entities.includes(id) || a.hidden_entities.includes(id));
+  if (!known || typeof body?.hidden !== "boolean") return json(res, 400, { error: "That device is not on an area page." });
+  if (hiddenDevices.set(id, body.hidden)) {
+    logger.info(`${id} ${body.hidden ? "removed from" : "restored to"} its area page`);
+    rebuild({ refresh: false });
+  }
+  return json(res, 200, { ok: true });
+}
+
 async function handleCalendar(res, params) {
   const scope = calendarScope(configStore.current.config, [...ha.entityIndex.keys()]);
   const window = parseWindow(params.get("start"), params.get("end"));
@@ -703,6 +726,7 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === "POST" && p === "/api/service") return await handleService(req, res);
     if (req.method === "POST" && p === "/api/plex/play") return await handlePlexPlay(req, res);
+    if (req.method === "POST" && p === "/api/areas/device") return await handleAreaDevice(req, res);
     if (req.method === "POST" && ["/api/todo/create", "/api/todo/rename", "/api/todo/delete"].includes(p)) return await handleTodoManage(req, res, p.slice("/api/todo/".length));
     if (req.method === "POST" && p === "/api/radio/play") return await handleRadioPlay(req, res);
     if (req.method === "POST" && p === "/api/music/play") return await handleMusicPlay(req, res);

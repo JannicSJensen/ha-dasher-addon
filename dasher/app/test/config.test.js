@@ -79,7 +79,7 @@ test("app version in config.yaml matches package.json", async () => {
 test("areas section: defaults, validation and override entities", () => {
   const defaults = parseConfig("pages:\n  - id: a\n").config.areas;
   assert.equal(defaults.enabled, true);
-  assert.deepEqual(defaults.domains, ["light", "fan", "cover", "media_player"]);
+  assert.deepEqual(defaults.domains, ["light", "fan", "cover", "media_player", "climate"]);
 
   const { config, errors, entities } = parseConfig(`
 pages:

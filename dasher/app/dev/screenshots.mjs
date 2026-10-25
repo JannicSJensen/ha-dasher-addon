@@ -13,10 +13,18 @@ import puppeteer from "puppeteer-core";
 
 const OUT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../docs/screenshots") + path.sep;
 const browser = await puppeteer.launch({ executablePath: process.env.BROWSER ?? "/usr/bin/chromium", headless: true, args: ["--no-sandbox", "--disable-gpu", "--hide-scrollbars", "--force-device-scale-factor=1"] });
-const page = await browser.newPage();
+let page = await browser.newPage();
+let viewport = { width: 1280, height: 800, deviceScaleFactor: 1 };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const size = (height = 800) => page.setViewport({ width: 1280, height, deviceScaleFactor: 1 });
+const size = (height = 800) => {
+  viewport = { width: 1280, height, deviceScaleFactor: 1 };
+  return page.setViewport(viewport);
+};
 const go = async (port, hash, ready) => {
+  // A new tab for every page: the browser allows only a few connections per host and the old tab's streams would use them up.
+  await page.close();
+  page = await browser.newPage();
+  await page.setViewport(viewport);
   await page.goto(`http://localhost:${port}/?t=${Date.now()}${hash}`, { waitUntil: "load" });
   await page.waitForSelector(ready, { timeout: 20000 });
   await page.waitForFunction(() => [...document.querySelectorAll(".icon")].every((i) => i.querySelector("svg")), { timeout: 20000 }).catch(() => {});
@@ -47,6 +55,7 @@ await go(8098, "#/climate", ".clcard"); await shot("climate");
 await go(8098, "#/areas", ".tile--area"); await shot("areas");
 await press(".tile--area:nth-child(2)"); await page.waitForSelector(".area"); await sleep(2500); await shot("area");
 await page.evaluate(() => document.querySelector(".area").scrollTo({ top: 1e5, behavior: "instant" })); await sleep(1500); await shot("area-devices");
+await press(".area__edit"); await sleep(1500); await shot("area-edit");
 await go(8098, "#/music", ".mtab"); await press(".mtab", "Discover"); await sleep(2500); await shot("music-discover");
 await press(".mtab", "Radio"); await sleep(2000); await shot("music-radio");
 await press(".mtab", "Party"); await page.waitForSelector(".party__code img"); await sleep(2000); await shot("music-party");

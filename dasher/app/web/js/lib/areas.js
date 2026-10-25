@@ -26,20 +26,27 @@ export function areaIcon(area) {
   return ICON_RULES.find(([re]) => re.test(name))?.[1] ?? "home-outline";
 }
 
+const isGone = (entity) => !entity || entity.state === "unavailable";
+
 /**
- * The entities to show as tiles for an area: light group members are hidden behind their group,
- * and entities that are unavailable move to the end (their order is otherwise kept).
+ * The entities to show as tiles for an area: group members (lights, thermostats) are hidden behind their group,
+ * and devices that are unavailable are not shown at all. `area.hidden_entities` (removed by the user) never show.
  */
 export function visibleAreaEntities(area, getState) {
   const members = new Set();
-  for (const id of area.entities) {
-    if (domainOf(id) !== "light") continue;
-    const list = getState(id)?.attributes?.entity_id;
+  for (const id of [...area.entities, ...(area.hidden_entities ?? [])]) {
+    const domain = domainOf(id);
+    if (domain !== "light" && domain !== "climate") continue;
+    const entity = getState(id);
+    if (isGone(entity)) continue;
+    const list = entity.attributes?.entity_id;
     if (Array.isArray(list)) for (const m of list) if (m !== id) members.add(m);
   }
-  const visible = area.entities.filter((id) => !members.has(id));
-  return [...visible.filter((id) => !isUnavailable(getState(id))), ...visible.filter((id) => isUnavailable(getState(id)))];
+  return area.entities.filter((id) => !members.has(id) && !isGone(getState(id)));
 }
+
+/** The removed devices that could be brought back: not unavailable (those would not show anyway). */
+export const restorableEntities = (area, getState) => (area.hidden_entities ?? []).filter((id) => !isGone(getState(id)));
 
 /** Number of lights currently on, counting each light group once. */
 export function lightsOn(area, getState) {
