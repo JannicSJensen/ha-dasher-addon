@@ -400,7 +400,7 @@
 .ev__col .notice { padding: 30px 12px; }
 @media (max-width: 760px), (orientation: portrait) { .ev__grid { grid-template-columns: 1fr; } }
 
-.evcard { padding: 18px 20px; border-radius: var(--radius); background: var(--tile-bg); }
+.evcard { position: relative; padding: 18px 20px; border-radius: var(--radius); background: var(--tile-bg); }
 .evcard__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .evcard__title { margin: 0 0 10px; font-size: 12.5px; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: #d0d0d3; }
 .evcard__head .evcard__title { margin: 0; }
@@ -413,17 +413,28 @@
 .evcar { display: flex; flex-direction: column; justify-content: center; text-align: center; }
 .evcar__name { margin: 0; font-size: clamp(20px, 2.6vw, 28px); font-weight: 300; letter-spacing: 0.16em; text-transform: uppercase; }
 .evcar__img { display: block; width: 100%; max-height: 260px; margin: 16px 0; border-radius: 14px; object-fit: cover; }
-.evcar__glyph { display: grid; place-items: center; height: 170px; margin: 12px 0; font-size: 110px; color: #3d3d41; }
+.evcar__gauge { width: min(100%, 340px); margin: 14px auto 4px; }
+.evcar__gauge .dial { width: 100%; }
+.evcar__bolt { font-size: 34px; color: #55555a; margin-bottom: 2px; transition: color 0.4s; }
+.evcar.is-charging .evcar__bolt { color: var(--accent); }
+.evcar .dial__mark { fill: #fff; r: 6; }
+.evcar .dial__track { stroke-width: 16; }
+.evcar .dial__arc { stroke-width: 16; }
+.evcar.is-low .dial__arc { stroke: #f59e0b; }
+.evcar.is-charging .dial__arc { animation: ev-pulse 2.4s ease-in-out infinite; }
+.evcar::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(60% 50% at 50% 45%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%); opacity: 0; transition: opacity 0.6s; }
+.evcar.is-charging::before { opacity: 1; }
+@keyframes ev-pulse { 0%, 100% { filter: drop-shadow(0 0 4px color-mix(in srgb, var(--accent) 40%, transparent)); } 50% { filter: drop-shadow(0 0 16px color-mix(in srgb, var(--accent) 85%, transparent)); } }
 .evcar__battery { margin-top: 6px; }
-.evcar__percent { margin-bottom: 8px; font-size: clamp(36px, 5vw, 54px); font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.evcar__percent { font-size: clamp(44px, 6.4vw, 70px); font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
 .evbar { position: relative; height: 12px; border-radius: 99px; background: #3a3a3d; }
 .evbar__fill { height: 100%; width: 0; border-radius: 99px; background: var(--accent); transition: width 0.6s ease; }
 .evbar__fill.is-low { background: #f59e0b; }
 .evbar__target { position: absolute; top: -4px; bottom: -4px; width: 3px; margin-left: -1.5px; border-radius: 2px; background: #fff; }
 .evbar__target[hidden] { display: none; }
-.evcar__target { margin-top: 8px; font-size: 12.5px; color: var(--muted); }
+.evcar__target { margin-top: 2px; font-size: 12.5px; color: var(--muted); }
 .evcar__target:empty { display: none; }
-.evcar__range { margin-top: 12px; font-size: 20px; font-weight: 500; }
+.evcar__range { margin-top: 2px; font-size: 18px; font-weight: 500; color: #d7d7da; }
 .evcar__range[hidden] { display: none; }
 .evcar__chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 14px; }
 .evchip { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 999px; background: rgba(255, 255, 255, 0.07); color: #b4b4b8; font-size: 13px; }

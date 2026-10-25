@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.31.0
+
+- **Car page battery ring.** The battery is now a big ring gauge with the charge in the middle, the range under it and a white dot at the charging target. While the car charges the ring glows and pulses; below 20 % it turns amber.
+
 ## 0.30.0
 
 - **Livelier full-screen player.** The colours of the cover are picked out and drift slowly behind the artwork as soft fields; the artwork and the play button glow in the same colours. Without readable artwork the player keeps a calm accent-coloured background.

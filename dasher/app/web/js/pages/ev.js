@@ -1,4 +1,5 @@
 import { assetUrl } from "../core/api.js";
+import { createDial } from "../components/dial.js";
 import { h } from "../core/h.js";
 import { icon, setIcon } from "../core/icons.js";
 import { confirmDialog, openTimePicker } from "../components/dialogs.js";
@@ -24,26 +25,23 @@ export function createEvPage(model, ctx) {
   const call = (id, service, data) => ctx.call(id.slice(0, id.indexOf(".")), service, id, data);
 
   // ---- car --------------------------------------------------------------------------
-  const fill = h("div", { class: "evbar__fill" });
-  const targetMark = h("div", { class: "evbar__target" });
+  // the battery as a ring: the arc is the charge, the white dot the target
+  const gauge = createDial({ min: 0, max: 100, step: 1, knob: false, stops: [[0, "#14b8a6"], [1, "#7af0dc"]] });
   const percent = h("div", { class: "evcar__percent" });
   const targetText = h("div", { class: "evcar__target" });
   const range = h("div", { class: "evcar__range" });
   const plugChip = h("span", { class: "evchip" });
   const chargeChip = h("span", { class: "evchip" });
-  const art = model.image
-    ? h("img", { class: "evcar__img", src: assetUrl(model.image), alt: "", draggable: "false" })
-    : h("div", { class: "evcar__glyph" }, icon("car-electric"));
-  if (model.image) art.addEventListener("error", () => art.replaceWith(h("div", { class: "evcar__glyph" }, icon("car-electric"))));
+  const art = model.image ? h("img", { class: "evcar__img", src: assetUrl(model.image), alt: "", draggable: "false" }) : null;
+  if (art) art.addEventListener("error", () => art.remove());
+  gauge.center.append(h("div", { class: "evcar__bolt" }, icon("car-electric")), percent, range, targetText);
 
   const car = h(
     "section",
     { class: "evcard evcar" },
     model.name ? h("h2", { class: "evcar__name" }, model.name) : null,
     art,
-    h("div", { class: "evcar__battery" }, percent, h("div", { class: "evbar" }, fill, targetMark)),
-    targetText,
-    range,
+    h("div", { class: "evcar__gauge" }, gauge.el),
     h("div", { class: "evcar__chips" }, plugChip, chargeChip),
   );
 
@@ -216,10 +214,8 @@ export function createEvPage(model, ctx) {
     const { percent: level, target } = batteryOf(roles, getState);
     const hasBattery = level != null;
     percent.textContent = hasBattery ? `${formatNumber(level, { locale: ctx.locale, decimals: 0 })}%` : "–";
-    fill.style.width = `${hasBattery ? Math.min(100, Math.max(0, level)) : 0}%`;
-    fill.classList.toggle("is-low", hasBattery && level < 20);
-    targetMark.hidden = target == null;
-    if (target != null) targetMark.style.left = `${Math.min(100, Math.max(0, target))}%`;
+    gauge.set({ value: hasBattery ? level : null, current: target });
+    car.classList.toggle("is-low", hasBattery && level < 20);
     targetText.textContent = target != null ? format(t, "ev_target", { n: formatNumber(target, { locale: ctx.locale, decimals: 0 }) }) : "";
 
     const rangeState = roles.range_entity ? getState(roles.range_entity) : null;
@@ -233,6 +229,7 @@ export function createEvPage(model, ctx) {
     plugChip.replaceChildren(icon(plugged ? "power-plug" : "power-plug-off"), t(plugged ? "ev_plugged" : "ev_unplugged"));
 
     const charging = isCharging(roles, getState);
+    car.classList.toggle("is-charging", Boolean(charging));
     chargeChip.hidden = charging == null;
     chargeChip.className = `evchip${charging ? " is-on is-charging" : ""}`;
     chargeChip.replaceChildren(icon(charging ? "flash" : "flash-off"), t(charging ? "ev_charging_now" : "ev_not_charging"));
