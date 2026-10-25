@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.33.0
+
+- **Area tiles show a little more.** Small chips in the corner of each area picture show the temperature, a window that is open and music that is playing in the area.
+- Light tiles with a brightness column let the column glow in the colour of the light.
+
 ## 0.32.0
 
 - **Devices page.** The sections now sit side by side instead of in one long column. Robot vacuums show their battery as a small ring (amber when low, pulsing while charging), and the time left of a running machine is large and coloured, with a moving line along the card while it runs.

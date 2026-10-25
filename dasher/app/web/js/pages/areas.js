@@ -1,6 +1,7 @@
 import { assetUrl, pictureUrl } from "../core/api.js";
 import { h } from "../core/h.js";
 import { icon } from "../core/icons.js";
+import { formatNumber } from "../lib/format.js";
 import { areaIcon, lightsOn } from "../lib/areas.js";
 import { format } from "../lib/i18n.js";
 import { pressable } from "../tiles/common.js";
@@ -22,17 +23,34 @@ function createAreaCard(area, ctx) {
   if (url) layer.style.backgroundImage = `url("${url.replace(/"/g, "%22")}")`;
 
   const caption = h("div", { class: "photo__status" });
+  const chips = h("div", { class: "photo__chips" });
   const el = h(
     "div",
     { class: `tile tile--photo tile--area${isBuiltinImage(area) ? " is-builtin" : ""}`, role: "link", tabindex: "0", "aria-label": area.name },
     url ? layer : h("div", { class: "photo__fallback" }, icon(areaIcon(area))),
     h("div", { class: "photo__shade" }),
+    chips,
     h("div", { class: "photo__text" }, caption, h("div", { class: "photo__name" }, area.name), h("div", { class: "photo__rule" })),
   );
   pressable(el, { onTap: () => ctx.navigate(`area/${encodeURIComponent(area.id)}`) });
   el.addEventListener("keydown", (e) => {
     if (e.key === "Enter" || e.key === " ") ctx.navigate(`area/${encodeURIComponent(area.id)}`);
   });
+
+  // small status chips in the corner: temperature, open windows, music playing
+  function paintChips() {
+    const temps = (area.temperature ?? []).map((id) => Number(ctx.getState(id)?.state)).filter(Number.isFinite);
+    const open = (area.windows ?? []).filter((id) => ctx.getState(id)?.state === "on").length;
+    const playing = area.entities.some((id) => id.startsWith("media_player.") && ctx.getState(id)?.state === "playing");
+    const parts = [];
+    if (temps.length) parts.push(h("span", { class: "photo__chip" }, `${formatNumber(temps.reduce((a, b) => a + b, 0) / temps.length, { locale: ctx.locale, decimals: 1 })}°`));
+    if (open) parts.push(h("span", { class: "photo__chip is-alert", title: ctx.t("windows") }, icon("window-open-variant")));
+    if (playing) parts.push(h("span", { class: "photo__chip is-accent", title: ctx.t("np_playing") }, icon("music")));
+    const signature = parts.map((p) => p.textContent + p.className).join("|") + parts.length;
+    if (chips.dataset.sig === signature) return;
+    chips.dataset.sig = signature;
+    chips.replaceChildren(...parts);
+  }
 
   return {
     el,
@@ -41,6 +59,7 @@ function createAreaCard(area, ctx) {
       const text = on === 0 ? (area.floor ?? "") : on === 1 ? ctx.t("one_light_on") : format(ctx.t, "lights_on", { n: on });
       caption.textContent = text;
       el.classList.toggle("is-on", on > 0);
+      paintChips();
     },
   };
 }
@@ -58,7 +77,7 @@ export function createAreasPage(model, ctx) {
   );
   return {
     el,
-    entities: [...new Set(model.areas.flatMap((a) => a.entities))],
+    entities: [...new Set(model.areas.flatMap((a) => [...a.entities, ...(a.temperature ?? []), ...(a.windows ?? [])]))],
     update: () => cards.forEach((c) => c.update()),
   };
 }

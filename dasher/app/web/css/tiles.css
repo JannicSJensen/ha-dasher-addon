@@ -324,3 +324,15 @@
 @keyframes heromsg-in { from { opacity: 0; transform: translateY(-6px); } }
 .tile--area.is-builtin .photo__img { filter: brightness(0.85) saturate(1); }
 .tile--area.is-builtin.is-on .photo__img { filter: brightness(1.1); }
+
+/* ---- area tiles: status chips ---- */
+.photo__chips { position: absolute; top: 5cqmin; right: 5cqmin; z-index: 3; display: flex; gap: 2cqmin; pointer-events: none; }
+.photo__chips:empty { display: none; }
+.photo__chip { display: inline-flex; align-items: center; gap: 1cqmin; min-height: 8.5cqmin; padding: 0 3cqmin; border-radius: 99px; background: rgba(10, 10, 12, 0.62); backdrop-filter: blur(8px); font-size: 4.2cqmin; font-weight: 600; font-variant-numeric: tabular-nums; }
+.photo__chip .icon { font-size: 5.4cqmin; }
+.photo__chip.is-alert { color: #fbbf24; }
+.photo__chip.is-accent { color: var(--accent); }
+
+/* ---- light tiles: the brightness column glows in the light's colour ---- */
+.tile--toggle.is-on:not(.tile--photo) .light-slider .slider__fill { background: linear-gradient(0deg, color-mix(in srgb, var(--glow, #ffd479) 45%, #1a1206), var(--glow, #ffd479)); box-shadow: 0 0 3.5cqmin color-mix(in srgb, var(--glow, #ffd479) 55%, transparent); }
+.tile--toggle.is-on:not(.tile--photo) .light-slider .slider__knob { background: #fff; border-color: color-mix(in srgb, var(--glow, #ffd479) 70%, #000); }
