@@ -1,3 +1,4 @@
+import { createDial } from "../components/dial.js";
 import { h } from "../core/h.js";
 import { icon } from "../core/icons.js";
 import { formatNumber, isUnavailable } from "../lib/format.js";
@@ -13,9 +14,12 @@ export function createClimatePage(model, ctx) {
   const ids = model.entities ?? [];
   const num = (v, decimals = 1) => formatNumber(v, { locale: ctx.locale, decimals });
 
-  const summary = h("p", { class: "climate-page__summary" });
+  const heroTemp = h("div", { class: "clhero__temp" });
+  const heroLabel = h("div", { class: "clhero__label" });
+  const heroChips = h("div", { class: "clhero__chips" });
+  const hero = h("div", { class: "clhero", hidden: true }, h("div", null, heroTemp, heroLabel), heroChips);
   const grid = h("div", { class: "clgrid" });
-  const el = h("div", { class: "climate-page" }, h("h1", { class: "radio__title" }, model.title ?? t("climate")), summary, grid);
+  const el = h("div", { class: "climate-page" }, h("h1", { class: "radio__title" }, model.title ?? t("climate")), hero, grid);
 
   const cards = ids.map((id) => {
     const state = { pending: null, timer: null };
@@ -26,8 +30,22 @@ export function createClimatePage(model, ctx) {
     const minus = h("button", { class: "clbtn", type: "button", "aria-label": "−" }, icon("minus"));
     const plus = h("button", { class: "clbtn", type: "button", "aria-label": "+" }, icon("plus"));
     const power = h("button", { class: "clbtn clbtn--power", type: "button", "aria-label": "Power" }, icon("power"));
-    const controls = h("div", { class: "clcard__controls" }, minus, target, plus, power);
-    const card = h("section", { class: "clcard" }, h("div", { class: "clcard__top" }, icon("radiator"), name), temp, status, controls);
+    const dial = createDial({
+      onInput: (value) => {
+        state.pending = value;
+        paintTarget();
+      },
+      onCommit: (value) => {
+        state.pending = value;
+        paintTarget();
+        clearTimeout(state.timer);
+        state.timer = null;
+        ctx.call("climate", "set_temperature", id, { temperature: value });
+      },
+    });
+    dial.center.append(temp, status, target);
+    const controls = h("div", { class: "clcard__controls" }, minus, plus);
+    const card = h("section", { class: "clcard" }, h("div", { class: "clcard__top" }, icon("radiator"), name, power), dial.el, controls);
 
     const entity = () => getState(id);
     const range = () => {
@@ -55,8 +73,11 @@ export function createClimatePage(model, ctx) {
     });
 
     function paintTarget() {
-      const setpoint = state.pending ?? entity()?.attributes?.temperature;
-      target.textContent = setpoint != null ? `${num(setpoint)}°` : "–";
+      const attrs = entity()?.attributes ?? {};
+      const setpoint = state.pending ?? attrs.temperature;
+      target.textContent = setpoint != null ? `→ ${num(setpoint)}°` : "";
+      const { min, max, step } = range();
+      dial.set({ value: setpoint ?? null, current: attrs.current_temperature, min, max, step });
     }
 
     return {
@@ -71,9 +92,11 @@ export function createClimatePage(model, ctx) {
         card.className = `clcard is-${kind}`;
         name.textContent = niceName(friendlyName(e, id));
         temp.textContent = attrs.current_temperature != null ? `${num(attrs.current_temperature)}°` : "–";
+        card.classList.toggle("is-set", attrs.temperature != null && kind !== "off" && kind !== "unavailable");
         status.textContent = kind === "unavailable" ? t("unavailable") : t(`climate_${kind}`) !== `climate_${kind}` ? t(`climate_${kind}`) : t(e.state);
         const hasSetpoint = attrs.temperature != null;
         for (const control of [minus, plus, target]) control.hidden = !hasSetpoint;
+        controls.hidden = !hasSetpoint;
         minus.disabled = plus.disabled = isUnavailable(e);
         power.disabled = isUnavailable(e);
         paintTarget();
@@ -87,10 +110,17 @@ export function createClimatePage(model, ctx) {
     entities: ids,
     update() {
       for (const card of cards) card.update();
-      const stats = climateSummary(ids.map((id) => getState(id)).filter(Boolean));
-      summary.textContent = stats.total
-        ? format(t, "climate_summary", { on: stats.on, total: stats.total }) + (stats.average != null ? ` · ${format(t, "climate_average", { n: num(stats.average) })}` : "")
-        : "";
+      const states = ids.map((id) => getState(id)).filter(Boolean);
+      const stats = climateSummary(states);
+      hero.hidden = !stats.total;
+      heroTemp.textContent = stats.average != null ? `${num(stats.average)}°` : "–";
+      heroLabel.textContent = t("climate_average_label");
+      const kinds = states.map((e) => climateStatus(e));
+      const chip = (kind, text) => h("span", { class: `clchip is-${kind}` }, text);
+      heroChips.replaceChildren(
+        chip("on", format(t, "climate_summary", { on: stats.on, total: stats.total })),
+        ...["heating", "cooling"].filter((k) => kinds.includes(k)).map((k) => chip(k, `${kinds.filter((x) => x === k).length} ${t(`climate_${k}`).toLowerCase()}`)),
+      );
     },
     destroy() {
       for (const card of cards) clearTimeout(card.state.timer);

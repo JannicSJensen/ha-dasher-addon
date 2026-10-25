@@ -478,10 +478,17 @@
 /* ---- climate overview ---- */
 .climate-page { height: 100%; overflow-y: auto; overscroll-behavior: contain; padding: 18px 18px 24px; scrollbar-width: none; }
 .climate-page::-webkit-scrollbar { display: none; }
-.climate-page__summary { margin: 6px 0 16px; font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.clgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
-.clcard { --heat: #ff8a3d; position: relative; display: flex; flex-direction: column; gap: 6px; padding: 16px 16px 14px; border-radius: var(--radius); background: var(--tile-bg); overflow: hidden; transition: background 0.4s, opacity 0.3s; }
-.clcard::before { content: ""; position: absolute; inset: 0; background: radial-gradient(90% 70% at 85% 0%, color-mix(in srgb, var(--heat) 28%, transparent), transparent 70%); opacity: 0; transition: opacity 0.5s; pointer-events: none; }
+.clhero { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin: 4px 0 18px; }
+.clhero[hidden] { display: none; }
+.clhero__temp { font-size: clamp(56px, 11vw, 96px); font-weight: 700; line-height: 0.95; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.clhero__label { margin-top: 6px; font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.clhero__chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.clchip { padding: 8px 14px; border-radius: 999px; background: #1c1c1e; color: #c9c9cd; font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.clchip.is-heating { background: color-mix(in srgb, #ff8a3d 20%, #141416); color: #ffae72; }
+.clchip.is-cooling { background: color-mix(in srgb, #4fc3f7 20%, #141416); color: #8bd8fb; }
+.clgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.clcard { --heat: #ff8a3d; position: relative; display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding: 14px 14px 14px 16px; border-radius: var(--radius); background: var(--tile-bg); overflow: hidden; transition: background 0.4s, opacity 0.3s; }
+.clcard::before { content: ""; position: absolute; inset: 0; background: radial-gradient(70% 60% at 50% 48%, color-mix(in srgb, var(--heat) 22%, transparent), transparent 72%); opacity: 0; transition: opacity 0.6s; pointer-events: none; }
 .clcard.is-heating::before { opacity: 1; }
 .clcard.is-cooling { --heat: #4fc3f7; }
 .clcard.is-cooling::before { opacity: 1; }
@@ -489,17 +496,30 @@
 .clcard__top { position: relative; display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 500; }
 .clcard__top .icon { font-size: 22px; color: var(--muted); transition: color 0.4s; }
 .clcard.is-heating .clcard__top .icon, .clcard.is-cooling .clcard__top .icon { color: var(--heat); }
-.clcard__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.clcard__temp { position: relative; margin-top: 4px; font-size: 44px; font-weight: 700; line-height: 1.05; font-variant-numeric: tabular-nums; }
-.clcard__status { position: relative; font-size: 13px; color: var(--muted); }
-.clcard__controls { position: relative; display: flex; align-items: center; gap: 8px; margin-top: 8px; }
-.clcard__target { flex: 1; text-align: center; font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.clbtn { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 14px; background: rgba(10, 10, 11, 0.7); color: #fff; font-size: 22px; transition: background 0.2s, transform 0.12s; }
+.clcard__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dial { position: relative; width: min(100%, 220px); aspect-ratio: 1; margin: 0 auto; }
+.dial__svg { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; overflow: visible; }
+.dial.is-draggable .dial__svg { cursor: pointer; }
+.dial__track { stroke: rgba(255, 255, 255, 0.08); stroke-width: 14; stroke-linecap: round; }
+.dial__arc { stroke-width: 14; stroke-linecap: round; transition: d 0.25s; }
+.dial__knob { fill: #fff; stroke: rgba(0, 0, 0, 0.35); stroke-width: 2; filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.5)); }
+.dial__mark { fill: rgba(255, 255, 255, 0.55); }
+.dial__mark[hidden], .dial__knob[hidden] { display: none; }
+.dial__center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; pointer-events: none; }
+.clcard:not(.is-set) .dial__arc { opacity: 0.35; filter: grayscale(1); }
+.clcard.is-heating .dial__arc, .clcard.is-cooling .dial__arc { filter: drop-shadow(0 0 7px color-mix(in srgb, var(--heat) 70%, transparent)); }
+.clcard__temp { font-size: 46px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.clcard__status { font-size: 12.5px; color: var(--muted); }
+.clcard__target { font-size: 14px; font-weight: 600; color: var(--accent); font-variant-numeric: tabular-nums; }
+.clcard__target:empty { display: none; }
+.clcard__controls { position: relative; display: flex; justify-content: center; gap: 14px; margin-top: -26px; }
+.clcard__controls[hidden] { display: none; }
+.clbtn { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; background: rgba(10, 10, 11, 0.7); color: #fff; font-size: 22px; transition: background 0.2s, transform 0.12s; }
 .clbtn.is-pressed { transform: scale(0.94); }
 .clbtn[disabled] { opacity: 0.4; }
 .clbtn[hidden], .clcard__target[hidden] { display: none; }
 .clcard:not(.is-off):not(.is-unavailable) .clbtn--power { color: var(--accent); background: color-mix(in srgb, var(--accent) 20%, #0a0a0b); }
-.clcard__controls .clbtn--power { margin-left: auto; }
+.clbtn--power { width: 40px; height: 40px; font-size: 20px; }
 
 /* ---- Media (Plex) ---- */
 .plexpage { height: 100%; overflow-y: auto; overscroll-behavior: contain; padding: 18px 18px 24px; scrollbar-width: none; }

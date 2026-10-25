@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.27.0
+
+- **New look for the Climate page.** A big average temperature at the top with chips for what is on and heating, and a ring dial per room: the colour arc shows the setpoint (cool blue to warm orange), a small mark shows the measured temperature, and the room glows while it heats or cools. Drag the ring to set the temperature, or use the − and + buttons; the power button sits in the corner of the card.
+
 ## 0.26.0
 
 - **Built-in room pictures for the areas.** Areas without a picture of their own now get a dark illustration of a living room, kitchen, dining room, bedroom, kids' room, bathroom, office, hallway, garage, garden, laundry room or storage room, chosen from the area's name (Danish or English). Your own pictures in `assets/areas/` and pictures uploaded in Home Assistant still come first. `areas: overrides: <area>: { room: kitchen }` picks another one and `areas: default_images: false` switches them off.
