@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.38.0
+
+- **The Family page can be switched on in the app configuration.** New app options *Family page* (`enable_family`) and *Children on the Family page* (`family_children`): switch it on, list the children, restart, and every person of Home Assistant is on the board; no `dashboard.yaml` editing. A `family:` section in the file still takes precedence (names, colours, PIN codes, calendars), and `family: false` there switches the page off.
+
 ## 0.37.0
 
 - **Family board (Familie).** A new page for the family: people with home/away and what is on in their calendar, **chores** per person and a chore bin (direct, whoever is first, or taking turns; repeating by day, interval or weekday; due dates, notes, streaks), **approval by a grown-up** that pays out **stars**, a **rewards** catalog (any time, one time, or saved up like screen minutes) with suggestions from the children, and a **log** of all stars with take-backs. Optional PIN for grown-ups. A `family` tile for the front page shows everyone's stars and chores left. Turn it on with a `family:` section in `dashboard.yaml`; the app option `allow_family_editing` makes it read-only. Inspired by [HA Family Hub](https://github.com/JVarhol/HA-Family-Hub), built from scratch.

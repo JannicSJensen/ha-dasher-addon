@@ -221,3 +221,15 @@ test("the family: section: off by default, people checked, PINs validated", () =
   assert.ok(r.entities.has("person.mor"));
   assert.ok(calendarScope(r.config).calendars.has("calendar.mor"), "a person's calendar may be read");
 });
+
+test("the app option switches the family page on without a family: section; the file still wins", () => {
+  const base = "pages:\n  - id: a\n    tiles: []\n";
+  const on = { family: { enabled: true, children: ["person.emil", "light.nope"] } };
+  const auto = parseConfig(base, on).config.family;
+  assert.deepEqual([auto.enabled, auto.people.length, auto.children], [true, 0, ["person.emil"]]);
+  assert.equal(parseConfig(base, { family: { enabled: false } }).config.family.enabled, false);
+  assert.equal(parseConfig(`${base}family: false\n`, on).config.family.enabled, false, "family: false in the file switches it off");
+  const own = parseConfig(`${base}family:\n  children: [person.ida]\n  people:\n    - { entity: person.ida, role: child }\n`, on).config.family;
+  assert.deepEqual([own.children, own.people.length], [["person.ida"], 1], "the section's own children win");
+  assert.deepEqual(parseConfig(`${base}family: true\n`, on).config.family.children, ["person.emil"], "a bare family: true takes the option's children");
+});

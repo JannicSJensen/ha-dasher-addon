@@ -29,6 +29,8 @@ If the file has a mistake, the page shows what is wrong instead of failing silen
 
 | `allow_area_editing` | `true` | Lets people at a tablet remove devices from the [area pages](#areas) and cards from the [Devices page](#devices), and bring them back. Turn off to forbid it. Always off in read-only mode. |
 | `allow_family_editing` | `true` | Lets people at a tablet add and change chores and rewards, mark chores done, approve them and spend stars on the [family page](#family-board-familie). Turn off to make it read-only. |
+| `enable_family` | `false` | Switches on the [Family page](#family-board-familie) with every person of Home Assistant, without editing `dashboard.yaml`. A `family:` section in the file takes precedence (and `family: false` there switches the page off). |
+| `family_children` | empty | Person entities (e.g. `person.emil`) that are children when the page is switched on here; everybody else is a grown-up who can approve chores. |
 | `allow_area_picture_upload` | `true` | Lets the app give areas that have no picture a built-in room picture **in Home Assistant itself** (see [Pictures](#pictures)). Turn off to keep the pictures out of Home Assistant's area settings. |
 | `allow_meal_editing` | `true` | Lets people at a tablet change the [meal plan](#meal-plan-madplan): edit days and rules, and start the AI (which may cost money with your AI provider). Off = the page only shows the plan. |
 
@@ -426,7 +428,7 @@ todo:
 
 ![The family board](https://raw.githubusercontent.com/JannicSJensen/ha-dasher-addon/main/docs/screenshots/family.png)
 
-A **Family** entry in the menu gives the family one place for who is home, **chores that earn stars**, **rewards** to spend the stars on, and a log of every change. The idea is taken from [HA Family Hub](https://github.com/JVarhol/HA-Family-Hub), built here from scratch for Dasher; its calendar, meal planning and themes are left out, because Dasher already has the calendar tile, the meal plan and its own look. It is off until you add a `family:` section:
+A **Family** entry in the menu gives the family one place for who is home, **chores that earn stars**, **rewards** to spend the stars on, and a log of every change. The idea is taken from [HA Family Hub](https://github.com/JVarhol/HA-Family-Hub), built here from scratch for Dasher; its calendar, meal planning and themes are left out, because Dasher already has the calendar tile, the meal plan and its own look. It is off until you switch it on: the quickest way is the app option **Family page** (*Settings, Apps, Dasher, Configuration*; add the children under *Children on the Family page*) and a restart, which uses every person of Home Assistant. For names, colours, avatars, PIN codes and calendars add a `family:` section to `dashboard.yaml`, which takes precedence over the option:
 
 ```yaml
 family:
@@ -438,7 +440,7 @@ family:
     - { entity: person.emil, name: Emil, color: "#4ade80", role: child }
 ```
 
-`family: true` is enough to start: every `person` entity of Home Assistant becomes a person (list the children with `children: [person.emil]`, everybody else is a grown-up). In `people`, `role` is `adult` (default) or `child`, `avatar` an emoji (otherwise the first letter), `calendar_entity` a calendar to show what the person is doing, and `pin` an optional 3 to 8 digit code for a grown-up.
+`family: true` is the same as the app option: every `person` entity of Home Assistant becomes a person (list the children with `children: [person.emil]`, everybody else is a grown-up). In `people`, `role` is `adult` (default) or `child`, `avatar` an emoji (otherwise the first letter), `calendar_entity` a calendar to show what the person is doing, and `pin` an optional 3 to 8 digit code for a grown-up.
 
 **The page**
 

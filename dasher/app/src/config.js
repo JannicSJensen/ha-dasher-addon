@@ -275,7 +275,7 @@ function parseAmbient(raw, errors) {
  * Normalise the optional `family:` section (the family board). Without the section there is no family page;
  * `family: true` (or an empty section) uses every `person` entity of Home Assistant as a person.
  */
-function parseFamily(raw, errors) {
+function parseFamily(raw, errors, optionChildren = []) {
   if (raw == null || raw === false) return { enabled: false, people: [] };
   const r = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
   const people = [];
@@ -313,7 +313,7 @@ function parseFamily(raw, errors) {
     title: r.title != null ? String(r.title) : null,
     icon: String(r.icon ?? "account-group"),
     allow_negative: r.allow_negative === true,
-    children: toList(r.children).filter((id) => ENTITY_RE.test(id) && id.startsWith("person.")),
+    children: (toList(r.children).length ? toList(r.children) : optionChildren).filter((id) => ENTITY_RE.test(id) && id.startsWith("person.")),
     people,
   };
 }
@@ -387,7 +387,8 @@ function parseClimate(raw, errors) {
  * Parse and normalise a dashboard.yaml document.
  * Never throws: problems end up in `errors` and offending tiles are dropped.
  */
-export function parseConfig(text, { entityMap = {} } = {}) {
+/** `family`: the app options `enable_family` and `family_children`, used when dashboard.yaml has no `family:` section. */
+export function parseConfig(text, { entityMap = {}, family: familyOption = {} } = {}) {
   const errors = [];
   const failed = (message) => ({ config: null, errors: [message], entities: new Set(), rawEntities: new Set(), usage: new Map() });
   let raw;
@@ -470,7 +471,7 @@ export function parseConfig(text, { entityMap = {} } = {}) {
   const todo = parseTodo(raw.todo, errors);
   const meals = parseMeals(raw.meals, errors);
   const ambient = parseAmbient(raw.ambient, errors);
-  const family = parseFamily(raw.family, errors);
+  const family = parseFamily(raw.family === undefined && familyOption.enabled ? true : raw.family, errors, familyOption.children ?? []);
 
   const config = {
     title: String(raw.title ?? "Dasher"),
@@ -509,8 +510,9 @@ export function parseConfig(text, { entityMap = {} } = {}) {
 /** Watches dashboard.yaml and keeps the parsed result current. */
 export class ConfigStore {
   /** `entityMapOption`: the app option `entity_map` (a list of { from, to }). */
-  constructor({ dir, onChange, logger, entityMapOption = [] }) {
+  constructor({ dir, onChange, logger, entityMapOption = [], familyOption = {} }) {
     this.dir = dir;
+    this.familyOption = { enabled: familyOption.enabled === true, children: Array.isArray(familyOption.children) ? familyOption.children.map(String) : [] };
     this.optionMap = parseEntityMapOption(entityMapOption);
     this._legacyLogged = false;
     this.file = path.join(dir, "dashboard.yaml");
@@ -557,7 +559,7 @@ export class ConfigStore {
       return this.current;
     }
     this.entityMap = this._readEntityMap();
-    this.current = parseConfig(text, { entityMap: this.entityMap });
+    this.current = parseConfig(text, { entityMap: this.entityMap, family: this.familyOption });
     for (const e of this.current.errors) this.log.warn(`dashboard.yaml: ${e}`);
     return this.current;
   }
