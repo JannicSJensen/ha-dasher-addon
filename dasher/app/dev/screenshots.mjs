@@ -71,6 +71,8 @@ await press(".mtab", "Recipe"); await page.waitForSelector(".mrecipe, .mealspage
 await press(".mtab", "Offers"); await page.waitForSelector(".moffer__row"); await sleep(1500); await shot("meals-offers");
 await press(".mtab", "Shopping"); await sleep(1500); await shot("meals-shopping");
 await press(".mtab", "Rules"); await sleep(1500); await shot("meals-rules");
+await go(8098, "#/family", ".fperson"); await press(".fperson", "Emil"); await sleep(1000); await shot("family");
+await press(".mtab", "Rewards"); await sleep(1000); await shot("family-rewards");
 await go(8098, "#/ev", ".evcar"); await shot("car");
 await size(1180);
 await go(8098, "#/devices", ".devcard"); await shot("devices");

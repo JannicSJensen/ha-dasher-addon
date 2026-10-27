@@ -14,6 +14,7 @@ This repository contains the **Dasher** app (add-on) for Home Assistant: a dark,
 * **Media page:** Plex through Home Assistant's Plex integration: continue watching and recently added movies and series. Plays on Cast devices and Plex clients, and, with a Plex address and token in the app options, on Apple TVs and DLNA players with stream links.
 * **To-do lists page (Huskelister):** every to-do list of Home Assistant; add, tick off, edit and delete items, and create, rename and delete Local To-do lists.
 * **Meal plan page (Madplan):** a week of dinners planned by Home Assistant's AI Task with your rules (vegetarian days, allergies, cooking time, fixed days), recipes with step timers, ingredients added to a shopping list, dinners written to a calendar, and a *tonight* tile; a cookbook from your Mealie (search, plan and import recipes), and an Offers tab that follows products (e.g. Pepsi Max) and shows the cheapest offers per litre or kilo, one per store, from tilbudsugen.dk. Inspired by [ha-middagsro](https://github.com/Dinnsen/ha-middagsro), without the REMA 1000 parts.
+* **Family page (Familie):** who is home, chores per person that earn stars with approval by a grown-up, a chore bin and rotating or repeating chores, rewards to spend the stars on (also saved-up ones such as screen minutes), a log of the stars, and a `family` tile for the front page. Inspired by [HA Family Hub](https://github.com/JVarhol/HA-Family-Hub).
 * **Devices page:** robot vacuums with controls, and washing machines, dryers, dishwashers and clothes heaters (LG ThinQ found automatically, others listed in `dashboard.yaml`); cards you do not want can be removed with the pencil, and restored.
 * **Ambient screen:** an optional calm clock screen with a breathing orb and quick buttons after a while without touch.
 * **Area pictures:** the dashboard uses the picture of each area in Home Assistant's area settings; areas without one get a built-in room picture (living room, kitchen, bedroom, bathroom, garage, garden ...) uploaded there by the app, chosen from the area's name. Pictures you choose are never changed.
@@ -55,6 +56,8 @@ All screenshots show the built-in fake Home Assistant and Music Assistant (see [
 | **Shopping**<br>The ingredients added up and put on a Home Assistant shopping list. | **Rules**<br>Vegetarian days, allergies, cooking time, fixed days and favourites. |
 | [![Ambient screen](docs/screenshots/ambient.png)](docs/screenshots/ambient.png) | |
 | **Ambient screen**<br>A calm clock with a breathing orb and quick buttons after a while without touch. | |
+| [![Family board](docs/screenshots/family.png)](docs/screenshots/family.png) | [![Rewards](docs/screenshots/family-rewards.png)](docs/screenshots/family-rewards.png) |
+| **Family**<br>Who is home, and the chores of each person with stars and approval. | **Rewards**<br>Things to spend the stars on, also saved-up minutes, and suggestions from the children. |
 | [![Built-in room pictures](docs/screenshots/room-pictures.jpg)](docs/screenshots/room-pictures.jpg) | |
 | **Built-in room pictures**<br>Areas without a picture get one that fits the name: living room, kitchen, bedroom, bathroom, garden and more. | |
 | [![Car](docs/screenshots/car.png)](docs/screenshots/car.png) | |

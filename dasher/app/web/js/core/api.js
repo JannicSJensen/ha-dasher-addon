@@ -18,7 +18,7 @@ export function connect(handlers) {
         retry = setTimeout(open, 3000);
       }
     };
-    for (const event of ["hello", "status", "config", "areas", "music", "ev", "climate", "plex", "devices", "todo", "meals", "lastplayed", "snapshot", "state"]) {
+    for (const event of ["hello", "status", "config", "areas", "music", "ev", "climate", "plex", "devices", "todo", "meals", "family", "lastplayed", "snapshot", "state"]) {
       source.addEventListener(event, (e) => handlers[event]?.(JSON.parse(e.data)));
     }
   };
@@ -146,6 +146,14 @@ export async function setDeviceCardHidden(key, hidden) {
   const response = await fetch("./api/devices/card", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key, hidden }) });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error ?? `Request failed (${response.status})`);
+}
+
+/** Change something on the family board (an action name and a body; the acting person goes along); throws with the server's message. */
+export async function familyPost(action, body) {
+  const response = await fetch(`./api/family/${action}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error ?? `Request failed (${response.status})`);
+  return data;
 }
 
 /** Change the meal plan or ask the AI ("day", "prefs", "rate", "generate", "recipe", "alternatives"); throws with the server's message. */

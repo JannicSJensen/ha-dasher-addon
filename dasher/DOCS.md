@@ -28,6 +28,7 @@ If the file has a mistake, the page shows what is wrong instead of failing silen
 | `allow_todo_management` | `true` | Lets people at a tablet create, rename and delete lists of the Local To-do integration on the [To-do page](#to-do-lists). Editing the items of a list is always possible. Turn off to forbid changing lists. Always off in read-only mode. |
 
 | `allow_area_editing` | `true` | Lets people at a tablet remove devices from the [area pages](#areas) and cards from the [Devices page](#devices), and bring them back. Turn off to forbid it. Always off in read-only mode. |
+| `allow_family_editing` | `true` | Lets people at a tablet add and change chores and rewards, mark chores done, approve them and spend stars on the [family page](#family-board-familie). Turn off to make it read-only. |
 | `allow_area_picture_upload` | `true` | Lets the app give areas that have no picture a built-in room picture **in Home Assistant itself** (see [Pictures](#pictures)). Turn off to keep the pictures out of Home Assistant's area settings. |
 | `allow_meal_editing` | `true` | Lets people at a tablet change the [meal plan](#meal-plan-madplan): edit days and rules, and start the AI (which may cost money with your AI provider). Off = the page only shows the plan. |
 
@@ -420,6 +421,36 @@ todo:
 * The page appears on its own when Home Assistant has a to-do list. The lists take part in entity mapping.
 * Creating and deleting lists needs Home Assistant's admin API: the app does it with its own Supervisor token. **Anyone who can open the tablet page can add, tick off and delete items and create, rename and delete Local lists.** Turn it off with the app option `allow_todo_management` (items can still be edited), or `read_only`.
 * Renaming a list changes the name of its entity in Home Assistant (the entity id stays).
+
+## Family board (Familie)
+
+![The family board](https://raw.githubusercontent.com/JannicSJensen/ha-dasher-addon/main/docs/screenshots/family.png)
+
+A **Family** entry in the menu gives the family one place for who is home, **chores that earn stars**, **rewards** to spend the stars on, and a log of every change. The idea is taken from [HA Family Hub](https://github.com/JVarhol/HA-Family-Hub), built here from scratch for Dasher; its calendar, meal planning and themes are left out, because Dasher already has the calendar tile, the meal plan and its own look. It is off until you add a `family:` section:
+
+```yaml
+family:
+  title: Familie                 # the menu name
+  allow_negative: false          # true = a child may spend more stars than there are (and owes the rest)
+  people:
+    - { entity: person.mor, name: Mor, avatar: "👩", color: "#f472b6", role: adult, pin: "1234", calendar_entity: calendar.mor }
+    - { entity: person.far, name: Far, role: adult }
+    - { entity: person.emil, name: Emil, color: "#4ade80", role: child }
+```
+
+`family: true` is enough to start: every `person` entity of Home Assistant becomes a person (list the children with `children: [person.emil]`, everybody else is a grown-up). In `people`, `role` is `adult` (default) or `child`, `avatar` an emoji (otherwise the first letter), `calendar_entity` a calendar to show what the person is doing, and `pin` an optional 3 to 8 digit code for a grown-up.
+
+**The page**
+
+* **People** along the top: avatar, home/away from the person entity, what is on in their calendar now or next, and their stars. **Tap your name** to say who you are on this tablet; the board remembers it.
+* **Chores** in a column per person plus a **chore bin** for chores nobody has yet. A chore gives stars and can be given to one person, put in the bin for *whoever is first* (**I'll take it**) or rotate between several people. It can repeat every day, every N days or on chosen weekdays, and have a due date and a note.
+* **Done and approve:** the person taps **Done**; the chore waits for approval until a grown-up taps **Approve** (the stars are paid) or **Send back** (with a note). A grown-up's own chores need no approval. Stars come only on approval; a chore done in time adds to a 🔥 streak, a late one resets it. A repeating chore waits and opens again on its day (rotation moves on to the next person); finished one-off chores are cleared after a week.
+* **Rewards:** a grown-up adds rewards with a price: *any time*, *one time only* (the reward disappears when used) or *saved up* (each purchase adds an amount, for instance 30 minutes of screen time, to a bank that is used up later with **Use**). Anyone can **suggest** a reward; a grown-up sets the price or turns it down. Stars cannot be spent beyond the balance unless `allow_negative: true`.
+* **Stars:** every balance and a log of chore payouts, purchases and manual changes. A grown-up can **Take back** a line (the stars come back) or give and take stars by hand.
+
+**The tile**: `- { type: family }` on any page shows everybody with their stars and what is left to do, and a tap opens the page. `name` and `icon` as usual.
+
+**Grown-up and PIN, honestly:** Dasher has no user accounts, so the board relies on the name you tap. Only grown-ups can add or approve things, and a grown-up with a `pin` has to type it (it is remembered for two minutes); five wrong tries lock that person for a minute. That keeps children from approving their own chores, but it is not protection against someone who wants to cheat: PIN codes are plain text in `dashboard.yaml` (the tablets never receive them), and anyone who can edit that file or open Dasher's address can act as anybody. The data lives in `family.json` in the app's data folder and is part of Home Assistant backups.
 
 ## Meal plan (Madplan)
 

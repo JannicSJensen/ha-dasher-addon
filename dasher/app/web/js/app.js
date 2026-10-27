@@ -11,6 +11,7 @@ import { createNowPlayingScreen } from "./components/nowplaying-screen.js";
 import { createClimatePage } from "./pages/climate.js";
 import { createDevicesPage } from "./pages/devices.js";
 import { createEvPage } from "./pages/ev.js";
+import { createFamilyPage } from "./pages/family.js";
 import { createMealsPage } from "./pages/meals.js";
 import { createPlexPage } from "./pages/plex.js";
 import { createTodoPage } from "./pages/todo.js";
@@ -32,6 +33,7 @@ const store = new Store({
   devices: null,
   todo: null,
   meals: null,
+  family: null,
   lastPlayed: {},
   errors: [],
   entities: {},
@@ -79,6 +81,7 @@ function makeContext(config) {
     lastPlayed: () => store.getState().lastPlayed,
     evEnabled: () => Boolean(store.getState().ev?.enabled),
     meals: () => store.getState().meals,
+    family: () => store.getState().family,
     devicesEditable: () => Boolean(store.getState().devices?.editable) && !store.getState().readOnly,
     areasEditable: () => Boolean(store.getState().areas?.editable) && !store.getState().readOnly,
     vacuums: () => store.getState().devices?.vacuums ?? [],
@@ -142,7 +145,8 @@ function parseRoute(config) {
   const areasOff = areas !== null && !areas.enabled; // known to be disabled, as opposed to not loaded yet
   const { music } = store.getState();
   const musicOff = music !== null && !music.enabled;
-  const { ev, climate, plex, devices, todo, meals } = store.getState();
+  const { ev, climate, plex, devices, todo, meals, family } = store.getState();
+  if (raw === "family" && family?.enabled) return { kind: "family", id: null };
   if (raw === "meals" && meals?.enabled) return { kind: "meals", id: null };
   if ((raw === "todo" || raw.startsWith("todo/")) && todo?.enabled) return { kind: "todo", id: raw.startsWith("todo/") ? decodeURIComponent(raw.slice(5)) : null };
   if (raw === "devices" && devices?.enabled) return { kind: "devices", id: null };
@@ -185,6 +189,8 @@ function renderSidebar(config) {
     const { music } = store.getState();
     items.push({ href: "#/music", title: music.title ?? t("music"), icon: music.icon, active: route.kind === "music" });
   }
+  const { family } = store.getState();
+  if (family?.enabled) items.push({ href: "#/family", title: family.title ?? t("fam_title"), icon: family.icon, active: route.kind === "family" });
   const { meals } = store.getState();
   if (meals?.enabled) items.push({ href: "#/meals", title: meals.title ?? t("meals_title"), icon: meals.icon, active: route.kind === "meals" });
   const { todo } = store.getState();
@@ -212,7 +218,7 @@ function mountSingle(page) {
 }
 
 function renderRoute() {
-  const { config, areas, music, ev, climate, plex, devices, todo, meals } = store.getState();
+  const { config, areas, music, ev, climate, plex, devices, todo, meals, family } = store.getState();
   destroyTiles();
   document.querySelectorAll(".modal").forEach((m) => m.remove());
   route = parseRoute(config);
@@ -220,7 +226,9 @@ function renderRoute() {
   stage.dataset.page = route.kind === "page" ? route.id : route.kind;
   const ctx = makeContext(config);
 
-  if (route.kind === "meals") {
+  if (route.kind === "family") {
+    mountSingle(createFamilyPage(family, ctx));
+  } else if (route.kind === "meals") {
     mountSingle(createMealsPage(meals, ctx));
   } else if (route.kind === "todo") {
     mountSingle(createTodoPage(todo, ctx, route.id));
@@ -463,6 +471,18 @@ store.subscribe((s) => s.meals, () => {
   } else renderSidebar(config);
 });
 
+store.subscribe((s) => s.family, () => {
+  const { config, family } = store.getState();
+  if (!config) return;
+  const page = mounted[0]?.tile;
+  if (route.kind === "family" && page?.setModel && family?.enabled) page.setModel(family); // redraw in place
+  else if (route.kind === "family" || location.hash === "#/family") renderRoute();
+  else if (route.kind === "page") {
+    renderSidebar(config);
+    refreshTiles(true); // a family tile follows the board
+  } else renderSidebar(config);
+});
+
 store.subscribe((s) => s.lastPlayed, () => refreshTiles(true));
 
 window.addEventListener("hashchange", () => {
@@ -498,6 +518,7 @@ connect({
   devices: (devices) => setIfChanged("devices", devices),
   todo: (todo) => setIfChanged("todo", todo),
   meals: (meals) => setIfChanged("meals", meals),
+  family: (family) => setIfChanged("family", family),
   lastplayed: (lastPlayed) => setIfChanged("lastPlayed", lastPlayed),
   snapshot: (states) => store.setState({ entities: states }),
   state: (state) => store.setState((s) => ({ ...s, entities: { ...s.entities, [state.entity_id]: state } })),

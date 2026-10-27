@@ -9,6 +9,7 @@ import { discoverMusicAssistant } from "./discovery.js";
 import { discoverEv, resolveEv } from "./ev.js";
 import { resolveClimate } from "./climate.js";
 import { MealsAI, allergenWarnings } from "./meals-ai.js";
+import { FamilyStore } from "./family.js";
 import { Mealie } from "./mealie.js";
 import { OffersService } from "./offers.js";
 import { MealsStore, addDays, isDate, normalizeEntry, todayLocal, weekdayIndex, WEEKDAYS } from "./meals.js";
@@ -56,6 +57,7 @@ const logger = Object.fromEntries(
 
 const PORT = Number(process.env.PORT ?? 8099);
 const READ_ONLY = options.read_only === true;
+const FAMILY_EDIT = !READ_ONLY && options.allow_family_editing !== false && process.env.ALLOW_FAMILY_EDITING !== "0";
 const MEALS_EDIT = !READ_ONLY && options.allow_meal_editing !== false && process.env.ALLOW_MEAL_EDITING !== "0";
 const AREA_PICTURES = !READ_ONLY && options.allow_area_picture_upload !== false && process.env.ALLOW_AREA_PICTURE_UPLOAD !== "0";
 const AREA_EDIT = !READ_ONLY && options.allow_area_editing !== false && process.env.ALLOW_AREA_EDITING !== "0";
@@ -279,6 +281,7 @@ function rebuild({ refresh }) {
     ...(todoState.enabled ? todoState.lists.map((l) => l.id) : []),
     ...(devicesState.enabled ? deviceEntities(devicesState) : []),
     ...(mealsEnabled() ? [mealsSettings().shopping].filter(Boolean) : []),
+    ...(familyEnabled() ? familyPeople().map((p) => p.entity).filter(Boolean) : []),
     ...areaModel.entities,
     ...radioPlayerIds,
     ...(evState.enabled ? Object.values(evState.roles) : []),
@@ -293,6 +296,7 @@ function rebuild({ refresh }) {
   broadcast("plex", plexPayload());
   broadcast("devices", devicesPayload());
   broadcast("meals", mealsPayload());
+  broadcast("family", familyPayload());
   syncMealsCalendar();
   broadcast("todo", todoPayload());
   if (radioPlayerIds.length && (radio.stations.length === 0 || radio.error)) radio.refresh();
@@ -308,7 +312,12 @@ function rescanImages() {
   if (!first) rebuild({ refresh: false });
 }
 
-const configPayload = () => ({ config: configStore.current.config, errors: configStore.current.errors });
+/** The configuration for the tablets: PIN codes never leave the app. */
+function publicConfig(config) {
+  if (!config?.family?.people?.some((p) => p.pin)) return config;
+  return { ...config, family: { ...config.family, people: config.family.people.map(({ pin, ...rest }) => ({ ...rest, has_pin: Boolean(pin) })) } };
+}
+const configPayload = () => ({ config: publicConfig(configStore.current.config), errors: configStore.current.errors });
 const statusPayload = () => ({
   ha: ha.connected,
   readOnly: READ_ONLY,
@@ -459,6 +468,7 @@ function handleEvents(req, res) {
   send(res, "plex", plexPayload());
   send(res, "devices", devicesPayload());
   send(res, "meals", mealsPayload());
+  send(res, "family", familyPayload());
   send(res, "todo", todoPayload());
   send(res, "lastplayed", nowPlaying.payload());
   send(res, "snapshot", Object.fromEntries(ha.states));
@@ -821,6 +831,87 @@ async function handleMealsPost(req, res, action) {
   }
 }
 
+// ---- family board -----------------------------------------------------------------------------
+
+const FAMILY_COLORS = ["#38bdf8", "#fb923c", "#a78bfa", "#f472b6", "#4ade80", "#facc15", "#f87171", "#2dd4bf"];
+const familyEnabled = () => Boolean(configStore.current.config?.family?.enabled);
+
+/** The people of the family page: the configured ones, or every person entity of Home Assistant. */
+function familyPeople() {
+  const cfg = configStore.current.config?.family;
+  if (!cfg?.enabled) return [];
+  const nameOf = (entity, fallback) => ha.states.get(entity)?.attributes?.friendly_name ?? ha.entityIndex.get(entity)?.name ?? fallback;
+  const children = new Set(cfg.children ?? []);
+  const base = cfg.people.length
+    ? cfg.people
+    : [...ha.entityIndex.keys()].filter((id) => id.startsWith("person.")).sort().map((entity) => ({ id: entity.slice("person.".length), entity, name: null, color: null, avatar: null, role: children.has(entity) ? "child" : "adult", pin: null, calendar: null }));
+  return base.map((p, i) => ({ ...p, name: p.name ?? (p.entity ? nameOf(p.entity, p.id) : p.id), color: p.color ?? FAMILY_COLORS[i % FAMILY_COLORS.length] }));
+}
+
+const family = new FamilyStore({ dir: dataDir, logger, people: familyPeople, allowNegative: () => configStore.current.config?.family?.allow_negative === true });
+family.on("change", () => broadcast("family", familyPayload()));
+setInterval(() => family.tick(), 10 * 60_000).unref();
+
+function familyPayload() {
+  const cfg = configStore.current.config?.family;
+  if (!cfg?.enabled) return { enabled: false };
+  return { enabled: true, title: cfg.title, icon: cfg.icon, editable: FAMILY_EDIT, ...family.payload() };
+}
+
+async function handleFamilyPost(req, res, action) {
+  if (!familyEnabled()) return json(res, 503, { error: "The family page is not available." });
+  if (!FAMILY_EDIT) return json(res, 403, { error: "Editing the family page is switched off." });
+  let body;
+  try {
+    body = JSON.parse(await readBody(req, 32 * 1024));
+  } catch (err) {
+    return json(res, err.status ?? 400, { error: err.message || "Invalid JSON." });
+  }
+  const actor = { id: String(body?.actor ?? ""), pin: String(body?.pin ?? "") };
+  try {
+    switch (action) {
+      case "chore-save":
+        return json(res, 200, { ok: true, chore: family.saveChore(body.chore, actor) });
+      case "chore-delete":
+        family.deleteChore(String(body.id), actor);
+        return json(res, 200, { ok: true });
+      case "chore-claim":
+        return json(res, 200, { ok: true, chore: family.claim(String(body.id), actor.id) });
+      case "chore-done":
+        return json(res, 200, { ok: true, chore: family.done(String(body.id), actor.id) });
+      case "chore-undo":
+        return json(res, 200, { ok: true, chore: family.undo(String(body.id), actor.id) });
+      case "chore-approve":
+        return json(res, 200, { ok: true, chore: family.approve(String(body.id), actor) });
+      case "chore-reject":
+        return json(res, 200, { ok: true, chore: family.reject(String(body.id), body.note, actor) });
+      case "reward-save":
+        return json(res, 200, { ok: true, reward: family.saveReward(body.reward, actor) });
+      case "reward-delete":
+        family.deleteReward(String(body.id), actor);
+        return json(res, 200, { ok: true });
+      case "reward-suggest":
+        return json(res, 200, { ok: true, reward: family.suggest(body.title, actor.id) });
+      case "reward-price":
+        return json(res, 200, { ok: true, reward: family.priceSuggestion(String(body.id), body.cost, body.accept !== false, actor) });
+      case "reward-redeem":
+        return json(res, 200, { ok: true, ...family.redeem(String(body.id), body.person ? String(body.person) : actor.id, actor.id) });
+      case "reward-use":
+        return json(res, 200, { ok: true, ...family.use(String(body.id), body.person ? String(body.person) : actor.id, body.amount, actor.id) });
+      case "adjust":
+        return json(res, 200, { ok: true, ...family.adjust(String(body.person), body.delta, body.reason, actor) });
+      case "ledger-reverse":
+        family.reverse(String(body.id), actor);
+        return json(res, 200, { ok: true });
+      default:
+        return json(res, 404, { error: "Not found." });
+    }
+  } catch (err) {
+    logger.warn(`Family ${action} failed: ${err.message}`);
+    return json(res, err.status ?? 502, { error: err.message });
+  }
+}
+
 /** Remove a device from an area's overview, or bring it back. */
 async function handleAreaDevice(req, res) {
   if (READ_ONLY || !AREA_EDIT) return json(res, 403, { error: "Editing the area devices is switched off." });
@@ -970,6 +1061,7 @@ const server = http.createServer(async (req, res) => {
       if (p === "/api/config") return json(res, 200, configPayload());
       if (p === "/api/calendar") return await handleCalendar(res, url.searchParams);
       if (p === "/api/meals") return json(res, 200, mealsPayload());
+      if (p === "/api/family") return json(res, 200, familyPayload());
       if (p === "/api/meals/cookbook") return await handleCookbook(res, url.searchParams);
       if (p === "/api/todo/items") return await handleTodoGet(res, url.searchParams);
       if (p.startsWith("/api/plex/")) return await handlePlexGet(res, p, url.searchParams);
@@ -995,6 +1087,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "POST" && p === "/api/service") return await handleService(req, res);
     if (req.method === "POST" && p === "/api/plex/play") return await handlePlexPlay(req, res);
     if (req.method === "POST" && p === "/api/areas/device") return await handleAreaDevice(req, res);
+    if (req.method === "POST" && p.startsWith("/api/family/")) return await handleFamilyPost(req, res, p.slice("/api/family/".length));
     if (req.method === "POST" && p.startsWith("/api/meals/")) return await handleMealsPost(req, res, p.slice("/api/meals/".length));
     if (req.method === "POST" && p === "/api/devices/card") return await handleDevicesCard(req, res);
     if (req.method === "POST" && ["/api/todo/create", "/api/todo/rename", "/api/todo/delete"].includes(p)) return await handleTodoManage(req, res, p.slice("/api/todo/".length));

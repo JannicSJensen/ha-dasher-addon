@@ -17,6 +17,15 @@ columns: 4
 rows: 2
 gap: 8
 
+# The family board (Familie): who is home, chores that earn stars, rewards to spend them on, and the log of the
+# stars. Off unless this section exists; `family: true` uses every person of Home Assistant.
+# family:
+#   title: Familie
+#   allow_negative: false     # true = children may spend more stars than they have (they owe the rest)
+#   people:
+#     - { entity: person.mor, name: Mor, avatar: "👩", color: "#f472b6", role: adult, pin: "1234", calendar_entity: calendar.mor }
+#     - { entity: person.emil, name: Emil, color: "#4ade80", role: child }     # role: adult (default) | child
+
 # The ambient screen: after a while without touch a calm clock fills the screen (orb, big time, a few quick
 # buttons). A tap brings the dashboard back. Off unless you set `after` (seconds) or `ambient: 600`.
 # ambient:
@@ -148,6 +157,8 @@ pages:
       # - { type: dinner, col: 3, row: 2 }
       # The cheapest offers per litre/kilo of a product you follow on the Offers tab:
       # - { type: offers, product: pepsi-max, count: 3 }
+      # The family at a glance (stars and chores left); a tap opens the Familie page:
+      # - { type: family }
 
       - type: calendar                      # the next days with something planned, plus the forecast
         col: 3

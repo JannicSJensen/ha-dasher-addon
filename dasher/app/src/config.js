@@ -22,6 +22,7 @@ export const TILE_TYPES = new Set([
   "calendar",
   "dinner",
   "offers",
+  "family",
 ]);
 
 const ENTITY_RE = /^[a-z0-9_]+\.[a-z0-9_]+$/;
@@ -270,6 +271,53 @@ function parseAmbient(raw, errors) {
   };
 }
 
+/**
+ * Normalise the optional `family:` section (the family board). Without the section there is no family page;
+ * `family: true` (or an empty section) uses every `person` entity of Home Assistant as a person.
+ */
+function parseFamily(raw, errors) {
+  if (raw == null || raw === false) return { enabled: false, people: [] };
+  const r = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+  const people = [];
+  const seen = new Set();
+  for (const [i, p] of (Array.isArray(r.people) ? r.people : []).entries()) {
+    const o = p && typeof p === "object" ? p : {};
+    const entity = o.entity != null ? String(o.entity) : null;
+    if (entity && !(ENTITY_RE.test(entity) && entity.startsWith("person."))) {
+      errors.push(`family.people[${i}].entity: "${entity}" is not a person entity id`);
+      continue;
+    }
+    const calendar = o.calendar_entity != null ? String(o.calendar_entity) : null;
+    if (calendar && !(ENTITY_RE.test(calendar) && calendar.startsWith("calendar."))) errors.push(`family.people[${i}].calendar_entity: "${calendar}" is not a calendar entity id`);
+    let id = slugify(o.id ?? o.name ?? entity?.slice("person.".length) ?? "");
+    if (!id) {
+      errors.push(`family.people[${i}]: a person needs an entity or a name`);
+      continue;
+    }
+    while (seen.has(id)) id += "-x";
+    seen.add(id);
+    people.push({
+      id,
+      entity,
+      name: o.name != null ? String(o.name).slice(0, 30) : null,
+      color: /^#[0-9a-fA-F]{6}$/.test(String(o.color ?? "")) ? String(o.color) : null,
+      avatar: o.avatar != null ? String(o.avatar).slice(0, 8) : null,
+      role: o.role === "child" ? "child" : "adult",
+      pin: /^\d{3,8}$/.test(String(o.pin ?? "")) ? String(o.pin) : null,
+      calendar: calendar && ENTITY_RE.test(calendar) && calendar.startsWith("calendar.") ? calendar : null,
+    });
+    if (o.pin != null && !/^\d{3,8}$/.test(String(o.pin))) errors.push(`family.people[${i}].pin: use 3 to 8 digits`);
+  }
+  return {
+    enabled: r.enabled !== false,
+    title: r.title != null ? String(r.title) : null,
+    icon: String(r.icon ?? "account-group"),
+    allow_negative: r.allow_negative === true,
+    children: toList(r.children).filter((id) => ENTITY_RE.test(id) && id.startsWith("person.")),
+    people,
+  };
+}
+
 /** Normalise the optional `todo:` section (the to-do lists page). */
 function parseTodo(raw, errors) {
   const r = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
@@ -361,6 +409,7 @@ export function parseConfig(text, { entityMap = {} } = {}) {
   for (const id of toList(raw.todo?.lists)) rawEntities.add(id);
   collectEntities(raw.meals ?? {}, rawEntities);
   collectEntities(raw.ambient ?? {}, rawEntities);
+  collectEntities(raw.family ?? {}, rawEntities);
   collectEntities(raw.devices?.appliances ?? [], rawEntities);
   for (const id of [...rawEntities]) if (!ENTITY_RE.test(id)) rawEntities.delete(id);
   const usage = describeUsage(raw);
@@ -421,6 +470,7 @@ export function parseConfig(text, { entityMap = {} } = {}) {
   const todo = parseTodo(raw.todo, errors);
   const meals = parseMeals(raw.meals, errors);
   const ambient = parseAmbient(raw.ambient, errors);
+  const family = parseFamily(raw.family, errors);
 
   const config = {
     title: String(raw.title ?? "Dasher"),
@@ -437,6 +487,7 @@ export function parseConfig(text, { entityMap = {} } = {}) {
     todo,
     meals,
     ambient,
+    family,
     pages,
   };
 
@@ -449,6 +500,7 @@ export function parseConfig(text, { entityMap = {} } = {}) {
   for (const id of todo.lists) entities.add(id);
   for (const id of [meals.shopping_list_entity, meals.calendar_entity, meals.ai_task_entity]) if (id) entities.add(id);
   collectEntities(ambient, entities);
+  collectEntities(family.people, entities);
   for (const a of devices.appliances) for (const id of Object.values(a.roles)) entities.add(id);
   for (const id of [...music.players, music.default_player]) if (id) entities.add(id);
   return { config, errors, entities, rawEntities, usage };

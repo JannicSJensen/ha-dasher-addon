@@ -58,6 +58,7 @@ export function describeUsage(config) {
   for (const id of collectEntities(config?.ev ?? {})) add(id, "car page");
   for (const id of collectEntities(config?.climate ?? {})) add(id, "climate page");
   for (const id of collectEntities(config?.ambient ?? {})) add(id, "ambient screen");
+  for (const id of collectEntities(config?.family ?? {})) add(id, "family page");
   for (const id of collectEntities(config?.devices?.appliances ?? [])) add(id, "devices page");
   return usage;
 }

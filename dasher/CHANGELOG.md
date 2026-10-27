@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.37.0
+
+- **Family board (Familie).** A new page for the family: people with home/away and what is on in their calendar, **chores** per person and a chore bin (direct, whoever is first, or taking turns; repeating by day, interval or weekday; due dates, notes, streaks), **approval by a grown-up** that pays out **stars**, a **rewards** catalog (any time, one time, or saved up like screen minutes) with suggestions from the children, and a **log** of all stars with take-backs. Optional PIN for grown-ups. A `family` tile for the front page shows everyone's stars and chores left. Turn it on with a `family:` section in `dashboard.yaml`; the app option `allow_family_editing` makes it read-only. Inspired by [HA Family Hub](https://github.com/JVarhol/HA-Family-Hub), built from scratch.
+
 ## 0.36.0
 
 - **Offers tab in the meal plan.** Follow products (for instance Pepsi Max, salmon or coffee) and see their cheapest offers per litre or kilo, one per store, read from tilbudsugen.dk about twice a day. Open an offer, put it on the shopping list, hide stores you do not want. Based on [ha-pepsi-max-tilbud](https://github.com/knuser666/ha-pepsi-max-tilbud) without needing the Scrape integration, sensors or Button Card. A new `offers` tile shows the cheapest offers on any page; `meals: offers:` can switch the tab off.

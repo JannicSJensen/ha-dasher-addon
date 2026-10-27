@@ -113,5 +113,6 @@ export function calendarScope(config, knownIds = []) {
       if (typeof tile.weather_entity === "string" && tile.weather_entity.startsWith("weather.")) weather.add(tile.weather_entity);
     }
   }
+  for (const person of Array.isArray(config?.family?.people) ? config.family.people : []) if (typeof person?.calendar === "string") calendars.add(person.calendar);
   return { calendars, weather };
 }

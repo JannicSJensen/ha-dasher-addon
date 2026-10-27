@@ -1,6 +1,7 @@
 import { createButtonsTile } from "./buttons.js";
 import { createClimateTile } from "./climate.js";
 import { createDinnerTile } from "./dinner.js";
+import { createFamilyTile } from "./family.js";
 import { createOffersTile } from "./offers.js";
 import { createHeroTile } from "./hero.js";
 import { createMediaTile } from "./media.js";
@@ -15,6 +16,7 @@ export const TILE_FACTORIES = {
   price: createPriceTile,
   calendar: createCalendarTile,
   dinner: createDinnerTile,
+  family: createFamilyTile,
   offers: createOffersTile,
   vehicle: createVehicleTile,
   media: createMediaTile,

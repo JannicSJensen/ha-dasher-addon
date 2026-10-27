@@ -27,6 +27,9 @@ configuration:
   allow_meal_editing:
     name: Allow editing the meal plan
     description: "Lets people at a tablet change the meal plan and the family rules, and ask the AI (Home Assistant AI Task) to plan, swap dishes and write recipes. Each AI request uses your AI provider. Turn off to forbid it."
+  allow_family_editing:
+    name: Allow editing the family board
+    description: "Lets people at a tablet add and change chores and rewards, mark chores done, approve them and spend stars on the family page. Turn off to make the family page read-only."
   music_assistant_url:
     name: Music Assistant address
     description: "Address of your Music Assistant server, for example http://192.168.1.10:8095. Leave empty when Music Assistant runs as a Home Assistant app: Dasher then finds it itself. Needed for the Discover, Albums, Artists, Podcasts and Search tabs otherwise."
