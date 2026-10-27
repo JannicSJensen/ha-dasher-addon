@@ -73,6 +73,10 @@ await press(".mtab", "Shopping"); await sleep(1500); await shot("meals-shopping"
 await press(".mtab", "Rules"); await sleep(1500); await shot("meals-rules");
 await go(8098, "#/family", ".fperson"); await press(".fperson", "Emil"); await sleep(1000); await shot("family");
 await press(".mtab", "Rewards"); await sleep(1000); await shot("family-rewards");
+// the calendar page needs ENABLE_CALENDAR=1 on the app (the mock has events for it)
+await go(8098, "#/calendar", ".cmday"); await shot("calendar-month");
+await press(".calseg__btn", "Planner"); await page.waitForSelector(".calplan__day"); await sleep(1500); await shot("calendar-planner");
+await press(".calplan .cev", "Tandl"); await page.waitForSelector(".calevent"); await sleep(600); await shot("calendar-event");
 await go(8098, "#/ev", ".evcar"); await shot("car");
 await size(1180);
 await go(8098, "#/devices", ".devcard"); await shot("devices");

@@ -148,6 +148,14 @@ export async function setDeviceCardHidden(key, hidden) {
   if (!response.ok) throw new Error(data.error ?? `Request failed (${response.status})`);
 }
 
+/** Create, change or delete a calendar event ({ action, calendar, uid, recurrence_id, range, event }); throws with the server's message. */
+export async function calendarPost(body) {
+  const response = await fetch("./api/calendar/event", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error ?? `Request failed (${response.status})`);
+  return data;
+}
+
 /** Change something on the family board (an action name and a body; the acting person goes along); throws with the server's message. */
 export async function familyPost(action, body) {
   const response = await fetch(`./api/family/${action}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });

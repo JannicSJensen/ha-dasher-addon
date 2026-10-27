@@ -17,6 +17,17 @@ columns: 4
 rows: 2
 gap: 8
 
+# The calendar page (Kalender): a month view and a planner (the week with a column per calendar), a detail view
+# of each event, and adding, changing and deleting events on calendars that allow it. Off unless this section exists
+# (or the app option); `calendar: true` shows every calendar of Home Assistant.
+# calendar:
+#   title: Kalender
+#   view: month                 # the view to open: month | planner
+#   week_start: mon             # mon | sun
+#   entities: [calendar.family, calendar.mor]   # default: every calendar
+#   names: { calendar.family: Familien, calendar.mor: Mor }
+#   colors: { calendar.family: "#38bdf8", calendar.mor: "#fb923c" }
+
 # The family board (Familie): who is home, chores that earn stars, rewards to spend them on, and the log of the
 # stars. Off unless this section exists; `family: true` uses every person of Home Assistant.
 # family:

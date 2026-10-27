@@ -20,7 +20,7 @@ import { PlexService, plexBrowsers, plexConfigured, plexPlayers, validBrowse, va
 import { PlexStreamer } from "./plex-stream.js";
 import { describeUnresolved, unresolvedEntities } from "./mapping.js";
 import { MusicService, availableTabs, DETAIL_TYPES } from "./music.js";
-import { CalendarService, calendarScope, parseWindow } from "./calendar.js";
+import { CalendarService, buildEventInput, calendarCaps, calendarScope, parseWindow } from "./calendar.js";
 import { NowPlayingStore } from "./nowplaying.js";
 import { RadioService, radioPlayers, validateGroupRequest } from "./radio.js";
 import { HAClient } from "./ha-client.js";
@@ -57,6 +57,7 @@ const logger = Object.fromEntries(
 
 const PORT = Number(process.env.PORT ?? 8099);
 const READ_ONLY = options.read_only === true;
+const CALENDAR_EDIT = !READ_ONLY && options.allow_calendar_editing !== false && process.env.ALLOW_CALENDAR_EDITING !== "0";
 const FAMILY_EDIT = !READ_ONLY && options.allow_family_editing !== false && process.env.ALLOW_FAMILY_EDITING !== "0";
 const MEALS_EDIT = !READ_ONLY && options.allow_meal_editing !== false && process.env.ALLOW_MEAL_EDITING !== "0";
 const AREA_PICTURES = !READ_ONLY && options.allow_area_picture_upload !== false && process.env.ALLOW_AREA_PICTURE_UPLOAD !== "0";
@@ -87,6 +88,7 @@ const configStore = new ConfigStore({
   dir: configDir,
   logger,
   entityMapOption: options.entity_map ?? process.env.ENTITY_MAP ?? [],
+  calendarPageOption: options.enable_calendar === true || process.env.ENABLE_CALENDAR === "1",
   familyOption: { enabled: options.enable_family === true || process.env.ENABLE_FAMILY === "1", children: options.family_children ?? [] },
   onChange: () => {
     rebuild({ refresh: true });
@@ -283,6 +285,7 @@ function rebuild({ refresh }) {
     ...(devicesState.enabled ? deviceEntities(devicesState) : []),
     ...(mealsEnabled() ? [mealsSettings().shopping].filter(Boolean) : []),
     ...(familyEnabled() ? familyPeople().map((p) => p.entity).filter(Boolean) : []),
+    ...(calendarPageEnabled() ? calendarPageList().map((c) => c.id) : []),
     ...areaModel.entities,
     ...radioPlayerIds,
     ...(evState.enabled ? Object.values(evState.roles) : []),
@@ -913,6 +916,74 @@ async function handleFamilyPost(req, res, action) {
   }
 }
 
+// ---- calendar page (month and planner) --------------------------------------------------------------
+
+const CALENDAR_COLORS = ["#38bdf8", "#fb923c", "#a78bfa", "#f472b6", "#4ade80", "#facc15", "#f87171", "#2dd4bf"];
+const calendarPageEnabled = () => Boolean(configStore.current.config?.calendar?.enabled);
+
+/** The calendars of the page with their name, colour and what each may do (create, change, delete). */
+function calendarPageList() {
+  const cfg = configStore.current.config?.calendar;
+  if (!cfg?.enabled) return [];
+  const known = [...ha.entityIndex.keys()].filter((id) => id.startsWith("calendar."));
+  const ids = cfg.entities.length ? cfg.entities : known.sort();
+  const people = familyEnabled() ? familyPeople() : [];
+  return ids.map((id, i) => {
+    const person = people.find((p) => p.calendar === id);
+    const caps = calendarCaps(ha.states.get(id)?.attributes?.supported_features);
+    const none = { create: false, update: false, delete: false };
+    return {
+      id,
+      name: cfg.names[id] ?? person?.name ?? ha.entityIndex.get(id)?.name ?? ha.states.get(id)?.attributes?.friendly_name ?? id,
+      color: cfg.colors[id] ?? person?.color ?? CALENDAR_COLORS[i % CALENDAR_COLORS.length],
+      can: CALENDAR_EDIT ? caps : none,
+    };
+  });
+}
+
+async function handleCalendarView(res, params) {
+  if (!calendarPageEnabled()) return json(res, 404, { error: "The calendar page is not available." });
+  const window = parseWindow(params.get("start"), params.get("end"));
+  if (!window) return json(res, 400, { error: "Invalid time window." });
+  const list = calendarPageList();
+  try {
+    const { events, failed } = await calendars.detailed(list.map((c) => c.id), window, haRest);
+    return json(res, 200, { calendars: list, events, failed, editable: CALENDAR_EDIT });
+  } catch (err) {
+    logger.warn(`Calendar page failed: ${err.message}`);
+    return json(res, 502, { error: err.message });
+  }
+}
+
+async function handleCalendarEvent(req, res) {
+  if (!calendarPageEnabled()) return json(res, 404, { error: "The calendar page is not available." });
+  if (!CALENDAR_EDIT) return json(res, 403, { error: "Editing the calendar is switched off." });
+  let body;
+  try {
+    body = JSON.parse(await readBody(req, 16 * 1024));
+  } catch (err) {
+    return json(res, err.status ?? 400, { error: err.message || "Invalid JSON." });
+  }
+  const calendar = calendarPageList().find((c) => c.id === body?.calendar);
+  if (!calendar) return json(res, 404, { error: "Unknown calendar." });
+  const action = String(body?.action ?? "");
+  const need = { create: "create", update: "update", delete: "delete" }[action];
+  if (!need) return json(res, 400, { error: "Unknown action." });
+  if (!calendar.can[need]) return json(res, 403, { error: `The calendar “${calendar.name}” cannot ${need} events.` });
+  const uid = typeof body.uid === "string" ? body.uid.slice(0, 200) : "";
+  if (action !== "create" && !uid) return json(res, 400, { error: "The event has no id." });
+  const target = { entity_id: calendar.id, ...(action === "create" ? {} : { uid, ...(typeof body.recurrence_id === "string" && body.recurrence_id ? { recurrence_id: body.recurrence_id.slice(0, 100), ...(body.range === "future" ? { recurrence_range: "THISANDFUTURE" } : {}) } : {}) }) };
+  try {
+    const event = action === "delete" ? null : buildEventInput(body.event);
+    await ha.request({ type: `calendar/event/${action}`, ...target, ...(event ? { event } : {}) });
+    calendars.clear();
+    return json(res, 200, { ok: true });
+  } catch (err) {
+    logger.warn(`Calendar ${action} failed: ${err.message}`);
+    return json(res, err.status ?? 502, { error: err.message });
+  }
+}
+
 /** Remove a device from an area's overview, or bring it back. */
 async function handleAreaDevice(req, res) {
   if (READ_ONLY || !AREA_EDIT) return json(res, 403, { error: "Editing the area devices is switched off." });
@@ -1061,6 +1132,7 @@ const server = http.createServer(async (req, res) => {
       if (p === "/api/events") return handleEvents(req, res);
       if (p === "/api/config") return json(res, 200, configPayload());
       if (p === "/api/calendar") return await handleCalendar(res, url.searchParams);
+      if (p === "/api/calendar/view") return await handleCalendarView(res, url.searchParams);
       if (p === "/api/meals") return json(res, 200, mealsPayload());
       if (p === "/api/family") return json(res, 200, familyPayload());
       if (p === "/api/meals/cookbook") return await handleCookbook(res, url.searchParams);
@@ -1088,6 +1160,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "POST" && p === "/api/service") return await handleService(req, res);
     if (req.method === "POST" && p === "/api/plex/play") return await handlePlexPlay(req, res);
     if (req.method === "POST" && p === "/api/areas/device") return await handleAreaDevice(req, res);
+    if (req.method === "POST" && p === "/api/calendar/event") return await handleCalendarEvent(req, res);
     if (req.method === "POST" && p.startsWith("/api/family/")) return await handleFamilyPost(req, res, p.slice("/api/family/".length));
     if (req.method === "POST" && p.startsWith("/api/meals/")) return await handleMealsPost(req, res, p.slice("/api/meals/".length));
     if (req.method === "POST" && p === "/api/devices/card") return await handleDevicesCard(req, res);

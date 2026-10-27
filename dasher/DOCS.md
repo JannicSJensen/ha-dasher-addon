@@ -29,6 +29,8 @@ If the file has a mistake, the page shows what is wrong instead of failing silen
 
 | `allow_area_editing` | `true` | Lets people at a tablet remove devices from the [area pages](#areas) and cards from the [Devices page](#devices), and bring them back. Turn off to forbid it. Always off in read-only mode. |
 | `allow_family_editing` | `true` | Lets people at a tablet add and change chores and rewards, mark chores done, approve them and spend stars on the [family page](#family-board-familie). Turn off to make it read-only. |
+| `enable_calendar` | `false` | Switches on the [Calendar page](#calendar-page-kalender) with every calendar of Home Assistant, without editing `dashboard.yaml`. A `calendar:` section in the file takes precedence (and `calendar: false` there switches the page off). |
+| `allow_calendar_editing` | `true` | Lets people at a tablet add, change and delete events on the Calendar page (only on calendars that support it). Turn off to make the page read-only. |
 | `enable_family` | `false` | Switches on the [Family page](#family-board-familie) with every person of Home Assistant, without editing `dashboard.yaml`. A `family:` section in the file takes precedence (and `family: false` there switches the page off). |
 | `family_children` | empty | Person entities (e.g. `person.emil`) that are children when the page is switched on here; everybody else is a grown-up who can approve chores. |
 | `allow_area_picture_upload` | `true` | Lets the app give areas that have no picture a built-in room picture **in Home Assistant itself** (see [Pictures](#pictures)). Turn off to keep the pictures out of Home Assistant's area settings. |
@@ -423,6 +425,32 @@ todo:
 * The page appears on its own when Home Assistant has a to-do list. The lists take part in entity mapping.
 * Creating and deleting lists needs Home Assistant's admin API: the app does it with its own Supervisor token. **Anyone who can open the tablet page can add, tick off and delete items and create, rename and delete Local lists.** Turn it off with the app option `allow_todo_management` (items can still be edited), or `read_only`.
 * Renaming a list changes the name of its entity in Home Assistant (the entity id stays).
+
+## Calendar page (Kalender)
+
+![The month view](https://raw.githubusercontent.com/JannicSJensen/ha-dasher-addon/main/docs/screenshots/calendar-month.png)
+
+A **Calendar** entry in the menu shows your Home Assistant calendars in two views, with details and editing. The views are inspired by [HA Family Hub](https://github.com/JVarhol/HA-Family-Hub) and written from scratch; reminders, checklists, meal links and the other layouts of Family Hub are not included. Switch it on with the app option **Calendar page** (*Settings, Apps, Dasher, Configuration*, then restart), or with a `calendar:` section, which takes precedence:
+
+```yaml
+calendar:
+  title: Kalender
+  view: month                 # the view to open: month | planner
+  week_start: mon             # mon | sun
+  entities: [calendar.family, calendar.mor]   # default: every calendar
+  names: { calendar.family: Familien, calendar.mor: Mor }
+  colors: { calendar.family: "#38bdf8", calendar.mor: "#fb923c" }
+```
+
+* **Month:** six weeks with each day's events as coloured lines (all-day events stronger), *+N more* when a day is full, today outlined. Tap an event for its details, or a day for its list and a button for a new event. The arrows move a month; *Today* jumps back.
+* **Planner:** the week with a **column per calendar** and a row per day, like a family planner; *This week, Next week, In 2 weeks* jump between weeks, the arrows move a week. Tap an empty square to add an event on that day to that calendar.
+* The coloured **calendar chips** show how many events each calendar has on screen; tap one to hide or show it.
+* **Event details** show the calendar, when, where and notes; with the right to edit you also get **Edit** and **Delete**, and the round **+** adds an event (title, calendar, all day or times, repeat every day/week/month/year, place, notes). For an event that belongs to a series you choose *Only this one* or *This and the following*.
+* Names and colours come from `names` and `colors`; without them a calendar of a person on the [Family page](#family-board-familie) (`calendar_entity`) uses that person's name and colour, and otherwise the calendar's own name.
+* Whether a calendar can be changed is decided by Home Assistant: a read-only calendar (a subscription, for instance) is shown but cannot be edited. Changes use Home Assistant's own calendar functions, so Google, CalDAV and Local Calendar work as they do in Home Assistant itself. `allow_calendar_editing: false` makes the page read-only.
+* The page reads about six weeks of events at a time and refreshes every five minutes.
+
+![The planner](https://raw.githubusercontent.com/JannicSJensen/ha-dasher-addon/main/docs/screenshots/calendar-planner.png)
 
 ## Family board (Familie)
 

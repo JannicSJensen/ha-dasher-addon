@@ -1,5 +1,5 @@
 name: Dasher
-version: "0.38.0"
+version: "0.39.0"
 slug: dasher
 url: https://github.com/JannicSJensen/ha-dasher-addon
 description: Wall-tablet dashboard that serves a ready-to-use web page for tablets
@@ -31,6 +31,8 @@ options:
   allow_meal_editing: true
   allow_family_editing: true
   enable_family: false
+  enable_calendar: false
+  allow_calendar_editing: true
   family_children: []
 schema:
   log_level: list(debug|info|warning|error)
@@ -44,6 +46,8 @@ schema:
   allow_meal_editing: bool
   allow_family_editing: bool
   enable_family: bool
+  enable_calendar: bool
+  allow_calendar_editing: bool
   family_children:
     - str
   music_assistant_url: url?

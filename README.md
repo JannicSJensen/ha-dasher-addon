@@ -14,6 +14,7 @@ This repository contains the **Dasher** app (add-on) for Home Assistant: a dark,
 * **Media page:** Plex through Home Assistant's Plex integration: continue watching and recently added movies and series. Plays on Cast devices and Plex clients, and, with a Plex address and token in the app options, on Apple TVs and DLNA players with stream links.
 * **To-do lists page (Huskelister):** every to-do list of Home Assistant; add, tick off, edit and delete items, and create, rename and delete Local To-do lists.
 * **Meal plan page (Madplan):** a week of dinners planned by Home Assistant's AI Task with your rules (vegetarian days, allergies, cooking time, fixed days), recipes with step timers, ingredients added to a shopping list, dinners written to a calendar, and a *tonight* tile; a cookbook from your Mealie (search, plan and import recipes), and an Offers tab that follows products (e.g. Pepsi Max) and shows the cheapest offers per litre or kilo, one per store, from tilbudsugen.dk. Inspired by [ha-middagsro](https://github.com/Dinnsen/ha-middagsro), without the REMA 1000 parts.
+* **Calendar page (Kalender):** a month view and a planner with a column per calendar, event details, and adding, changing and deleting events (also repeating ones) on calendars that allow it. Inspired by [HA Family Hub](https://github.com/JVarhol/HA-Family-Hub).
 * **Family page (Familie):** who is home, chores per person that earn stars with approval by a grown-up, a chore bin and rotating or repeating chores, rewards to spend the stars on (also saved-up ones such as screen minutes), a log of the stars, and a `family` tile for the front page. Inspired by [HA Family Hub](https://github.com/JVarhol/HA-Family-Hub).
 * **Devices page:** robot vacuums with controls, and washing machines, dryers, dishwashers and clothes heaters (LG ThinQ found automatically, others listed in `dashboard.yaml`); cards you do not want can be removed with the pencil, and restored.
 * **Ambient screen:** an optional calm clock screen with a breathing orb and quick buttons after a while without touch.
@@ -56,6 +57,10 @@ All screenshots show the built-in fake Home Assistant and Music Assistant (see [
 | **Shopping**<br>The ingredients added up and put on a Home Assistant shopping list. | **Rules**<br>Vegetarian days, allergies, cooking time, fixed days and favourites. |
 | [![Ambient screen](docs/screenshots/ambient.png)](docs/screenshots/ambient.png) | |
 | **Ambient screen**<br>A calm clock with a breathing orb and quick buttons after a while without touch. | |
+| [![Calendar: month](docs/screenshots/calendar-month.png)](docs/screenshots/calendar-month.png) | [![Calendar: planner](docs/screenshots/calendar-planner.png)](docs/screenshots/calendar-planner.png) |
+| **Calendar: month**<br>The coloured events of every calendar, a day at a time on tap. | **Calendar: planner**<br>The week with a column per calendar. |
+| [![Calendar: event](docs/screenshots/calendar-event.png)](docs/screenshots/calendar-event.png) | |
+| **Event details**<br>Calendar, time and place, with edit and delete. | |
 | [![Family board](docs/screenshots/family.png)](docs/screenshots/family.png) | [![Rewards](docs/screenshots/family-rewards.png)](docs/screenshots/family-rewards.png) |
 | **Family**<br>Who is home, and the chores of each person with stars and approval. | **Rewards**<br>Things to spend the stars on, also saved-up minutes, and suggestions from the children. |
 | [![Built-in room pictures](docs/screenshots/room-pictures.jpg)](docs/screenshots/room-pictures.jpg) | |

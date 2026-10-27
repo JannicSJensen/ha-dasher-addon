@@ -318,6 +318,37 @@ function parseFamily(raw, errors, optionChildren = []) {
   };
 }
 
+/**
+ * Normalise the optional `calendar:` section (the calendar page with month and planner views). Off without the
+ * section; `calendar: true` (or the app option) shows every calendar of Home Assistant.
+ */
+function parseCalendarPage(raw, errors) {
+  if (raw == null || raw === false) return { enabled: false };
+  const r = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+  const entities = [];
+  for (const id of toList(r.entities)) {
+    if (ENTITY_RE.test(id) && id.startsWith("calendar.")) entities.push(id);
+    else errors.push(`calendar.entities: "${id}" is not a calendar entity id`);
+  }
+  const names = {};
+  const colors = {};
+  for (const [id, name] of Object.entries(r.names && typeof r.names === "object" ? r.names : {})) if (ENTITY_RE.test(id) && name != null) names[id] = String(name).slice(0, 30);
+  for (const [id, color] of Object.entries(r.colors && typeof r.colors === "object" ? r.colors : {})) {
+    if (ENTITY_RE.test(id) && /^#[0-9a-fA-F]{6}$/.test(String(color))) colors[id] = String(color);
+    else errors.push(`calendar.colors.${id}: use a colour like #38bdf8`);
+  }
+  return {
+    enabled: r.enabled !== false,
+    title: r.title != null ? String(r.title) : null,
+    icon: String(r.icon ?? "calendar-month"),
+    entities,
+    names,
+    colors,
+    week_start: r.week_start === "sun" ? "sun" : "mon",
+    view: r.view === "planner" ? "planner" : "month",
+  };
+}
+
 /** Normalise the optional `todo:` section (the to-do lists page). */
 function parseTodo(raw, errors) {
   const r = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
@@ -388,7 +419,7 @@ function parseClimate(raw, errors) {
  * Never throws: problems end up in `errors` and offending tiles are dropped.
  */
 /** `family`: the app options `enable_family` and `family_children`, used when dashboard.yaml has no `family:` section. */
-export function parseConfig(text, { entityMap = {}, family: familyOption = {} } = {}) {
+export function parseConfig(text, { entityMap = {}, family: familyOption = {}, calendarPage: calendarPageOption = false } = {}) {
   const errors = [];
   const failed = (message) => ({ config: null, errors: [message], entities: new Set(), rawEntities: new Set(), usage: new Map() });
   let raw;
@@ -411,6 +442,7 @@ export function parseConfig(text, { entityMap = {}, family: familyOption = {} } 
   collectEntities(raw.meals ?? {}, rawEntities);
   collectEntities(raw.ambient ?? {}, rawEntities);
   collectEntities(raw.family ?? {}, rawEntities);
+  collectEntities(raw.calendar ?? {}, rawEntities);
   collectEntities(raw.devices?.appliances ?? [], rawEntities);
   for (const id of [...rawEntities]) if (!ENTITY_RE.test(id)) rawEntities.delete(id);
   const usage = describeUsage(raw);
@@ -471,6 +503,7 @@ export function parseConfig(text, { entityMap = {}, family: familyOption = {} } 
   const todo = parseTodo(raw.todo, errors);
   const meals = parseMeals(raw.meals, errors);
   const ambient = parseAmbient(raw.ambient, errors);
+  const calendarPage = parseCalendarPage(raw.calendar === undefined && calendarPageOption ? true : raw.calendar, errors);
   const family = parseFamily(raw.family === undefined && familyOption.enabled ? true : raw.family, errors, familyOption.children ?? []);
 
   const config = {
@@ -489,6 +522,7 @@ export function parseConfig(text, { entityMap = {}, family: familyOption = {} } 
     meals,
     ambient,
     family,
+    calendar: calendarPage,
     pages,
   };
 
@@ -502,6 +536,7 @@ export function parseConfig(text, { entityMap = {}, family: familyOption = {} } 
   for (const id of [meals.shopping_list_entity, meals.calendar_entity, meals.ai_task_entity]) if (id) entities.add(id);
   collectEntities(ambient, entities);
   collectEntities(family.people, entities);
+  for (const id of calendarPage.entities ?? []) entities.add(id);
   for (const a of devices.appliances) for (const id of Object.values(a.roles)) entities.add(id);
   for (const id of [...music.players, music.default_player]) if (id) entities.add(id);
   return { config, errors, entities, rawEntities, usage };
@@ -510,7 +545,8 @@ export function parseConfig(text, { entityMap = {}, family: familyOption = {} } 
 /** Watches dashboard.yaml and keeps the parsed result current. */
 export class ConfigStore {
   /** `entityMapOption`: the app option `entity_map` (a list of { from, to }). */
-  constructor({ dir, onChange, logger, entityMapOption = [], familyOption = {} }) {
+  constructor({ dir, onChange, logger, entityMapOption = [], familyOption = {}, calendarPageOption = false }) {
+    this.calendarPageOption = calendarPageOption === true;
     this.dir = dir;
     this.familyOption = { enabled: familyOption.enabled === true, children: Array.isArray(familyOption.children) ? familyOption.children.map(String) : [] };
     this.optionMap = parseEntityMapOption(entityMapOption);
@@ -559,7 +595,7 @@ export class ConfigStore {
       return this.current;
     }
     this.entityMap = this._readEntityMap();
-    this.current = parseConfig(text, { entityMap: this.entityMap, family: this.familyOption });
+    this.current = parseConfig(text, { entityMap: this.entityMap, family: this.familyOption, calendarPage: this.calendarPageOption });
     for (const e of this.current.errors) this.log.warn(`dashboard.yaml: ${e}`);
     return this.current;
   }

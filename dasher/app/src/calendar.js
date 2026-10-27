@@ -1,4 +1,4 @@
-const MAX_DAYS = 31;
+const MAX_DAYS = 45;
 const MAX_CALENDARS = 20;
 const EVENTS_TTL_MS = 60_000;
 const FORECAST_TTL_MS = 15 * 60_000;
@@ -22,6 +22,70 @@ export function normalizeEvent(raw, calendar) {
     allDay,
     ...(raw.location ? { location: String(raw.location) } : {}),
   };
+}
+
+/** What a calendar supports, from its `supported_features` attribute. */
+export const CALENDAR_FEATURE = { create: 1, delete: 2, update: 4 };
+export const calendarCaps = (features) => ({ create: Boolean(Number(features) & 1), delete: Boolean(Number(features) & 2), update: Boolean(Number(features) & 4) });
+
+/** An event with what is needed to change it: its id, the id of the occurrence of a repeating event, and the text. */
+export function normalizeDetailedEvent(raw, calendar) {
+  const base = normalizeEvent(raw, calendar);
+  if (!base) return null;
+  const text = (v, max) => (typeof v === "string" && v ? v.slice(0, max) : undefined);
+  return {
+    ...base,
+    ...(text(raw.uid, 200) ? { uid: text(raw.uid, 200) } : {}),
+    ...(text(raw.recurrence_id, 100) ? { recurrence_id: text(raw.recurrence_id, 100) } : {}),
+    ...(text(raw.rrule, 200) ? { rrule: text(raw.rrule, 200) } : {}),
+    ...(text(raw.description, 2000) ? { description: text(raw.description, 2000) } : {}),
+  };
+}
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const DATETIME_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/;
+const FREQ = { daily: "DAILY", weekly: "WEEKLY", monthly: "MONTHLY", yearly: "YEARLY" };
+const badRequest = (message) => Object.assign(new Error(message), { status: 400 });
+const nextDay = (date) => {
+  const d = new Date(`${date}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+};
+
+/**
+ * The event fields for Home Assistant (`calendar/event/create` and `update`) from what a tablet sends:
+ * { summary, all_day, start, end, location, description, repeat }. An all-day event ends on its last day (Home
+ * Assistant wants the day after); timed events are local times without a zone, which Home Assistant reads as its own.
+ */
+export function buildEventInput(input) {
+  const summary = String(input?.summary ?? "").replace(/\s+/g, " ").trim().slice(0, 120);
+  if (!summary) throw badRequest("The event needs a title.");
+  const event = { summary };
+  if (input?.all_day) {
+    const start = String(input.start ?? "").slice(0, 10);
+    const end = String(input.end ?? input.start ?? "").slice(0, 10);
+    if (!DATE_RE.test(start) || !DATE_RE.test(end) || end < start) throw badRequest("Choose valid days.");
+    event.dtstart = start;
+    event.dtend = nextDay(end);
+  } else {
+    const start = String(input?.start ?? "");
+    const end = String(input?.end ?? "");
+    if (!DATETIME_RE.test(start) || !DATETIME_RE.test(end)) throw badRequest("Choose valid times.");
+    const full = (v) => (v.length === 16 ? `${v}:00` : v);
+    if (full(end) <= full(start)) throw badRequest("The event must end after it starts.");
+    event.dtstart = full(start);
+    event.dtend = full(end);
+  }
+  const location = String(input?.location ?? "").trim().slice(0, 200);
+  const description = String(input?.description ?? "").trim().slice(0, 2000);
+  if (location) event.location = location;
+  if (description) event.description = description;
+  const repeat = input?.repeat;
+  if (repeat && repeat !== "none") {
+    if (!FREQ[repeat]) throw badRequest("Unknown repeat.");
+    event.rrule = `FREQ=${FREQ[repeat]}`;
+  }
+  return event;
 }
 
 /** The part of a forecast date-time that names the day, as Home Assistant reports it. */
@@ -74,6 +138,37 @@ export class CalendarService {
       }
       return events;
     });
+  }
+
+  /**
+   * The events of calendars with the details needed to change them, read through Home Assistant's calendar REST
+   * interface (`rest(method, path)`), which names each event (uid) and the occurrence of a repeating one.
+   * Calendars that cannot be read are listed in `failed`.
+   */
+  async detailed(entityIds, { start, end }, rest) {
+    const ids = [...new Set(entityIds)].slice(0, MAX_CALENDARS);
+    const events = [];
+    const failed = [];
+    await Promise.all(
+      ids.map(async (id) => {
+        try {
+          const list = await rest("GET", `/api/calendars/${encodeURIComponent(id)}?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`);
+          for (const raw of Array.isArray(list) ? list : []) {
+            const event = normalizeDetailedEvent(raw, id);
+            if (event) events.push(event);
+          }
+        } catch (err) {
+          this.log.warn(`Calendar ${id}: ${err.message}`);
+          failed.push(id);
+        }
+      }),
+    );
+    return { events, failed };
+  }
+
+  /** Forget what was read, after an event was changed. */
+  clear() {
+    this.cache.clear();
   }
 
   /** { "2026-10-11": { temperature, condition } } from the daily forecast; {} when unsupported. */

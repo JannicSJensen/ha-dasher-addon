@@ -36,6 +36,12 @@ configuration:
   family_children:
     name: Children on the Family page
     description: "Person entities (for example person.emil) that are children. Everybody else is a grown-up who can approve chores. Used when the Family page is switched on here; a family section in dashboard.yaml with its own people or children takes precedence."
+  enable_calendar:
+    name: Calendar page
+    description: "Switches on the Calendar page (month and planner views of your Home Assistant calendars, with a detail view and adding, changing and deleting events) with every calendar of Home Assistant, without editing dashboard.yaml. A `calendar:` section in dashboard.yaml overrides this (which calendars, names, colours); `calendar: false` there switches the page off. Restart the app after changing."
+  allow_calendar_editing:
+    name: Allow editing calendar events
+    description: "Lets people at a tablet add, change and delete events on the Calendar page (only on calendars that support it). Turn off to make the page read-only."
   music_assistant_url:
     name: Music Assistant address
     description: "Address of your Music Assistant server, for example http://192.168.1.10:8095. Leave empty when Music Assistant runs as a Home Assistant app: Dasher then finds it itself. Needed for the Discover, Albums, Artists, Podcasts and Search tabs otherwise."

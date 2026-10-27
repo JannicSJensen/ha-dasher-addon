@@ -95,8 +95,9 @@ todoCreate("todo.family", "Family ⚠️", "caldav", [{ summary: "Book the denti
 put("ai_task.mock_ai", "unknown", { friendly_name: "Mock AI Task" });
 put("calendar.madplan", "off", { friendly_name: "Madplan" });
 const mealEvents = []; // { uid, calendar, summary, description, start, end }
-put("calendar.family", "off", { friendly_name: "Family" });
-put("calendar.privat", "off", { friendly_name: "Privat" });
+put("calendar.family", "off", { friendly_name: "Family", supported_features: 7 });
+put("calendar.privat", "off", { friendly_name: "Privat", supported_features: 7 });
+put("calendar.skole", "off", { friendly_name: "Skole", supported_features: 0 });
 put("weather.forecast_home", "cloudy", { friendly_name: "Forecast Home", temperature: 11 });
 const TIMES = ["None", ...Array.from({ length: 96 }, (_, i) => `${String(Math.floor(i / 4)).padStart(2, "0")}:${String((i % 4) * 15).padStart(2, "0")}`)];
 put("sensor.ev_smart_charging_status", "waiting_for_charging_to_begin", { friendly_name: "EV Smart Charging Status" });
@@ -211,6 +212,7 @@ let registry = {
     { ei: "calendar.madplan", pl: "local_calendar" },
     { ei: "calendar.family" },
     { ei: "calendar.privat" },
+    { ei: "calendar.skole" },
     { ei: "weather.forecast_home" },
     // car charging (EV Smart Charging and a Peblar charger), recognised by integration and translation key
     { ei: "sensor.ev_smart_charging_status", pl: "ev_smart_charging", tk: "status" },
@@ -249,6 +251,36 @@ function calendarEvents(id) {
     ];
   }
   return [timed("Tandlæge", 3, [14, 30], [15, 15]), allDay("Ferie", 5, 8)];
+}
+// Events of the calendar page: a month of things to do, kept in memory so they can be created, changed and deleted.
+const pageEvents = []; // { uid, calendar, summary, allDay, start, end, description, location, rrule }
+{
+  const day = (offset, h = 0, m = 0) => { const d = atDay(offset, h, m); return d; };
+  const timed = (calendar, summary, offset, [h1, m1], [h2, m2], extra = {}) => pageEvents.push({ uid: `seed${pageEvents.length}`, calendar, summary, allDay: false, start: day(offset, h1, m1), end: day(offset, h2, m2), ...extra });
+  const whole = (calendar, summary, from, to, extra = {}) => pageEvents.push({ uid: `seed${pageEvents.length}`, calendar, summary, allDay: true, start: day(from), end: day(to), ...extra });
+  const weekStart = -((new Date().getDay() + 6) % 7); // this week's Monday, as an offset from today
+  for (let w = -3; w <= 4; w++) {
+    const m = weekStart + w * 7;
+    timed("calendar.family", "Pizza-aften", m + 4, [18, 0], [20, 0]);
+    timed("calendar.family", "Skraldespand", m + 1, [7, 0], [7, 30]);
+    timed("calendar.privat", "Træning", m + 0, [17, 0], [18, 30], { description: "Husk tasken" });
+    timed("calendar.privat", "Træning", m + 3, [17, 0], [18, 30]);
+    timed("calendar.skole", "Skole", m + 0, [8, 0], [14, 0]);
+    timed("calendar.skole", "Skole", m + 1, [8, 0], [14, 0]);
+    timed("calendar.skole", "Skole", m + 2, [8, 0], [13, 0]);
+    timed("calendar.skole", "Fodbold", m + 2, [16, 0], [17, 30]);
+  }
+  whole("calendar.family", "Efterårsferie hos mormor", weekStart + 5, weekStart + 7, { location: "Odense", description: "Pak varmt tøj" });
+  timed("calendar.privat", "Tandlæge", weekStart + 2, [14, 30], [15, 15], { location: "Tandlægen, Storegade 4" });
+  timed("calendar.family", "Forældremøde", weekStart + 2, [19, 0], [20, 30]);
+  timed("calendar.skole", "Svømning", weekStart + 3, [15, 0], [16, 0]);
+  timed("calendar.family", "Fødselsdag: Ida", weekStart + 10, [15, 0], [18, 0], { rrule: "FREQ=YEARLY" });
+}
+const restEvent = (e) => ({ start: e.allDay ? { date: isoLocal(e.start) } : { dateTime: e.start.toISOString() }, end: e.allDay ? { date: isoLocal(e.end) } : { dateTime: e.end.toISOString() }, summary: e.summary, description: e.description ?? null, location: e.location ?? null, uid: e.uid, ...(e.rrule ? { rrule: e.rrule } : {}) });
+const parseMockWhen = (text) => (/^\d{4}-\d{2}-\d{2}$/.test(text) ? new Date(`${text}T00:00:00`) : new Date(text));
+function applyPageEvent(calendar, event, base = {}) {
+  const allDay = /^\d{4}-\d{2}-\d{2}$/.test(event.dtstart);
+  return { ...base, calendar, summary: event.summary, allDay, start: parseMockWhen(event.dtstart), end: parseMockWhen(event.dtend), description: event.description ?? null, location: event.location ?? null, rrule: event.rrule ?? null };
 }
 function forecastDays() {
   const conditions = ["cloudy", "partlycloudy", "rainy", "sunny", "lightning-rainy", "snowy", "fog"];
@@ -666,6 +698,14 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { "Content-Type": "image/svg+xml" });
     return res.end(plexPoster(plexImage[2]));
   }
+  const restCalendar = url.pathname.match(/^\/api\/calendars\/(calendar\.[a-z0-9_]+)$/);
+  if (restCalendar) {
+    const from = new Date(url.searchParams.get("start"));
+    const to = new Date(url.searchParams.get("end"));
+    const list = pageEvents.filter((e) => e.calendar === restCalendar[1] && e.start < to && e.end > from).map(restEvent);
+    res.writeHead(200, { "Content-Type": "application/json" });
+    return res.end(JSON.stringify(list));
+  }
   if (url.pathname === "/imageproxy") {
     res.writeHead(200, { "Content-Type": "image/svg+xml" });
     return res.end(logo(url.searchParams.get("path")));
@@ -698,6 +738,23 @@ wss.on("connection", (ws) => {
     if (msg.type === "config/floor_registry/list") return reply(registry.floors);
     if (msg.type === "config/device_registry/list") return reply(registry.devices);
     if (msg.type === "config/entity_registry/list_for_display") return reply({ entity_categories: {}, entities: registry.entities });
+    if (msg.type === "calendar/event/create") {
+      pageEvents.push(applyPageEvent(msg.entity_id, msg.event, { uid: `new${Date.now()}` }));
+      console.log(`[mock-ha] calendar event created: ${msg.event.summary} (${msg.event.dtstart})`);
+      return reply(null);
+    }
+    if (msg.type === "calendar/event/update") {
+      const i = pageEvents.findIndex((e) => e.uid === msg.uid && e.calendar === msg.entity_id);
+      if (i < 0) return ws.send(JSON.stringify({ id: msg.id, type: "result", success: false, error: { code: "not_found", message: "Event not found" } }));
+      pageEvents[i] = applyPageEvent(msg.entity_id, msg.event, { uid: msg.uid });
+      console.log(`[mock-ha] calendar event updated: ${msg.event.summary}`);
+      return reply(null);
+    }
+    if (msg.type === "calendar/event/delete" && pageEvents.some((e) => e.uid === msg.uid)) {
+      pageEvents.splice(pageEvents.findIndex((e) => e.uid === msg.uid), 1);
+      console.log(`[mock-ha] calendar event deleted: ${msg.uid}`);
+      return reply(null);
+    }
     if (msg.type === "calendar/event/delete") {
       const i = mealEvents.findIndex((e) => e.uid === msg.uid);
       if (i >= 0) mealEvents.splice(i, 1);

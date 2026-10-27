@@ -8,6 +8,7 @@ import { createAreaPage } from "./pages/area.js";
 import { createAreasPage } from "./pages/areas.js";
 import { createAmbient } from "./components/ambient.js";
 import { createNowPlayingScreen } from "./components/nowplaying-screen.js";
+import { createCalendarPage } from "./pages/calendar.js";
 import { createClimatePage } from "./pages/climate.js";
 import { createDevicesPage } from "./pages/devices.js";
 import { createEvPage } from "./pages/ev.js";
@@ -146,6 +147,7 @@ function parseRoute(config) {
   const { music } = store.getState();
   const musicOff = music !== null && !music.enabled;
   const { ev, climate, plex, devices, todo, meals, family } = store.getState();
+  if (raw === "calendar" && config?.calendar?.enabled) return { kind: "calendar", id: null };
   if (raw === "family" && family?.enabled) return { kind: "family", id: null };
   if (raw === "meals" && meals?.enabled) return { kind: "meals", id: null };
   if ((raw === "todo" || raw.startsWith("todo/")) && todo?.enabled) return { kind: "todo", id: raw.startsWith("todo/") ? decodeURIComponent(raw.slice(5)) : null };
@@ -189,6 +191,7 @@ function renderSidebar(config) {
     const { music } = store.getState();
     items.push({ href: "#/music", title: music.title ?? t("music"), icon: music.icon, active: route.kind === "music" });
   }
+  if (config.calendar?.enabled) items.push({ href: "#/calendar", title: config.calendar.title ?? t("calp_title"), icon: config.calendar.icon, active: route.kind === "calendar" });
   const { family } = store.getState();
   if (family?.enabled) items.push({ href: "#/family", title: family.title ?? t("fam_title"), icon: family.icon, active: route.kind === "family" });
   const { meals } = store.getState();
@@ -226,7 +229,9 @@ function renderRoute() {
   stage.dataset.page = route.kind === "page" ? route.id : route.kind;
   const ctx = makeContext(config);
 
-  if (route.kind === "family") {
+  if (route.kind === "calendar") {
+    mountSingle(createCalendarPage(config, ctx));
+  } else if (route.kind === "family") {
     mountSingle(createFamilyPage(family, ctx));
   } else if (route.kind === "meals") {
     mountSingle(createMealsPage(meals, ctx));

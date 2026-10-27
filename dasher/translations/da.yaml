@@ -36,6 +36,12 @@ configuration:
   family_children:
     name: Børn på Familiesiden
     description: "Person-entiteter (fx person.emil), der er børn. Alle andre er voksne, som kan godkende pligter. Bruges når Familiesiden er slået til her; en family-sektion i dashboard.yaml med egne personer eller børn har forrang."
+  enable_calendar:
+    name: Kalendersiden
+    description: "Slår Kalendersiden (måneds- og plannervisning af dine Home Assistant-kalendere, med detaljer samt oprettelse, ændring og sletning af aftaler) til med alle kalendere i Home Assistant, uden at redigere dashboard.yaml. En `calendar:`-sektion i dashboard.yaml har forrang (hvilke kalendere, navne, farver); `calendar: false` dér slår siden fra. Genstart appen efter ændring."
+  allow_calendar_editing:
+    name: Tillad redigering af kalenderaftaler
+    description: "Lader folk ved en tablet oprette, ændre og slette aftaler på Kalendersiden (kun på kalendere, der understøtter det). Slå fra for at gøre siden skrivebeskyttet."
   music_assistant_url:
     name: Music Assistant-adresse
     description: "Adressen på din Music Assistant-server, fx http://192.168.1.10:8095. Lad feltet stå tomt, når Music Assistant kører som Home Assistant-app: Dasher finder den så selv. Ellers kræves den til fanerne Udforsk, Album, Kunstnere, Podcasts og Søg."

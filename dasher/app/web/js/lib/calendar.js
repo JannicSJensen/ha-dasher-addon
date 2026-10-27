@@ -5,7 +5,7 @@ export const dayKey = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1
 export const startOfDay = (date, offsetDays = 0) => new Date(date.getFullYear(), date.getMonth(), date.getDate() + offsetDays);
 
 /** All-day dates ("2026-10-10") are local calendar days; date-times carry their own offset. */
-function parseWhen(text) {
+export function parseWhen(text) {
   if (typeof text !== "string") return null;
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
   const date = m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(text);

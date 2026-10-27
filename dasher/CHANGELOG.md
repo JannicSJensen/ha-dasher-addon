@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.39.0
+
+- **Calendar page (Kalender).** A **month** view and a **planner** (the week with a column per calendar), coloured calendar chips with counts that hide and show a calendar, an **event view** (calendar, time, place, notes) and **adding, changing and deleting events**, also repeating ones (only this one or this and the following), on calendars that Home Assistant lets you change. Switch it on with the new app option *Calendar page* (`enable_calendar`) or a `calendar:` section in `dashboard.yaml`; `allow_calendar_editing` makes it read-only. Inspired by [HA Family Hub](https://github.com/JVarhol/HA-Family-Hub), written from scratch.
+- Fixed: colours set with CSS variables on tiles and pages (the people on the Family page, for instance) were not applied, so every avatar had the accent colour.
+
 ## 0.38.0
 
 - **The Family page can be switched on in the app configuration.** New app options *Family page* (`enable_family`) and *Children on the Family page* (`family_children`): switch it on, list the children, restart, and every person of Home Assistant is on the board; no `dashboard.yaml` editing. A `family:` section in the file still takes precedence (names, colours, PIN codes, calendars), and `family: false` there switches the page off.
