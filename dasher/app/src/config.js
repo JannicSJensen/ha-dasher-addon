@@ -466,6 +466,17 @@ function parseClimate(raw, errors) {
   };
 }
 
+function parseEnergy(raw, errors) {
+  const r = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+  if (raw != null && typeof raw !== "boolean" && (typeof raw !== "object" || Array.isArray(raw))) errors.push("energy: use true, false or a mapping.");
+  if (r.enabled != null && ![true, false, "auto"].includes(r.enabled)) errors.push('energy.enabled: use true, false or "auto".');
+  return {
+    enabled: raw === false || r.enabled === false ? false : raw === true || r.enabled === true ? true : "auto",
+    title: r.title != null ? String(r.title) : null,
+    icon: String(r.icon ?? "lightning-bolt-outline"),
+  };
+}
+
 /**
  * Parse and normalise a dashboard.yaml document.
  * Never throws: problems end up in `errors` and offending tiles are dropped.
@@ -558,6 +569,7 @@ export function parseConfig(text, { entityMap = {}, family: familyOption = {}, c
   const music = parseMusic(section("music", raw.music ?? raw.radio), errors);
   const ev = parseEv(section("ev", raw.ev), errors);
   const climate = parseClimate(section("climate", raw.climate), errors);
+  const energy = parseEnergy(section("energy", raw.energy), errors);
   const plex = parsePlex(section("media", raw.plex), errors);
   const devices = parseDevices(section("devices", raw.devices), errors);
   const todo = parseTodo(section("todo", raw.todo), errors);
@@ -576,6 +588,7 @@ export function parseConfig(text, { entityMap = {}, family: familyOption = {}, c
     music,
     ev,
     climate,
+    energy,
     plex,
     devices,
     todo,

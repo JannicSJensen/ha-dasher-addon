@@ -21,6 +21,7 @@ This repository contains the **Dasher** app (add-on) for Home Assistant: a dark,
 * **Ambient screen:** an optional calm clock screen with a breathing orb and quick buttons after a while without touch.
 * **Area pictures:** the dashboard uses the picture of each area in Home Assistant's area settings; areas without one get a built-in room picture (living room, kitchen, bedroom, bathroom, garage, garden ...) uploaded there by the app, chosen from the area's name. Pictures you choose are never changed.
 * **Climate page:** a ring dial per room (drag to set the temperature) with a big average at the top, built from your climate helpers.
+* **Energy page:** a read-only overview of HA's existing Energy configuration: grid, solar, battery and home flows, date navigation, consumption charts, tracked devices and configured gas/water sources. Uses HA's recorded statistics and time zone; see [Energy](dasher/DOCS.md#energy).
 * **Missing entities:** when `dashboard.yaml` uses entities your Home Assistant does not have, the tablet shows a notice and the app log suggests the likely ones; you choose the replacements in the app configuration (*Entity mapping*), and `dashboard.yaml` stays unchanged.
 * **Updates:** an unedited `dashboard.yaml` follows new versions of the example (the old one is saved as `dashboard.yaml.bak`); an edited one is never touched. The current example is always written to `dashboard.example.yaml`.
 * Vanilla JavaScript front end, one small Node.js server, no build step.
@@ -116,6 +117,7 @@ Against a real Home Assistant, create a long-lived access token (Profile → Sec
 | `CONFIG_DIR` | Folder with `dashboard.yaml` and `assets/` (the app uses `/config`). |
 | `DATA_DIR` | Where the "last played" memory is saved (the app uses `/data`). |
 | `PORT` | HTTP port, default 8099. |
+| `MOCK_ENERGY_SETUP` | Mock HA only: `full` (default) for grid/solar/battery/gas/water, `grid` for grid/water, or `none` for an unconfigured Energy dashboard. |
 
 ```
 dasher/                          the app (this folder is what Home Assistant builds)
@@ -123,7 +125,7 @@ dasher/                          the app (this folder is what Home Assistant bui
   run.sh                         container entry point
   DOCS.md, README.md, CHANGELOG.md, icon.png, logo.png, translations/
   app/
-    src/                         server: config, areas, radio, music, calendar, car, climate, Plex, now playing, HA client, policy, HTTP
+    src/                         server: config, areas, radio, music, calendar, car, climate, energy, Plex, now playing, HA client, policy, HTTP
     web/                         front end (index.html, css/, js/core, lib, tiles, pages, views, components)
     examples/dashboard.yaml      copied to the user's config folder on first start
     test/, dev/                  tests and the fake servers (not part of the image)

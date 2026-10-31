@@ -55,6 +55,20 @@ test("rejects requests while disconnected", async () => {
   await assert.rejects(client.request({ type: "get_states" }), /Not connected/);
 });
 
+test("preserves HA error codes so unconfigured Energy can be distinguished from a failure", async (t) => {
+  const { wss, url } = fakeHA((ws, msg) => {
+    if (msg.type === "energy/get_prefs") return ws.send(JSON.stringify({ id: msg.id, type: "result", success: false, error: { code: "not_found", message: "No prefs" } }));
+    const result = msg.type === "get_states" || msg.type.startsWith("config/") ? [] : null;
+    ws.send(JSON.stringify({ id: msg.id, type: "result", success: true, result }));
+  });
+  const client = new HAClient({ wsUrl: url, token: "good", logger: silent });
+  t.after(() => { client.stop(); wss.close(); });
+  const snapshot = once(client, "snapshot");
+  client.start();
+  await snapshot;
+  await assert.rejects(client.request({ type: "energy/get_prefs" }), (err) => err.code === "not_found" && err.message === "No prefs");
+});
+
 test("reports watched entities that Home Assistant does not know", async (t) => {
   const { wss, url } = fakeHA((ws, msg) => {
     const result = msg.type === "get_states" ? [{ entity_id: "light.a", state: "on", attributes: {} }] : null;

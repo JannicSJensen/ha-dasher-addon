@@ -9,6 +9,7 @@ export const BUILTIN_MENU_ITEMS = [
   { id: "devices", section: "devices", title: "dev_devices" },
   { id: "media", section: "plex", title: "plex_media" },
   { id: "ev", section: "ev", title: "ev_car" },
+  { id: "energy", section: "energy", title: "energy_title" },
 ];
 
 export function menuItems(config, state, t, { includePending = false } = {}) {
@@ -20,7 +21,7 @@ export function menuItems(config, state, t, { includePending = false } = {}) {
   const builtins = BUILTIN_MENU_ITEMS.map((item) => {
     const settings = config[item.section];
     const model = state[item.section];
-    const pending = includePending && ["areas", "music"].includes(item.id) && model == null;
+    const pending = includePending && ["areas", "music", "energy"].includes(item.id) && model == null;
     return {
       key: item.id, kind: item.section, id: null,
       href: `#/${item.id}`, title: settings?.title ?? t(item.title), icon: settings?.icon,

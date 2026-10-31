@@ -139,7 +139,7 @@ export class HAClient extends EventEmitter {
         clearTimeout(pending.timer);
         this._pending.delete(msg.id);
         if (msg.success) pending.resolve(msg.result);
-        else pending.reject(new Error(msg.error?.message ?? "Request failed."));
+        else pending.reject(Object.assign(new Error(msg.error?.message ?? "Request failed."), { code: msg.error?.code }));
         break;
       }
     }

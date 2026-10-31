@@ -8,6 +8,7 @@ import { ConfigStore } from "./config.js";
 import { discoverMusicAssistant } from "./discovery.js";
 import { discoverEv, resolveEv } from "./ev.js";
 import { resolveClimate } from "./climate.js";
+import { EnergyService } from "./energy.js";
 import { MealsAI, allergenWarnings } from "./meals-ai.js";
 import { FamilyStore } from "./family.js";
 import { Mealie } from "./mealie.js";
@@ -96,6 +97,8 @@ const configStore = new ConfigStore({
     broadcast("config", configPayload());
   },
 });
+const energy = new EnergyService({ ha, logger });
+energy.on("change", () => broadcast("energy", energy.payload()));
 const radio = new RadioService({ ha, logger });
 radio.on("change", () => broadcast("music", musicPayload()));
 const music = new MusicService({
@@ -249,6 +252,7 @@ const musicPayload = () => {
 /** Recompute everything derived from the config and the registries, and tell the tablets. */
 function rebuild({ refresh }) {
   const current = configStore.current;
+  energy.configure(current.config?.energy);
   areaModel = buildAreaModel({
     registries: ha.registries,
     deviceClasses: ha.deviceClasses,
@@ -364,7 +368,14 @@ ha.on("registries", () => {
   scheduleAreaPictures();
   logger.info(`Area pages: ${areaModel.areas.length} areas, ${areaModel.entities.size} entities`);
 });
-ha.on("status", () => broadcast("status", statusPayload()));
+ha.on("status", (connected) => {
+  broadcast("status", statusPayload());
+  if (connected) {
+    energy.clear();
+    energy.configure(configStore.current.config?.energy);
+    energy.refresh();
+  }
+});
 ha.on("state", (state) => {
   nowPlaying.observe(state);
   broadcast("state", state);
@@ -470,6 +481,7 @@ function handleEvents(req, res) {
   send(res, "music", musicPayload());
   send(res, "ev", evPayload());
   send(res, "climate", climatePayload());
+  send(res, "energy", energy.payload());
   send(res, "plex", plexPayload());
   send(res, "devices", devicesPayload());
   send(res, "meals", mealsPayload());
@@ -956,6 +968,17 @@ async function handleCalendarView(res, params) {
   }
 }
 
+async function handleEnergy(res, params) {
+  if (!configStore.current.config?.energy || configStore.current.config.energy.enabled === false) return json(res, 404, { error: "The Energy page is not available." });
+  try {
+    const data = await energy.overview({ date: params.get("date"), period: params.get("period") ?? "day" });
+    return json(res, 200, data);
+  } catch (err) {
+    logger.warn(`Energy page failed: ${err.message}`);
+    return json(res, err.status ?? 502, { error: err.message });
+  }
+}
+
 async function handleCalendarEvent(req, res) {
   if (!calendarPageEnabled()) return json(res, 404, { error: "The calendar page is not available." });
   if (!CALENDAR_EDIT) return json(res, 403, { error: "Editing the calendar is switched off." });
@@ -1134,6 +1157,7 @@ const server = http.createServer(async (req, res) => {
       if (p === "/api/config") return json(res, 200, configPayload());
       if (p === "/api/calendar") return await handleCalendar(res, url.searchParams);
       if (p === "/api/calendar/view") return await handleCalendarView(res, url.searchParams);
+      if (p === "/api/energy") return await handleEnergy(res, url.searchParams);
       if (p === "/api/meals") return json(res, 200, mealsPayload());
       if (p === "/api/family") return json(res, 200, familyPayload());
       if (p === "/api/meals/cookbook") return await handleCookbook(res, url.searchParams);
@@ -1187,6 +1211,7 @@ allowed = new Set(configStore.current.entities);
 ha.setWatched(allowed, { refresh: false });
 ha.start();
 radio.start();
+setInterval(() => ha.connected && energy.refresh(), 60_000).unref();
 setInterval(rescanImages, 3000).unref();
 
 server.listen(PORT, () => logger.info(`Dasher ${version} listening on :${PORT} (config: ${configStore.file})`));

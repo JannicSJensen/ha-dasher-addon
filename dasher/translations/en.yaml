@@ -17,7 +17,7 @@ configuration:
         description: "The entity of your Home Assistant to use instead, for example sensor.fordpass_elveh."
   menu_items:
     name: Menu items
-    description: "Configure visibility, label, icon and order for built-in and dashboard pages. Built-in IDs: climate, areas, music, calendar, family, meals, todo, devices, media, ev. For a dashboard page use its id (for example home), or page:home. Omitted fields keep existing settings; these overrides take precedence over dashboard.yaml and the Family/Calendar switches. Restart the app after changing."
+    description: "Configure visibility, label, icon and order for built-in and dashboard pages. Built-in IDs: climate, areas, music, calendar, family, meals, todo, devices, media, ev, energy. For a dashboard page use its id (for example home), or page:home. Omitted fields keep existing settings; these overrides take precedence over dashboard.yaml and the Family/Calendar switches. Restart the app after changing."
     fields:
       id:
         name: Menu item ID

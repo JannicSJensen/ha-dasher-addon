@@ -17,7 +17,7 @@ configuration:
         description: "Entiteten i din Home Assistant der skal bruges i stedet, fx sensor.fordpass_elveh."
   menu_items:
     name: Menupunkter
-    description: "Indstil synlighed, navn, ikon og rækkefølge for indbyggede sider og dashboardsider. Indbyggede id'er: climate, areas, music, calendar, family, meals, todo, devices, media, ev. Brug en dashboardsides id (fx home) eller page:home. Udeladte felter bevarer eksisterende indstillinger; disse valg har forrang over dashboard.yaml og Familie-/Kalenderkontakterne. Genstart appen efter ændring."
+    description: "Indstil synlighed, navn, ikon og rækkefølge for indbyggede sider og dashboardsider. Indbyggede id'er: climate, areas, music, calendar, family, meals, todo, devices, media, ev, energy. Brug en dashboardsides id (fx home) eller page:home. Udeladte felter bevarer eksisterende indstillinger; disse valg har forrang over dashboard.yaml og Familie-/Kalenderkontakterne. Genstart appen efter ændring."
     fields:
       id:
         name: Menupunktets id

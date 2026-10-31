@@ -7,6 +7,7 @@
 import fs from "node:fs";
 import http from "node:http";
 import { WebSocketServer } from "ws";
+import { MOCK_ENERGY_CONFIG, MOCK_ENERGY_INFO, mockEnergyMetadata, mockEnergyPreferences, mockEnergyStatistics } from "./mock-energy.js";
 
 const now = new Date();
 const day = new Date(now);
@@ -725,6 +726,14 @@ wss.on("connection", (ws) => {
     if (msg.type === "auth") return ws.send(JSON.stringify({ type: msg.access_token ? "auth_ok" : "auth_invalid", ha_version: "mock" }));
     if (msg.type === "ping") return ws.send(JSON.stringify({ id: msg.id, type: "pong" }));
     if (msg.type === "get_states") return reply([...states.values()]);
+    if (msg.type === "get_config") return reply(MOCK_ENERGY_CONFIG);
+    if (msg.type === "energy/get_prefs") {
+      const prefs = mockEnergyPreferences(process.env.MOCK_ENERGY_SETUP);
+      return prefs ? reply(prefs) : ws.send(JSON.stringify({ id: msg.id, type: "result", success: false, error: { code: "not_found", message: "No prefs" } }));
+    }
+    if (msg.type === "energy/info") return reply(MOCK_ENERGY_INFO);
+    if (msg.type === "recorder/get_statistics_metadata") return reply(mockEnergyMetadata(msg.statistic_ids));
+    if (msg.type === "recorder/statistics_during_period") return reply(mockEnergyStatistics(msg, { mode: process.env.MOCK_ENERGY_SETUP }));
     if (msg.type === "config/area_registry/list") return reply(registry.areas);
     if (msg.type === "config/area_registry/update") {
       const area = registry.areas.find((a) => a.area_id === msg.area_id);

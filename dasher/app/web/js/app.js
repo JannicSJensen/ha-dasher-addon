@@ -11,6 +11,7 @@ import { createAmbient } from "./components/ambient.js";
 import { createNowPlayingScreen } from "./components/nowplaying-screen.js";
 import { createCalendarPage } from "./pages/calendar.js";
 import { createClimatePage } from "./pages/climate.js";
+import { createEnergyPage } from "./pages/energy.js";
 import { createDevicesPage } from "./pages/devices.js";
 import { createEvPage } from "./pages/ev.js";
 import { createFamilyPage } from "./pages/family.js";
@@ -31,6 +32,7 @@ const store = new Store({
   music: null,
   ev: null,
   climate: null,
+  energy: null,
   plex: null,
   devices: null,
   todo: null,
@@ -167,7 +169,7 @@ function mountSingle(page) {
 }
 
 function renderRoute() {
-  const { config, areas, music, ev, climate, plex, devices, todo, meals, family } = store.getState();
+  const { config, areas, music, ev, climate, energy, plex, devices, todo, meals, family } = store.getState();
   destroyTiles();
   document.querySelectorAll(".modal").forEach((m) => m.remove());
   route = parseRoute(config);
@@ -192,6 +194,8 @@ function renderRoute() {
     mountSingle(createPlexPage(plex, ctx));
   } else if (route.kind === "climate") {
     mountSingle(createClimatePage(climate, ctx));
+  } else if (route.kind === "energy") {
+    mountSingle(createEnergyPage(energy ?? config.energy, ctx));
   } else if (route.kind === "ev") {
     mountSingle(createEvPage(ev, ctx));
   } else if (route.kind === "music") {
@@ -387,6 +391,15 @@ store.subscribe((s) => s.climate, () => {
   else renderSidebar(config);
 });
 
+store.subscribe((s) => s.energy, () => {
+  const { config, energy } = store.getState();
+  if (!config) return;
+  const page = mounted[0]?.tile;
+  if (route.kind === "energy" && energy?.enabled && page?.setModel) page.setModel(energy);
+  else if (route.kind === "energy" || location.hash === "#/energy") renderRoute();
+  else renderSidebar(config);
+});
+
 store.subscribe((s) => s.plex, () => {
   const { config } = store.getState();
   if (!config) return;
@@ -471,6 +484,7 @@ connect({
   music: (music) => setIfChanged("music", music),
   ev: (ev) => setIfChanged("ev", ev),
   climate: (climate) => setIfChanged("climate", climate),
+  energy: (energy) => setIfChanged("energy", energy),
   plex: (plex) => setIfChanged("plex", plex),
   devices: (devices) => setIfChanged("devices", devices),
   todo: (todo) => setIfChanged("todo", todo),

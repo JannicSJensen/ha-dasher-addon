@@ -63,6 +63,7 @@ Open **Settings → Apps → Dasher → Configuration → Menu items**. Add a ro
 | `devices` | Devices |
 | `media` | Plex Media (`plex:` in the dashboard file) |
 | `ev` | Car |
+| `energy` | Energy (Home Assistant's configured energy sources and devices) |
 
 For example, in the app configuration's YAML editor:
 
@@ -371,6 +372,29 @@ climate:
 * Without a `climate:` section the page appears on its own when climate helpers exist.
 * `entities` wins over `source`, and its entities take part in entity mapping.
 * A change of the setpoint is sent half a second after the last tap. Cards of entities that are unavailable are dimmed.
+
+## Energy
+
+The **Energy** page reuses the sources and individual devices already configured in Home Assistant's **Energy dashboard**. No separate entity list or integration is needed. It appears automatically when HA has configured energy sources; use the `energy` row in the app's **Menu items** option to show/hide it, change its label or icon, or move it.
+
+The overview has **day, week, month and year** navigation, an electricity-flow diagram, grid import/export, solar production, battery charging/discharging, home consumption, a consumption chart, and the individual devices tracked by HA. Configured gas and water sources are shown separately with their own units. Available recorded costs and consumption percentages are shown alongside the energy values.
+
+Values come from Home Assistant's **Recorder statistics**, not from current sensor readings or differences between raw meter states. Electricity and energy-based gas statistics use **kWh**; water and volume-based gas statistics use **m³**, converted by HA so mixed meter units remain comparable. Dates use **Home Assistant's time zone**, including daylight-saving changes; weeks start on Monday. The page refreshes every five minutes while open. Recorder data can lag behind live meters, just as it does in HA.
+
+```yaml
+energy:
+  enabled: auto                # auto (default), true or false
+  title: Energy                # optional; translated by default
+  icon: lightning-bolt-outline
+```
+
+`energy: false` also disables the page; `energy: true` forces it on, including the setup explanation when HA has no sources yet. As with other pages, the app's Menu items overrides take precedence over these display settings.
+
+The page is **read-only**, also when the rest of Dasher permits commands. It never edits HA's Energy configuration or controls devices. Missing statistics and unsupported units are reported instead of being displayed as zero; if no sources are configured, the page explains that Energy must first be set up in Home Assistant.
+
+Costs use HA's recorded cost/compensation statistics, never today's price multiplied by historical consumption. Standing-charge adjustments are not reconstructed, and these figures are not billing-grade totals. Solar self-consumption is shown without a battery; the page does not guess the origin of energy stored in a battery.
+
+Anyone who can reach Dasher can read the configured Energy statistics and costs through this page. Keep the tablet port on a trusted LAN, as described under [Security](#security).
 
 ## Media
 
