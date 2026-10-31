@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.40.0
 
 - **All menu items are configurable in the app configuration.** The new *Menu items* option controls visibility, labels, icons and order for every built-in and custom dashboard page. Overrides preserve detailed dashboard settings; the first visible, available item becomes the start and idle-return page.
 

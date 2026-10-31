@@ -68,12 +68,17 @@ test("collectEntities handles `entities` lists", () => {
   assert.deepEqual([...collectEntities({ entities: ["light.a", "light.b"] })], ["light.a", "light.b"]);
 });
 
-test("app version in config.yaml matches package.json", async () => {
+test("app, package, lockfile and latest changelog release versions match", async () => {
   const { readFileSync } = await import("node:fs");
   const { default: YAML } = await import("yaml");
   const addon = YAML.parse(readFileSync(new URL("../../config.yaml", import.meta.url), "utf8"));
   const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
+  const lock = JSON.parse(readFileSync(new URL("../package-lock.json", import.meta.url), "utf8"));
+  const changelog = readFileSync(new URL("../../CHANGELOG.md", import.meta.url), "utf8");
   assert.equal(addon.version, pkg.version);
+  assert.equal(lock.version, addon.version);
+  assert.equal(lock.packages[""].version, addon.version);
+  assert.equal(changelog.match(/^## (\d+\.\d+\.\d+)$/m)?.[1], addon.version);
 });
 
 test("areas section: defaults, validation and override entities", () => {

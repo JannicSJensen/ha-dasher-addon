@@ -129,7 +129,9 @@ dasher/                          the app (this folder is what Home Assistant bui
     test/, dev/                  tests and the fake servers (not part of the image)
 ```
 
-Keep the version in `dasher/config.yaml` and `dasher/app/package.json` identical (a test checks it), and add a line to `dasher/CHANGELOG.md` for every release: Home Assistant only offers an update when the version changes.
+For every user-visible app update, bump the version in `dasher/config.yaml`, `dasher/app/package.json` and both root version fields in `dasher/app/package-lock.json`, and add a matching release heading to `dasher/CHANGELOG.md` (a test checks they agree). Run `npm version <version> --no-git-tag-version` from `dasher/app/` to update the package and lockfile together, then update the app definition and changelog.
+
+Commit and push these changes to `main`: Home Assistant only offers an update after it refreshes the repository and sees a newer version in `dasher/config.yaml`. If the update is not listed yet, use **Settings → Apps → App store → ⋮ → Check for updates**, then open Dasher and install the update.
 
 ## License
 
