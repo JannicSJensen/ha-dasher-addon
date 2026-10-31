@@ -371,6 +371,7 @@ climate:
 
 * Without a `climate:` section the page appears on its own when climate helpers exist.
 * `entities` wins over `source`, and its entities take part in entity mapping.
+* **−** / **+** changes the setpoint by **0.5°C** per tap for every entity, within its minimum/maximum temperature limits, regardless of the step reported by HA. Dragging the dial still follows the entity's reported step.
 * A change of the setpoint is sent half a second after the last tap. Cards of entities that are unavailable are dimmed.
 
 ## Energy
@@ -637,7 +638,7 @@ With the **Mealie** app running and Home Assistant's [Mealie integration](https:
 Every area in Home Assistant (Settings → Areas) gets a picture card on an **Areas** page, reachable from the extra entry at the bottom of the sidebar. A card shows the area name, its floor (or how many lights are on) and opens a sub-page with:
 
 * a large picture with the area name and its **temperature**, **humidity** and **windows** (shown only when the area has such sensors),
-* below it, a `photo` tile for every light, fan, cover, media player and **thermostat** (`climate`) in the area. Lights have the brightness slider; a thermostat shows its status and temperature, switches on and off when tapped and has **+** / **−** for the setpoint. Members of a light group or thermostat group are hidden behind the group.
+* below it, a `photo` tile for every light, fan, cover, media player and **thermostat** (`climate`) in the area. Lights have the brightness slider; a thermostat shows its status and temperature, switches on and off when tapped and has **+** / **−** for the setpoint, in **0.5°C** steps within its temperature limits. Members of a light group or thermostat group are hidden behind the group.
 * **Unavailable devices are not shown** (they come back by themselves when they are available again).
 * **Edit** (the pencil above the tiles) lets you take devices off the overview: each tile gets a **×**, and the removed ones are listed under *Removed devices* with a **+** to bring them back. Press **Done** to leave.
 

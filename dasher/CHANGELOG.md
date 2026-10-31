@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.41.1
+
+- **Half-degree climate buttons.** The Climate page and room thermostat tiles now change the setpoint by 0.5°C per −/+ tap for every entity, rather than using HA's reported temperature step. Entity temperature limits are preserved; dial dragging still uses the entity's reported step.
+
 ## 0.41.0
 
 - **Energy overview.** A new read-only Energy page uses Home Assistant's existing energy sources and tracked devices. Day/week/month/year navigation, electricity flows, consumption charts, grid import/export, solar and battery totals, recorded costs, and configured gas/water sources. Dates follow HA's time zone, including daylight-saving changes. The `energy` Menu items row controls visibility, label, icon and order.

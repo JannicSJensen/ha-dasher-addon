@@ -78,3 +78,28 @@ test("climateStatus, niceName, stepTarget, powerCall and summary", () => {
   ]);
   assert.deepEqual([s.total, s.on, s.average], [3, 1, 21]);
 });
+
+test("temperature buttons always change by half a degree, independent of the entity step", () => {
+  for (const step of [0.1, 0.5, 1, 2]) {
+    const range = { step, min: 5, max: 30 };
+    assert.equal(stepTarget(20, 1, range), 20.5);
+    assert.equal(stepTarget(20, -1, range), 19.5);
+    assert.equal(stepTarget(20.1, 1, range), 20.6);
+    assert.equal(stepTarget(20.1, -1, range), 19.6);
+    let target = 20;
+    for (let i = 0; i < 4; i++) target = stepTarget(target, 1, range);
+    assert.equal(target, 22);
+    for (let i = 0; i < 4; i++) target = stepTarget(target, -1, range);
+    assert.equal(target, 20);
+  }
+});
+
+test("half-degree temperature buttons respect each entity's temperature limits", () => {
+  const range = { min: 5, max: 30 };
+  assert.equal(stepTarget(5, -1, range), 5);
+  assert.equal(stepTarget(30, 1, range), 30);
+  assert.equal(stepTarget(5.2, -1, range), 5);
+  assert.equal(stepTarget(29.8, 1, range), 30);
+  assert.equal(stepTarget(5, 1, range), 5.5);
+  assert.equal(stepTarget(30, -1, range), 29.5);
+});

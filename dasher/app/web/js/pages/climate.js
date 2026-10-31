@@ -54,7 +54,8 @@ export function createClimatePage(model, ctx) {
     };
     const nudge = (direction) => {
       const current = state.pending ?? entity()?.attributes?.temperature;
-      state.pending = stepTarget(current, direction, range());
+      const { min, max } = range();
+      state.pending = stepTarget(current, direction, { min, max });
       paintTarget();
       clearTimeout(state.timer);
       state.timer = setTimeout(() => {

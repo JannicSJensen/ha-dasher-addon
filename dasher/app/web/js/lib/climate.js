@@ -19,10 +19,10 @@ export const niceName = (name) => {
   return text ? text.charAt(0).toLocaleUpperCase() + text.slice(1) : text;
 };
 
-/** The next setpoint after pressing + or - (`direction` 1 / -1), snapped to the step and kept in range. */
-export function stepTarget(current, direction, { step = 0.5, min = 5, max = 35 } = {}) {
+/** The next setpoint after pressing + or - (`direction` 1 / -1), changed by 0.5 degrees and kept in range. */
+export function stepTarget(current, direction, { min = 5, max = 35 } = {}) {
   const base = Number.isFinite(Number(current)) ? Number(current) : min;
-  const next = Math.round((base + direction * step) / step) * step;
+  const next = base + direction * 0.5;
   return Math.min(max, Math.max(min, Number(next.toFixed(2))));
 }
 

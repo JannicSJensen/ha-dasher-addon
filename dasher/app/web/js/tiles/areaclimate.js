@@ -48,7 +48,7 @@ export function createAreaClimateTile(cfg, ctx) {
   let timer = null;
   const range = () => {
     const a = getState(id)?.attributes ?? {};
-    return { step: Number(a.target_temp_step ?? a.target_temperature_step) || 0.5, min: a.min_temp ?? 5, max: a.max_temp ?? 35 };
+    return { min: a.min_temp ?? 5, max: a.max_temp ?? 35 };
   };
   const nudge = (direction) => {
     pending = stepTarget(pending ?? getState(id)?.attributes?.temperature, direction, range());
