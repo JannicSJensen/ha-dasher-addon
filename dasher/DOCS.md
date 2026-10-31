@@ -20,6 +20,7 @@ If the file has a mistake, the page shows what is wrong instead of failing silen
 | `log_level` | `info` | `debug`, `info`, `warning` or `error`. |
 | `read_only` | `false` | Show states but refuse every command from tablets. |
 | `entity_map` | empty | [Entity mapping](#missing-entities): a list of rows, each with the entity id as written in `dashboard.yaml` (*From*) and the entity of your Home Assistant to use instead (*To*). |
+| `menu_items` | empty | [Menu items](#menu-items): configure visibility, label, icon and order for every built-in and custom dashboard page. Empty keeps the existing menu. |
 | `music_assistant_url` | empty | Address of your Music Assistant server, e.g. `http://192.168.1.10:8095`. **Leave it empty when Music Assistant runs as a Home Assistant app**: Dasher then finds it through the Supervisor (and keeps looking if Music Assistant starts later). Only needed for the browsing tabs of the [Music page](#music). |
 | `music_assistant_token` | empty | A long-lived access token from Music Assistant (*Settings → Profile → Long-lived access tokens*). Needed for the browsing tabs, also when Music Assistant runs as an app. Only used to read the library. |
 | `plex_url` | empty | Address of your Plex server **as your players reach it**, e.g. `http://192.168.1.10:32400`. Only needed to play Plex on Apple TVs and DLNA players with [stream links](#stream-links-apple-tv-dlna); the [Media page](#media) itself uses Home Assistant's Plex integration. |
@@ -29,14 +30,64 @@ If the file has a mistake, the page shows what is wrong instead of failing silen
 
 | `allow_area_editing` | `true` | Lets people at a tablet remove devices from the [area pages](#areas) and cards from the [Devices page](#devices), and bring them back. Turn off to forbid it. Always off in read-only mode. |
 | `allow_family_editing` | `true` | Lets people at a tablet add and change chores and rewards, mark chores done, approve them and spend stars on the [family page](#family-board-familie). Turn off to make it read-only. |
-| `enable_calendar` | `false` | Switches on the [Calendar page](#calendar-page-kalender) with every calendar of Home Assistant, without editing `dashboard.yaml`. A `calendar:` section in the file takes precedence (and `calendar: false` there switches the page off). |
+| `enable_calendar` | `false` | Switches on the [Calendar page](#calendar-page-kalender) with every calendar of Home Assistant, without editing `dashboard.yaml`. A `calendar:` section in the file takes precedence (and `calendar: false` there switches the page off), unless overridden by `menu_items`. |
 | `allow_calendar_editing` | `true` | Lets people at a tablet add, change and delete events on the Calendar page (only on calendars that support it). Turn off to make the page read-only. |
-| `enable_family` | `false` | Switches on the [Family page](#family-board-familie) with every person of Home Assistant, without editing `dashboard.yaml`. A `family:` section in the file takes precedence (and `family: false` there switches the page off). |
+| `enable_family` | `false` | Switches on the [Family page](#family-board-familie) with every person of Home Assistant, without editing `dashboard.yaml`. A `family:` section in the file takes precedence (and `family: false` there switches the page off), unless overridden by `menu_items`. |
 | `family_children` | empty | Person entities (e.g. `person.emil`) that are children when the page is switched on here; everybody else is a grown-up who can approve chores. |
 | `allow_area_picture_upload` | `true` | Lets the app give areas that have no picture a built-in room picture **in Home Assistant itself** (see [Pictures](#pictures)). Turn off to keep the pictures out of Home Assistant's area settings. |
 | `allow_meal_editing` | `true` | Lets people at a tablet change the [meal plan](#meal-plan-madplan): edit days and rules, and start the AI (which may cost money with your AI provider). Off = the page only shows the plan. |
 
 Changes to the options take effect when the app is restarted.
+
+### Menu items
+
+Open **Settings → Apps → Dasher → Configuration → Menu items**. Add a row for each page you want to change; pages without a row keep their existing settings.
+
+| Field | Description |
+| --- | --- |
+| `id` | Required. Built-in menu ID from the table below, or a page's `id` from `dashboard.yaml` (for example `home` or `garage`). `page:home` also works; use the `page:` prefix if a custom ID is the same as a built-in ID. |
+| `visible` | Show or hide the page. Showing a built-in also enables its page, including Calendar and Family. Music and Media still need compatible players. Omit to preserve the existing enabled/automatic setting. |
+| `title` | Menu label. Empty or omitted keeps the dashboard's label or the translated default. |
+| `icon` | Material Design Icon name, with or without `mdi:`. Empty or omitted keeps the existing icon. |
+| `order` | Non-negative position starting at `0`. Lower numbers appear first. Omitted uses the original position (custom pages first, then built-ins in the order below); ties keep the original order. |
+
+| Built-in ID | Page |
+| --- | --- |
+| `climate` | Climate |
+| `areas` | Areas (including individual area pages) |
+| `music` | Music Assistant |
+| `calendar` | Calendar |
+| `family` | Family |
+| `meals` | Meal plan |
+| `todo` | To-do lists |
+| `devices` | Devices |
+| `media` | Plex Media (`plex:` in the dashboard file) |
+| `ev` | Car |
+
+For example, in the app configuration's YAML editor:
+
+```yaml
+menu_items:
+  - id: calendar
+    visible: true
+    title: Our calendar
+    icon: mdi:calendar-month
+    order: 0
+  - id: home
+    title: Overview
+    order: 1
+  - id: garage
+    visible: false
+  - id: music
+    title: Speakers
+    icon: mdi:speaker
+```
+
+Restart the app after saving. These fields take precedence over menu settings in `dashboard.yaml` and the `enable_calendar` / `enable_family` switches, without rewriting your dashboard file. Other settings (entities, tabs, family members, PINs, etc.) are preserved.
+
+The first visible, available menu item is the start page and the page used by `idle_return`. Hidden pages are omitted from navigation; old links and navigation buttons targeting them fall back to the first available page. If every page is hidden, the dashboard shows a message explaining how to enable one.
+
+Hiding a custom page does not remove its tiles or entities from the configuration and is not an access-control boundary. Use `read_only` or remove entities from the dashboard file to restrict control.
 
 ## Security
 
@@ -64,7 +115,7 @@ pages:
     tiles: [ ... ]
 ```
 
-Each page is a grid of `columns` x `rows` equally sized cells that fills the screen. A tile is placed with `col`/`row` (starting at 1) and covers `w` x `h` cells (default 1 x 1). Omit `col`/`row` to let tiles flow automatically. With a single page the sidebar is hidden.
+Each page is a grid of `columns` x `rows` equally sized cells that fills the screen. A tile is placed with `col`/`row` (starting at 1) and covers `w` x `h` cells (default 1 x 1). Omit `col`/`row` to let tiles flow automatically. With fewer than two visible, available menu items the sidebar is hidden.
 
 Icons: use names from <https://pictogrammers.com/library/mdi/>, with or without the `mdi:` prefix.
 

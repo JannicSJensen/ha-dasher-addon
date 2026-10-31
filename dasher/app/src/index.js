@@ -88,6 +88,7 @@ const configStore = new ConfigStore({
   dir: configDir,
   logger,
   entityMapOption: options.entity_map ?? process.env.ENTITY_MAP ?? [],
+  menuItemsOption: options.menu_items ?? [],
   calendarPageOption: options.enable_calendar === true || process.env.ENABLE_CALENDAR === "1",
   familyOption: { enabled: options.enable_family === true || process.env.ENABLE_FAMILY === "1", children: options.family_children ?? [] },
   onChange: () => {

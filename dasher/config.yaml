@@ -25,6 +25,7 @@ options:
   log_level: info
   read_only: false
   entity_map: []
+  menu_items: []
   allow_todo_management: true
   allow_area_editing: true
   allow_area_picture_upload: true
@@ -40,6 +41,12 @@ schema:
   entity_map:
     - from: str
       to: str
+  menu_items:
+    - id: str
+      visible: bool?
+      title: str?
+      icon: str?
+      order: int(0,)?
   allow_todo_management: bool
   allow_area_editing: bool
   allow_area_picture_upload: bool

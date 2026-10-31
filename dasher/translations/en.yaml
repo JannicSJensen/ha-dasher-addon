@@ -15,6 +15,25 @@ configuration:
       to:
         name: Home Assistant entity
         description: "The entity of your Home Assistant to use instead, for example sensor.fordpass_elveh."
+  menu_items:
+    name: Menu items
+    description: "Configure visibility, label, icon and order for built-in and dashboard pages. Built-in IDs: climate, areas, music, calendar, family, meals, todo, devices, media, ev. For a dashboard page use its id (for example home), or page:home. Omitted fields keep existing settings; these overrides take precedence over dashboard.yaml and the Family/Calendar switches. Restart the app after changing."
+    fields:
+      id:
+        name: Menu item ID
+        description: "A built-in ID or a page id from dashboard.yaml. Prefix custom ids with page: if they collide with a built-in ID."
+      visible:
+        name: Visible
+        description: "Show or hide this page. Showing a built-in page also enables it; Music and Media still need compatible players. Leave unset to keep the existing setting."
+      title:
+        name: Label
+        description: "The menu label. Leave empty to keep the existing or translated label."
+      icon:
+        name: Icon
+        description: "A Material Design Icon name, for example mdi:home. Leave empty to keep the existing icon."
+      order:
+        name: Order
+        description: "Position starting at 0. Lower numbers appear first; ties keep the original order. Leave unset to keep the original position. The first visible page is the home and idle-return page."
   allow_todo_management:
     name: Allow changing to-do lists
     description: "Lets people at a tablet create, rename and delete to-do lists of the Local To-do integration (editing the items of a list is always possible). Turn off to forbid it."

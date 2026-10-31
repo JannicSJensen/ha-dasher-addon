@@ -4,6 +4,7 @@ import { icon } from "./core/icons.js";
 import { Store } from "./core/store.js";
 import { collectEntities } from "./lib/entities.js";
 import { makeTranslator } from "./lib/i18n.js";
+import { menuItemActive, menuItems, menuRoute } from "./lib/menu.js";
 import { createAreaPage } from "./pages/area.js";
 import { createAreasPage } from "./pages/areas.js";
 import { createAmbient } from "./components/ambient.js";
@@ -141,76 +142,21 @@ function destroyTiles() {
 }
 
 function parseRoute(config) {
-  const raw = location.hash.replace(/^#\/?/, "");
-  const { areas } = store.getState();
-  const areasOff = areas !== null && !areas.enabled; // known to be disabled, as opposed to not loaded yet
-  const { music } = store.getState();
-  const musicOff = music !== null && !music.enabled;
-  const { ev, climate, plex, devices, todo, meals, family } = store.getState();
-  if (raw === "calendar" && config?.calendar?.enabled) return { kind: "calendar", id: null };
-  if (raw === "family" && family?.enabled) return { kind: "family", id: null };
-  if (raw === "meals" && meals?.enabled) return { kind: "meals", id: null };
-  if ((raw === "todo" || raw.startsWith("todo/")) && todo?.enabled) return { kind: "todo", id: raw.startsWith("todo/") ? decodeURIComponent(raw.slice(5)) : null };
-  if (raw === "devices" && devices?.enabled) return { kind: "devices", id: null };
-  if (raw === "media" && plex?.enabled) return { kind: "plex", id: null };
-  if (raw === "ev" && ev?.enabled) return { kind: "ev", id: null };
-  if (raw === "climate" && climate?.enabled) return { kind: "climate", id: null };
-  if ((raw === "music" || raw === "radio") && !musicOff) return { kind: "music", id: null };
-  if (raw === "areas" && !areasOff) return { kind: "areas", id: null };
-  if (raw.startsWith("area/") && !areasOff) return { kind: "area", id: decodeURIComponent(raw.slice(5)) };
-  const page = config.pages.find((p) => p.id === raw) ?? config.pages[0];
-  return { kind: "page", id: page.id };
+  return menuRoute(location.hash, menuItems(config, store.getState(), t, { includePending: true }));
 }
 
-const musicEnabled = () => Boolean(store.getState().music?.enabled);
-
-const areasEnabled = () => {
-  const { areas } = store.getState();
-  return Boolean(areas?.enabled);
-};
-
 function renderSidebar(config) {
-  const items = config.pages.map((page) => ({
-    href: `#/${page.id}`,
-    title: page.title,
-    icon: page.icon,
-    active: route.kind === "page" && route.id === page.id,
-  }));
-  const { climate } = store.getState();
-  if (climate?.enabled) items.push({ href: "#/climate", title: climate.title ?? t("climate"), icon: climate.icon, active: route.kind === "climate" });
-  if (areasEnabled()) {
-    const { areas } = store.getState();
-    items.push({
-      href: "#/areas",
-      title: areas.title ?? t("areas"),
-      icon: areas.icon,
-      active: route.kind === "areas" || route.kind === "area",
-    });
-  }
-  if (musicEnabled()) {
-    const { music } = store.getState();
-    items.push({ href: "#/music", title: music.title ?? t("music"), icon: music.icon, active: route.kind === "music" });
-  }
-  if (config.calendar?.enabled) items.push({ href: "#/calendar", title: config.calendar.title ?? t("calp_title"), icon: config.calendar.icon, active: route.kind === "calendar" });
-  const { family } = store.getState();
-  if (family?.enabled) items.push({ href: "#/family", title: family.title ?? t("fam_title"), icon: family.icon, active: route.kind === "family" });
-  const { meals } = store.getState();
-  if (meals?.enabled) items.push({ href: "#/meals", title: meals.title ?? t("meals_title"), icon: meals.icon, active: route.kind === "meals" });
-  const { todo } = store.getState();
-  if (todo?.enabled) items.push({ href: "#/todo", title: todo.title ?? t("todo_title"), icon: todo.icon, active: route.kind === "todo" });
-  const { devices } = store.getState();
-  if (devices?.enabled) items.push({ href: "#/devices", title: devices.title ?? t("dev_devices"), icon: devices.icon, active: route.kind === "devices" });
-  const { plex } = store.getState();
-  if (plex?.enabled) items.push({ href: "#/media", title: plex.title ?? t("plex_media"), icon: plex.icon, active: route.kind === "plex" });
-  const { ev } = store.getState();
-  if (ev?.enabled) items.push({ href: "#/ev", title: ev.title ?? t("ev_car"), icon: ev.icon, active: route.kind === "ev" });
+  const next = parseRoute(config);
+  if (next.kind !== route.kind || next.id !== route.id) return renderRoute();
+  const items = menuItems(config, store.getState(), t);
   setChildren(
     sidebar,
     items.map((item) =>
-      h("a", { class: `sidebar__item${item.active ? " is-active" : ""}`, href: item.href, title: item.title, "aria-label": item.title }, icon(item.icon)),
+      h("a", { class: `sidebar__item${menuItemActive(item, route) ? " is-active" : ""}`, href: item.href, title: item.title, "aria-label": item.title }, icon(item.icon)),
     ),
   );
   sidebar.hidden = items.length < 2;
+  resetIdle();
 }
 
 function mountSingle(page) {
@@ -229,7 +175,10 @@ function renderRoute() {
   stage.dataset.page = route.kind === "page" ? route.id : route.kind;
   const ctx = makeContext(config);
 
-  if (route.kind === "calendar") {
+  if (route.kind === "empty") {
+    stage.style.gridTemplateColumns = stage.style.gridTemplateRows = "1fr";
+    setChildren(stage, h("div", { class: "notice" }, icon("view-dashboard-outline"), h("h2", null, t("menu_empty")), h("p", null, t("menu_empty_hint"))));
+  } else if (route.kind === "calendar") {
     mountSingle(createCalendarPage(config, ctx));
   } else if (route.kind === "family") {
     mountSingle(createFamilyPage(family, ctx));
@@ -360,9 +309,12 @@ function applyConfig() {
 function resetIdle() {
   clearTimeout(idleTimer);
   const { config } = store.getState();
-  if (!config?.idle_return || (config.pages.length < 2 && !areasEnabled() && !musicEnabled())) return;
+  if (!config?.idle_return) return;
+  const items = menuItems(config, store.getState(), t);
+  if (items.length < 2) return;
+  const first = items[0];
   idleTimer = setTimeout(() => {
-    if (route.kind !== "page" || route.id !== config.pages[0].id) location.hash = `#/${config.pages[0].id}`;
+    if (route.kind !== first.kind || route.id !== first.id) location.hash = first.href;
   }, config.idle_return * 1000);
 }
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **All menu items are configurable in the app configuration.** The new *Menu items* option controls visibility, labels, icons and order for every built-in and custom dashboard page. Overrides preserve detailed dashboard settings; the first visible, available item becomes the start and idle-return page.
+
 ## 0.39.0
 
 - **Calendar page (Kalender).** A **month** view and a **planner** (the week with a column per calendar), coloured calendar chips with counts that hide and show a calendar, an **event view** (calendar, time, place, notes) and **adding, changing and deleting events**, also repeating ones (only this one or this and the following), on calendars that Home Assistant lets you change. Switch it on with the new app option *Calendar page* (`enable_calendar`) or a `calendar:` section in `dashboard.yaml`; `allow_calendar_editing` makes it read-only. Inspired by [HA Family Hub](https://github.com/JVarhol/HA-Family-Hub), written from scratch.

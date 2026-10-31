@@ -8,5 +8,6 @@ A wall-tablet dashboard for Home Assistant, served as a plain web page that any 
 * A music page for Music Assistant: radio, discover, albums, artists, podcasts and search, played on any speaker, also several in sync.
 * A calendar tile with the next days and the weather, a Car page (charging, smart charging, remote climate), a Climate overview of your climate helpers, and a Media page for Plex (continue watching, recently added) that plays on Cast, Plex clients, Apple TVs and DLNA players.
 * Missing entities can be mapped from the tablet.
+* Configure visibility, labels, icons and ordering for all menu items in the app's **Configuration** tab.
 
 Open the **Documentation** tab for setup and all options.

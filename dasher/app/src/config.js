@@ -8,6 +8,7 @@ import { collectEntities, describeUsage, mapEntities } from "../web/js/lib/entit
 import { STOCK_EXAMPLE_HASHES, hashDashboard } from "./stock-examples.js";
 import { APPLIANCE_KINDS, APPLIANCE_ROLES } from "./devices.js";
 import { MAP_FILE, parseEntityMap, parseEntityMapOption } from "./mapping.js";
+import { BUILTIN_MENU_ITEMS } from "../web/js/lib/menu.js";
 
 export { collectEntities };
 
@@ -37,6 +38,57 @@ const posInt = (v, fallback) => {
 
 
 const toList = (v) => (Array.isArray(v) ? v : v == null ? [] : [v]).map(String);
+
+function parseMenuItems(raw, pages, errors) {
+  if (!Array.isArray(raw)) {
+    errors.push("menu_items: must be a list of menu-item overrides in the app configuration.");
+    return [];
+  }
+  const builtins = new Set(BUILTIN_MENU_ITEMS.map((item) => item.id));
+  const custom = new Set(pages.map((page) => `page:${page.id}`));
+  const seen = new Set();
+  const items = [];
+  for (const [i, value] of raw.entries()) {
+    const where = `menu_items[${i}]`;
+    if (!value || typeof value !== "object" || Array.isArray(value) || typeof value.id !== "string") {
+      errors.push(`${where}: needs a menu item id.`);
+      continue;
+    }
+    const input = value.id.trim();
+    const id = builtins.has(input) || custom.has(input) ? input : `page:${input}`;
+    if (!builtins.has(id) && !custom.has(id)) {
+      errors.push(`${where}.id: "${input}" is not a built-in menu item or dashboard page id.`);
+      continue;
+    }
+    if (seen.has(id)) {
+      errors.push(`${where}.id: duplicate menu item "${input}".`);
+      continue;
+    }
+    seen.add(id);
+    const item = { id };
+    if (value.visible != null) {
+      if (typeof value.visible === "boolean") item.visible = value.visible;
+      else errors.push(`${where}.visible: must be true or false.`);
+    }
+    for (const key of ["title", "icon"]) {
+      if (value[key] == null || value[key] === "") continue;
+      if (typeof value[key] === "string" && value[key].trim()) item[key] = value[key].trim();
+      else errors.push(`${where}.${key}: must be a non-empty string.`);
+    }
+    if (value.order != null) {
+      if (Number.isSafeInteger(value.order) && value.order >= 0) item.order = value.order;
+      else errors.push(`${where}.order: must be a non-negative integer.`);
+    }
+    items.push(item);
+  }
+  return items;
+}
+
+function menuSection(raw, item) {
+  if (!item || item.visible == null) return raw;
+  const section = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+  return { ...section, enabled: item.visible };
+}
 
 /** Normalise the optional `areas:` section; problems are pushed to `errors`. */
 function parseAreas(raw, errors) {
@@ -418,8 +470,8 @@ function parseClimate(raw, errors) {
  * Parse and normalise a dashboard.yaml document.
  * Never throws: problems end up in `errors` and offending tiles are dropped.
  */
-/** `family`: the app options `enable_family` and `family_children`, used when dashboard.yaml has no `family:` section. */
-export function parseConfig(text, { entityMap = {}, family: familyOption = {}, calendarPage: calendarPageOption = false } = {}) {
+/** App menu overrides take precedence; the legacy Family/Calendar switches fill in missing sections. */
+export function parseConfig(text, { entityMap = {}, family: familyOption = {}, calendarPage: calendarPageOption = false, menuItems: menuItemsOption = [] } = {}) {
   const errors = [];
   const failed = (message) => ({ config: null, errors: [message], entities: new Set(), rawEntities: new Set(), usage: new Map() });
   let raw;
@@ -494,17 +546,25 @@ export function parseConfig(text, { entityMap = {}, family: familyOption = {}, c
     };
   });
 
-  const areas = parseAreas(raw.areas, errors);
-  const music = parseMusic(raw.music ?? raw.radio, errors);
-  const ev = parseEv(raw.ev, errors);
-  const climate = parseClimate(raw.climate, errors);
-  const plex = parsePlex(raw.plex, errors);
-  const devices = parseDevices(raw.devices, errors);
-  const todo = parseTodo(raw.todo, errors);
-  const meals = parseMeals(raw.meals, errors);
+  const menuItems = parseMenuItems(menuItemsOption, pages, errors);
+  const menuOverrides = new Map(menuItems.map((item) => [item.id, item]));
+  const section = (id, value) => menuSection(value, menuOverrides.get(id));
+  for (const page of pages) {
+    const item = menuOverrides.get(`page:${page.id}`);
+    if (item?.title) page.title = item.title;
+    if (item?.icon) page.icon = item.icon;
+  }
+  const areas = parseAreas(section("areas", raw.areas), errors);
+  const music = parseMusic(section("music", raw.music ?? raw.radio), errors);
+  const ev = parseEv(section("ev", raw.ev), errors);
+  const climate = parseClimate(section("climate", raw.climate), errors);
+  const plex = parsePlex(section("media", raw.plex), errors);
+  const devices = parseDevices(section("devices", raw.devices), errors);
+  const todo = parseTodo(section("todo", raw.todo), errors);
+  const meals = parseMeals(section("meals", raw.meals), errors);
   const ambient = parseAmbient(raw.ambient, errors);
-  const calendarPage = parseCalendarPage(raw.calendar === undefined && calendarPageOption ? true : raw.calendar, errors);
-  const family = parseFamily(raw.family === undefined && familyOption.enabled ? true : raw.family, errors, familyOption.children ?? []);
+  const calendarPage = parseCalendarPage(section("calendar", raw.calendar === undefined && calendarPageOption ? true : raw.calendar), errors);
+  const family = parseFamily(section("family", raw.family === undefined && familyOption.enabled ? true : raw.family), errors, familyOption.children ?? []);
 
   const config = {
     title: String(raw.title ?? "Dasher"),
@@ -523,8 +583,14 @@ export function parseConfig(text, { entityMap = {}, family: familyOption = {}, c
     ambient,
     family,
     calendar: calendarPage,
+    menu_items: menuItems,
     pages,
   };
+  for (const { id, section } of BUILTIN_MENU_ITEMS) {
+    const item = menuOverrides.get(id);
+    if (item?.title) config[section].title = item.title;
+    if (item?.icon) config[section].icon = item.icon;
+  }
 
   const entities = collectEntities(pages);
   collectEntities(areas.overrides, entities);
@@ -545,7 +611,8 @@ export function parseConfig(text, { entityMap = {}, family: familyOption = {}, c
 /** Watches dashboard.yaml and keeps the parsed result current. */
 export class ConfigStore {
   /** `entityMapOption`: the app option `entity_map` (a list of { from, to }). */
-  constructor({ dir, onChange, logger, entityMapOption = [], familyOption = {}, calendarPageOption = false }) {
+  constructor({ dir, onChange, logger, entityMapOption = [], familyOption = {}, calendarPageOption = false, menuItemsOption = [] }) {
+    this.menuItemsOption = menuItemsOption;
     this.calendarPageOption = calendarPageOption === true;
     this.dir = dir;
     this.familyOption = { enabled: familyOption.enabled === true, children: Array.isArray(familyOption.children) ? familyOption.children.map(String) : [] };
@@ -595,8 +662,8 @@ export class ConfigStore {
       return this.current;
     }
     this.entityMap = this._readEntityMap();
-    this.current = parseConfig(text, { entityMap: this.entityMap, family: this.familyOption, calendarPage: this.calendarPageOption });
-    for (const e of this.current.errors) this.log.warn(`dashboard.yaml: ${e}`);
+    this.current = parseConfig(text, { entityMap: this.entityMap, family: this.familyOption, calendarPage: this.calendarPageOption, menuItems: this.menuItemsOption });
+    for (const e of this.current.errors) this.log.warn(`${e.startsWith("menu_items") ? "App configuration" : "dashboard.yaml"}: ${e}`);
     return this.current;
   }
 
