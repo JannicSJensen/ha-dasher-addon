@@ -318,7 +318,7 @@ test("five-minute refresh only loads while mounted and does not overlap a slow l
 });
 
 test("invalid successful HTTP responses become visible errors rather than a false empty/zero state", async () => {
-  for (const bad of [{}, null, { configured: true }, response({ series: null }), response({ water_devices: {} }), response({ range: { date: "bad", period: "day" } }), { error: "Statistics failed" }]) {
+  for (const bad of [{}, null, { configured: true }, response({ series: null }), response({ water_devices: {} }), response({ prices: { slots: [] } }), response({ range: { date: "bad", period: "day" } }), { error: "Statistics failed" }]) {
     const client = createEnergyClient({ clock: fakeClock(), load: async () => bad });
     await client.start();
     assert.ok(client.getState().error);
@@ -430,6 +430,50 @@ test("page renders flows, accessible chart values, named sources, devices, gas/w
   assert.equal(clock.callbacks.size, 1);
   page.destroy();
   assert.equal(clock.callbacks.size, 0);
+});
+
+test("daily prices and recommendations are read-only, localized, refreshed and preserve chart details", async (context) => {
+  withDOM(context);
+  const start = Date.parse("2026-10-30T23:00:00Z");
+  const end = start + 24 * 3600_000;
+  let now = start + 14 * 3600_000;
+  let tick;
+  let stopped = false;
+  const priceClock = {
+    setInterval(callback, ms) { assert.equal(ms, 60_000); tick = callback; return 1; },
+    clearInterval(id) { assert.equal(id, 1); stopped = true; },
+  };
+  const prices = {
+    date: "2026-10-31", start, end, name: "Daily rates", entity_id: "sensor.daily", unit: "DKK/kWh",
+    slots: Array.from({ length: 24 }, (_, hour) => ({ start: start + hour * 3600_000, end: start + (hour + 1) * 3600_000, value: hour === 0 ? -1 : hour === 1 ? 0 : hour >= 22 ? 1 : 3 })),
+    ev: { hours: 4.5, reason: null },
+  };
+  const page = createEnergyPage({ enabled: true }, {
+    t: makeTranslator("da"), locale: "da", energyClock: fakeClock(), priceClock, priceNow: () => now,
+    loadEnergy: async () => response({ prices }),
+  });
+  context.after(() => page.destroy());
+  await flush();
+  assert.deepEqual(page.entities, []);
+  for (const text of ["Dagens elpriser", "Billigste start i dag", "sensor.daily", "4,5 t", "2 t", "Tørretumbler", "Vaskemaskine", "Opvaskemaskine", "DKK/kWh"]) {
+    assert.ok(page.el.textContent.includes(text), text);
+  }
+  assert.equal(find(page.el, (node) => node.className.includes("energy-price-slot ")).length, 24);
+  const bars = find(page.el, (node) => node.className === "energy-price-bar");
+  assert.equal(bars[0].style.top, "75%", "negative price is below the zero baseline");
+  assert.equal(bars[0].style.height, "25%");
+  assert.equal(bars[1].style.height, "0%", "a measured zero is not a missing rate");
+  const graph = find(page.el, (node) => node.className === "energy-card energy-prices-card")[0];
+  const details = find(graph, (node) => node.tag === "details")[0];
+  details.open = true;
+  now = end - 3600_000;
+  tick();
+  assert.equal(find(page.el, (node) => node.className === "energy-card energy-prices-card")[0], graph);
+  assert.equal(find(graph, (node) => node.tag === "details")[0], details);
+  assert.equal(details.open, true);
+  assert.ok(page.el.textContent.includes("Der er ikke nok sammenhængende"));
+  page.destroy();
+  assert.equal(stopped, true);
 });
 
 test("page supports keyboard tabs, navigates dates, displays reload errors and clears stale values on navigation", async (context) => {

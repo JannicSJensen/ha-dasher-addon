@@ -404,7 +404,16 @@ The **Energy** page reuses the sources and individual devices already configured
 
 The overview has **day, week, month and year** navigation, an electricity-flow diagram, grid import/export, solar production, battery charging/discharging, home consumption, a consumption chart, and the individual devices tracked by HA. Configured gas and water sources are shown separately with their own units. Available recorded costs and consumption percentages are shown alongside the energy values.
 
-Values come from Home Assistant's **Recorder statistics**, not from current sensor readings or differences between raw meter states. Electricity and energy-based gas statistics use **kWh**; water and volume-based gas statistics use **m³**, converted by HA so mixed meter units remain comparable. Dates use **Home Assistant's time zone**, including daylight-saving changes; weeks start on Monday. The page refreshes every five minutes while open. Recorder data can lag behind live meters, just as it does in HA.
+**Today's electricity prices** shows a separate daily price graph, the current price and all rates in an expandable table. Dasher prefers the grid-import price sensor configured in HA Energy when it provides a daily list; otherwise it discovers a price sensor with `raw_today`, `today`, `prices_today`, `prices` or `data` attributes, such as Energi Data Service or Nordpool. The sensor's published prices and units are used as-is, including any tariffs it already includes and negative prices. The source is shown beside the graph. This section always shows **today in HA's time zone**, even while browsing historical consumption.
+
+**Cheapest start today** recommends a continuous run in the remaining hours today:
+
+* **EV:** the duration reported by EV Smart Charging's `charging_number_of_hours` attribute, using the Car page's configured or discovered `smart_info_entity`. No duration is guessed when HA has no planned charge or no duration.
+* **Dryer, washer and dishwasher:** two hours each, considered independently.
+
+Recommendations minimize the time-weighted average price across a complete run. They never start in the past, cross missing prices or extend into tomorrow. If a full run no longer fits today, that is explained instead of showing an invalid start. These are **suggestions only**: Dasher does not schedule or start devices, coordinate the appliances with each other, or estimate actual appliance energy use. Rates are refreshed with the page's five-minute load; start recommendations and the current-time marker update every minute. Timestamped hourly and quarter-hourly rates, and numeric daily arrays, use HA's time zone and its actual day length.
+
+Consumption values come from Home Assistant's **Recorder statistics**, not from current sensor readings or differences between raw meter states. Electricity and energy-based gas statistics use **kWh**; water and volume-based gas statistics use **m³**, converted by HA so mixed meter units remain comparable. Dates use **Home Assistant's time zone**, including daylight-saving changes; weeks start on Monday. The page refreshes every five minutes while open. Recorder data can lag behind live meters, just as it does in HA.
 
 ```yaml
 energy:

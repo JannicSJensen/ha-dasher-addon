@@ -2,6 +2,36 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { WebSocketServer } from "ws";
 import { HAClient } from "../src/ha-client.js";
+import { isEnergyPriceState } from "../src/energy-prices.js";
+
+test("read-only price cache receives snapshots and updates without adding watched states or events", () => {
+  const client = new HAClient({
+    wsUrl: "ws://example.invalid", token: "test-token", logger: { warn() {} },
+    cacheReadOnlyState: isEnergyPriceState,
+  });
+  const price = {
+    entity_id: "sensor.daily_price", state: "2", last_updated: "2026-11-07T12:00:00Z",
+    attributes: { unit_of_measurement: "DKK/kWh", today: [2, 3] },
+  };
+  const snapshots = [];
+  const events = [];
+  client.on("snapshot", (states) => snapshots.push([...states.keys()]));
+  client.on("state", (state) => events.push(state));
+  client._indexDeviceClasses([price]);
+  client._applyStates([price]);
+  assert.deepEqual(snapshots, [[]]);
+  assert.equal(client.states.size, 0);
+  assert.equal(client.watched.size, 0);
+  assert.equal(client.readOnlyStates.get(price.entity_id).last_updated, price.last_updated);
+  client._onStateChanged({ entity_id: price.entity_id, new_state: { ...price, state: "3" } });
+  assert.equal(client.readOnlyStates.get(price.entity_id).state, "3");
+  assert.deepEqual(events, []);
+  client._onStateChanged({ entity_id: price.entity_id, new_state: null });
+  assert.equal(client.readOnlyStates.size, 0);
+  client._indexDeviceClasses([price]);
+  client._indexDeviceClasses([]);
+  assert.equal(client.readOnlyStates.size, 0, "resync removes obsolete read-only states");
+});
 
 const silent = { info() {}, warn() {}, error() {}, debug() {} };
 

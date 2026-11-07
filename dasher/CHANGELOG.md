@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.44.0
+
+- **Energy prices and cheapest-start advice.** Today's published HA electricity prices are graphed with current-price and accessible table views. EV recommendations use EV Smart Charging's reported duration; dryer, washer and dishwasher recommendations use two-hour runs. Suggestions cover only the remaining day, use time-weighted prices, and never bridge missing rates or control devices. Energy card columns now have matching widths and gaps.
+
 ## 0.43.0
 
 - **Menu configuration:** Existing built-in and dashboard pages are listed automatically in the app's Menu items options, without changing their visibility or existing overrides.

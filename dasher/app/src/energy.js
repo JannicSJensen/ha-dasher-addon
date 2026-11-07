@@ -1,5 +1,6 @@
 import { EventEmitter } from "node:events";
 import { energyDate, energyWindow } from "./energy-window.js";
+import { energyPrices } from "./energy-prices.js";
 
 const PREFS_TTL_MS = 60_000;
 const DATA_TTL_MS = 5 * 60_000;
@@ -23,6 +24,7 @@ export function energySources(prefs, info = {}) {
     sources.push({
       id, kind, name: text(source.name), cost_id: cost,
       cost_configured: Boolean(cost || text(source[priceField]) || number(source[fixedField]) != null),
+      price_entity: text(source[priceField]),
     });
   };
   for (const source of prefs.energy_sources) {
@@ -188,11 +190,12 @@ export function buildEnergyOverview({ preferences, metadata, statistics, range, 
 }
 
 export class EnergyService extends EventEmitter {
-  constructor({ ha, logger, now = Date.now }) {
+  constructor({ ha, logger, now = Date.now, getEvInfoEntity = () => null }) {
     super();
     this.ha = ha;
     this.log = logger;
     this.now = now;
+    this.getEvInfoEntity = getEvInfoEntity;
     this.settings = { enabled: false };
     this.preferences = { sources: [], devices: [], water_devices: [], warnings: [] };
     this.core = null;
@@ -278,9 +281,13 @@ export class EnergyService extends EventEmitter {
     if (this.state.error) throw error(this.state.error);
     if (!this.core) throw error("Home Assistant's Energy configuration is still loading.", 503);
     const range = energyWindow({ date, period, timeZone: this.core.time_zone, now: this.now() });
+    const withPrices = (overview) => ({
+      ...overview, today: energyDate(this.now(), this.core.time_zone),
+      prices: energyPrices({ states: this.ha.readOnlyStates ?? this.ha.states, preferences: this.preferences, core: this.core, evInfoEntity: this.getEvInfoEntity(), now: this.now() }),
+    });
     const key = `${this.signature}|${range.start}|${range.end}|${period}`;
     const cached = this.cache.get(key);
-    if (cached && this.now() - cached.at < DATA_TTL_MS) return { ...await cached.promise, today: energyDate(this.now(), this.core.time_zone) };
+    if (cached && this.now() - cached.at < DATA_TTL_MS) return withPrices(await cached.promise);
     const preferences = this.preferences;
     const core = this.core;
     const load = (async () => {
@@ -302,7 +309,7 @@ export class EnergyService extends EventEmitter {
     const entry = { at: this.now(), promise: load };
     this.cache.set(key, entry);
     if (this.cache.size > 16) this.cache.delete(this.cache.keys().next().value);
-    try { return { ...await load, today: energyDate(this.now(), core.time_zone) }; }
+    try { return withPrices(await load); }
     catch (err) {
       if (this.cache.get(key) === entry) this.cache.delete(key);
       throw err;

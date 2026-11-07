@@ -2,6 +2,7 @@ import { getJson } from "../core/api.js";
 import { h } from "../core/h.js";
 import { icon, setIcon } from "../core/icons.js";
 import { format } from "../lib/i18n.js";
+import { cheapestPriceWindow, currentSlot, makeClassifier } from "../lib/price.js";
 import {
   ENERGY_PERIODS, createEnergyClient, energyBar, energyBucketText, energyCanNext, energyChart,
   energyDate, energyDeviceValue, energyFieldsForSources, energyNumber, energyRangeText, energySourceCostVisible, energyValue, energyWarnings, shiftEnergyDate,
@@ -32,6 +33,12 @@ export function createEnergyPage(model, ctx) {
   let renderedMode;
   let renderedPeriod;
   let renderedNotices;
+  let priceRoot;
+  let paintedPrices;
+  let priceMinute;
+  let priceCurrent;
+  let priceMarker;
+  let recommendationRoot;
   const root = h("div", { class: "energypage" });
   const titleIcon = icon(settings.icon || "lightning-bolt");
   const title = h("h1", { class: "energy-title" });
@@ -98,6 +105,98 @@ export function createEnergyPage(model, ctx) {
   const label = (field) => t(`energy_${field}`);
   const heading = (key, glyph) => h("h2", { class: "energy-card-title" }, glyph ? icon(glyph) : null, t(key));
   const card = (cls, ...children) => h("section", { class: `energy-card ${cls}`.trim() }, children);
+  const priceNow = () => (ctx.priceNow ?? Date.now)();
+
+  function paintPrices() {
+    if (!priceRoot || destroyed) return;
+    const prices = data()?.prices;
+    const now = priceNow();
+    const minute = Math.floor(now / 60_000);
+    const changed = paintedPrices !== prices;
+    if (paintedPrices === prices && priceMinute === minute) return;
+    paintedPrices = prices;
+    priceMinute = minute;
+    const graph = card("energy-prices-card", heading("energy_prices_today", "chart-bar"));
+    const recommendations = card("energy-recommendations", heading("energy_best_start", "clock-outline"));
+    if (!prices?.slots?.length || now >= prices.end) {
+      graph.append(h("p", { class: "energy-muted" }, t("energy_prices_missing")));
+      recommendations.append(h("p", { class: "energy-muted" }, t("energy_prices_missing")));
+      priceRoot.replaceChildren(graph, recommendations);
+      return;
+    }
+    const rows = prices.slots;
+    const fmt = (value) => numberText(value, prices.unit);
+    const time = (instant, full = false) => energyBucketText(instant, "day", { locale, timeZone: timeZone(), full });
+    const max = Math.max(0, ...rows.map((row) => row.value));
+    const min = Math.min(0, ...rows.map((row) => row.value));
+    const span = max - min || 1;
+    const zero = max === min ? 100 : max / span * 100;
+    const classify = makeClassifier(rows);
+    const plot = h("div", { class: "energy-price-plot", "aria-hidden": "true" },
+      h("div", { class: "energy-price-zero", style: { top: `${zero}%` } }),
+      rows.map((row) => h("div", {
+        class: `energy-price-slot energy-price-slot--${classify(row.value)}`,
+        style: { left: `${(row.start - prices.start) / (prices.end - prices.start) * 100}%`, width: `${(row.end - row.start) / (prices.end - prices.start) * 100}%` },
+        title: `${time(row.start, true)} – ${time(row.end)}: ${fmt(row.value)}`,
+      }, h("div", { class: "energy-price-bar", style: {
+        top: `${zero - Math.max(0, row.value) / span * 100}%`,
+        height: `${Math.abs(row.value) / span * 100}%`,
+      } }))),
+    );
+    const current = h("p", { class: "energy-price-current" }, `${t("energy_price_now")}: ${fmt(currentSlot(rows, now)?.value)}`);
+    const marker = h("div", { class: "energy-price-now", style: { left: `${(now - prices.start) / (prices.end - prices.start) * 100}%` } });
+    marker.hidden = now < prices.start || now >= prices.end;
+    plot.append(marker);
+    graph.append(
+      h("p", { class: "energy-muted" }, `${energyRangeText(prices.date, "day", locale)} · ${prices.name} (${prices.entity_id})`),
+      current,
+      h("div", { class: "energy-chart-axis" }, h("span", null, fmt(max)), h("span", null, fmt(min))),
+      plot,
+      h("div", { class: "energy-price-ticks", "aria-hidden": "true" }, [0, 0.25, 0.5, 0.75, 1].map((fraction) => h("span", null, time(prices.start + (prices.end - prices.start) * fraction)))),
+    );
+    if (prices.partial) graph.append(h("p", { class: "energy-footnote", role: "status" }, t("energy_prices_partial")));
+    graph.append(h("details", { class: "energy-values" }, h("summary", null, t("energy_show_values")),
+      h("div", { class: "energy-table-scroll", tabindex: "0", role: "region", "aria-label": t("energy_prices_today") },
+        h("table", { class: "energy-table" },
+          h("caption", { class: "energy-sr" }, t("energy_prices_today")),
+          h("thead", null, h("tr", null, h("th", { scope: "col" }, t("energy_time")), h("th", { scope: "col" }, prices.unit))),
+          h("tbody", null, rows.map((row) => h("tr", null, h("th", { scope: "row" }, `${time(row.start, true)} – ${time(row.end)}`), h("td", null, fmt(row.value))))),
+        ),
+      ),
+    ));
+    const ev = prices.ev ?? {};
+    const loads = [
+      { key: "ev", glyph: "car-electric", hours: ev.hours, reason: ev.reason },
+      { key: "dryer", glyph: "tumble-dryer", hours: 2 },
+      { key: "washer", glyph: "washing-machine", hours: 2 },
+      { key: "dishwasher", glyph: "dishwasher", hours: 2 },
+    ];
+    const recommendationNodes = [heading("energy_best_start", "clock-outline"), h("p", { class: "energy-muted" }, t("energy_recommendation_hint")),
+      h("ul", { class: "energy-recommendation-list" }, loads.map((load) => {
+        const window = load.reason ? null : cheapestPriceWindow(rows, load.hours, { now: Math.ceil(now / 60_000) * 60_000, end: prices.end });
+        const message = load.reason === "no_plan" ? t("energy_ev_no_plan") : load.key === "ev" && (!load.hours || load.reason)
+          ? t("energy_ev_duration_missing") : t("energy_no_window");
+        return h("li", null, h("div", { class: "energy-recommendation-name" }, icon(load.glyph), h("strong", null, t(`energy_load_${load.key}`))),
+          window ? h("div", { class: "energy-recommendation-time" },
+            h("strong", null, `${window.start - now < 60_000 ? t("energy_start_now") : time(window.start)} – ${time(window.end)}`),
+            h("span", { class: "energy-muted" }, format(t, "energy_run_price", { hours: new Intl.NumberFormat(locale).format(load.hours), price: fmt(window.average) })),
+          ) : h("p", { class: "energy-muted" }, message),
+        );
+      })),
+      h("p", { class: "energy-footnote" }, t("energy_recommendation_read_only"))];
+    if (changed) {
+      recommendations.replaceChildren(...recommendationNodes);
+      priceRoot.replaceChildren(graph, recommendations);
+      recommendationRoot = recommendations;
+      priceCurrent = current;
+      priceMarker = marker;
+    } else {
+      recommendationRoot.replaceChildren(...recommendationNodes);
+      priceCurrent.textContent = current.textContent;
+      priceMarker.hidden = marker.hidden;
+      priceMarker.style.left = marker.style.left;
+    }
+  }
 
   function step(direction) {
     if (settings.enabled === false || direction === 1 && !energyCanNext(snapshot.date, snapshot.period, todayDate())) return;
@@ -329,6 +428,7 @@ export function createEnergyPage(model, ctx) {
 
   function render() {
     if (destroyed) return;
+    paintPrices();
     paintControls();
     paintNotices();
     const mode = settings.enabled === false ? "disabled"
@@ -338,6 +438,7 @@ export function createEnergyPage(model, ctx) {
     renderedData = data();
     renderedMode = mode;
     renderedPeriod = snapshot.period;
+    priceRoot = null;
     if (settings.enabled === false) {
       panel.replaceChildren(empty("disabled"));
     } else if (data()?.configured === false || !data() && settings.configured === false) {
@@ -348,9 +449,13 @@ export function createEnergyPage(model, ctx) {
     } else {
       const sources = data().sources;
       const optional = ["gas", "water"].filter((kind) => sources.some((source) => source.kind === kind));
+      priceRoot = h("div", { class: "energy-main-grid energy-prices" });
+      paintedPrices = null;
+      priceMinute = null;
       panel.replaceChildren(
         kpis(),
         h("div", { class: "energy-main-grid" }, flow(), chart()),
+        priceRoot,
         ...[stats()].filter(Boolean),
         h("div", { class: "energy-breakdown-grid" },
           breakdown(sources.filter((source) => !["gas", "water"].includes(source.kind)), { key: "energy_sources", glyph: "transmission-tower", costs: true }),
@@ -359,11 +464,16 @@ export function createEnergyPage(model, ctx) {
           (data().water_devices ?? []).length ? breakdown(data().water_devices, { key: "energy_water_devices", glyph: GLYPHS.water, devices: true, kind: "water" }) : null,
         ),
       );
+      paintPrices();
     }
   }
 
   render();
   if (settings.enabled !== false) void client.start();
+  const priceClock = ctx.priceClock ?? globalThis;
+  const priceTimer = priceClock.setInterval(() => {
+    if (root.isConnected && settings.enabled !== false) paintPrices();
+  }, 60_000);
   return {
     el: root,
     entities: [],
@@ -386,6 +496,7 @@ export function createEnergyPage(model, ctx) {
     },
     destroy() {
       destroyed = true;
+      priceClock.clearInterval(priceTimer);
       client.destroy();
     },
   };

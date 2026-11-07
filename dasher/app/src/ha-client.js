@@ -13,7 +13,7 @@ const PONG_TIMEOUT_MS = 10_000;
  *        "registries" (area/floor/device/entity registries, or null when they could not be read)
  */
 export class HAClient extends EventEmitter {
-  constructor({ wsUrl, token, logger, WebSocketImpl = WebSocket }) {
+  constructor({ wsUrl, token, logger, WebSocketImpl = WebSocket, cacheReadOnlyState = () => false }) {
     super();
     this.wsUrl = wsUrl;
     this.token = token;
@@ -22,6 +22,9 @@ export class HAClient extends EventEmitter {
     this.watched = new Set();
     this.required = new Set();
     this.states = new Map();
+    // Server-only cache; excluded from tablet snapshots and state events.
+    this.readOnlyStates = new Map();
+    this.cacheReadOnlyState = cacheReadOnlyState;
     this.missing = [];
     this.registries = null;
     this.deviceClasses = new Map();
@@ -185,6 +188,8 @@ export class HAClient extends EventEmitter {
 
   _indexEntity(s) {
     const a = s.attributes ?? {};
+    if (this.cacheReadOnlyState(s)) this.readOnlyStates.set(s.entity_id, { ...slim(s), last_updated: s.last_updated });
+    else this.readOnlyStates.delete(s.entity_id);
     this.entityIndex.set(s.entity_id, {
       id: s.entity_id,
       name: a.friendly_name ?? null,
@@ -197,6 +202,7 @@ export class HAClient extends EventEmitter {
   _indexDeviceClasses(all) {
     this.deviceClasses.clear();
     this.entityIndex.clear();
+    this.readOnlyStates.clear();
     for (const s of all) {
       this._indexEntity(s);
       const cls = s.attributes?.device_class;
@@ -237,7 +243,10 @@ export class HAClient extends EventEmitter {
 
   _onStateChanged({ entity_id, new_state }) {
     if (new_state) this._indexEntity(new_state);
-    else this.entityIndex.delete(entity_id);
+    else {
+      this.entityIndex.delete(entity_id);
+      this.readOnlyStates.delete(entity_id);
+    }
     if (!this.watched.has(entity_id)) return;
     if (new_state) {
       const s = slim(new_state);

@@ -8,12 +8,15 @@ import fs from "node:fs";
 import http from "node:http";
 import { WebSocketServer } from "ws";
 import { MOCK_ENERGY_CONFIG, MOCK_ENERGY_INFO, mockEnergyMetadata, mockEnergyPreferences, mockEnergyStatistics } from "./mock-energy.js";
+import { energyWindow } from "../src/energy-window.js";
 
 const now = new Date();
 const day = new Date(now);
 day.setHours(0, 0, 0, 0);
-const prices = Array.from({ length: 24 }, (_, h) => {
-  const start = new Date(day.getTime() + h * 3600_000);
+const priceDay = energyWindow({ timeZone: MOCK_ENERGY_CONFIG.time_zone, now: now.getTime() });
+const priceStart = Date.parse(priceDay.start);
+const prices = Array.from({ length: (Date.parse(priceDay.end) - priceStart) / 3600_000 }, (_, h) => {
+  const start = new Date(priceStart + h * 3600_000);
   const value = 0.3 + 0.9 * Math.max(0, Math.sin(((h - 5) / 24) * Math.PI * 2)) + (h >= 17 && h <= 20 ? 1.2 : 0);
   return { start: start.toISOString(), end: new Date(start.getTime() + 3600_000).toISOString(), value: Number(value.toFixed(3)) };
 });
@@ -102,7 +105,7 @@ put("calendar.skole", "off", { friendly_name: "Skole", supported_features: 0 });
 put("weather.forecast_home", "cloudy", { friendly_name: "Forecast Home", temperature: 11, temperature_unit: "°C" });
 const TIMES = ["None", ...Array.from({ length: 96 }, (_, i) => `${String(Math.floor(i / 4)).padStart(2, "0")}:${String((i % 4) * 15).padStart(2, "0")}`)];
 put("sensor.ev_smart_charging_status", "waiting_for_charging_to_begin", { friendly_name: "EV Smart Charging Status" });
-put("sensor.ev_smart_charging_charging", "off", { friendly_name: "EV Smart Charging Lading", ev_soc: "67.0", ev_target_soc: "80.0", charging_is_planned: true, charging_start_time: new Date(day.getTime() + 25 * 3600_000).toISOString(), charging_stop_time: new Date(day.getTime() + 28.5 * 3600_000).toISOString() });
+put("sensor.ev_smart_charging_charging", "off", { friendly_name: "EV Smart Charging Lading", ev_soc: "67.0", ev_target_soc: "80.0", charging_is_planned: true, charging_number_of_hours: 3.5, charging_start_time: new Date(day.getTime() + 25 * 3600_000).toISOString(), charging_stop_time: new Date(day.getTime() + 28.5 * 3600_000).toISOString() });
 put("switch.ev_smart_charging_smart_charging_activated", "on", { friendly_name: "Smart ladning aktiveret" });
 put("switch.ev_smart_charging_ev_connected", "on", { friendly_name: "Elbil tilkoblet" });
 put("select.ev_smart_charging_charge_start_time", "None", { friendly_name: "Starttidspunkt", options: TIMES });
@@ -115,7 +118,7 @@ put("sensor.living_room_temperature", "21.4", { friendly_name: "Living room temp
 put("binary_sensor.garage_door", "off", { friendly_name: "Garage door", device_class: "door" });
 put("scene.cozy", "unknown", {});
 put("scene.movie", "unknown", {});
-put("sensor.electricity_price", String(prices[now.getHours()].value), { friendly_name: "Electricity price", raw_today: prices });
+put("sensor.electricity_price", String(prices.find((slot) => now >= new Date(slot.start) && now < new Date(slot.end)).value), { friendly_name: "Electricity price", raw_today: prices, unit_of_measurement: "DKK/kWh", currency: "DKK" });
 put("media_player.living_room", "playing", { friendly_name: "Bose", media_title: "Rix FM Fresh", source: "Radio", volume_level: 0.3, mass_player_type: "player" });
 put("media_player.garage_speaker", "idle", { friendly_name: "Garage speaker", volume_level: 0.15, mass_player_type: "player" });
 put("sensor.car_range", "692", { friendly_name: "Volvo", unit_of_measurement: "km" });

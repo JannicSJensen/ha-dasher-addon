@@ -10,6 +10,7 @@ import { discoverMusicAssistant } from "./discovery.js";
 import { discoverEv, resolveEv } from "./ev.js";
 import { resolveClimate } from "./climate.js";
 import { EnergyService } from "./energy.js";
+import { isEnergyPriceState } from "./energy-prices.js";
 import { resolveWeatherBackgrounds } from "./weather.js";
 import { MealsAI, allergenWarnings } from "./meals-ai.js";
 import { FamilyStore } from "./family.js";
@@ -86,7 +87,10 @@ const clients = new Set();
 const send = (res, event, data) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
 const broadcast = (event, data) => clients.forEach((res) => send(res, event, data));
 
-const ha = new HAClient({ wsUrl: haWsUrl, token: haToken, logger });
+const ha = new HAClient({
+  wsUrl: haWsUrl, token: haToken, logger,
+  cacheReadOnlyState: (state) => isEnergyPriceState(state) || Object.hasOwn(state.attributes ?? {}, "charging_number_of_hours"),
+});
 const menuOptionsSync = supervisorToken ? new MenuOptionsSync({ token: supervisorToken, logger }) : null;
 const configStore = new ConfigStore({
   dir: configDir,
@@ -102,7 +106,11 @@ const configStore = new ConfigStore({
     broadcast("config", configPayload());
   },
 });
-const energy = new EnergyService({ ha, logger });
+const energy = new EnergyService({
+  ha, logger,
+  getEvInfoEntity: () => configStore.current.config?.ev?.roles.smart_info_entity
+    ?? discoverEv({ registries: ha.registries, index: ha.entityIndex }).smart_info_entity,
+});
 energy.on("change", () => broadcast("energy", energy.payload()));
 const radio = new RadioService({ ha, logger });
 radio.on("change", () => broadcast("music", musicPayload()));

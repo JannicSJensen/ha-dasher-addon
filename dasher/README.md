@@ -12,5 +12,6 @@ A wall-tablet dashboard for Home Assistant, served as a plain web page that any 
 * Missing entities can be mapped from the tablet.
 * Configure visibility, labels, icons and ordering for all menu items in the app's **Configuration** tab; rows for built-in and dashboard pages are added automatically.
 * An Energy overview reuses Home Assistant's configured grid, solar, battery and device statistics, with date navigation and consumption charts.
+* Daily electricity prices and cheapest-start advice for EV charging and two-hour dryer, washer and dishwasher runs, using existing HA price sensors.
 
 Open the **Documentation** tab for setup and all options.

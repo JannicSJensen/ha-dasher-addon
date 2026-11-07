@@ -158,6 +158,15 @@ function checkResponse(data) {
       || data.water_devices != null && !Array.isArray(data.water_devices)))) {
     throw new Error("energy_invalid_response");
   }
+  const prices = data.prices;
+  if (prices != null && (!energyDate(prices.date) || energyNumber(prices.start) === null || energyNumber(prices.end) === null
+    || prices.end <= prices.start || !Array.isArray(prices.slots)
+    || prices.slots.some((slot) => energyNumber(slot?.start) === null || energyNumber(slot?.end) === null || energyNumber(slot?.value) === null
+      || slot.start < prices.start || slot.end > prices.end || slot.end <= slot.start)
+    || prices.slots.length && (typeof prices.unit !== "string" || !prices.unit.trim())
+    || prices.ev?.hours != null && (energyNumber(prices.ev.hours) === null || prices.ev.hours < 0))) {
+    throw new Error("energy_invalid_response");
+  }
   return data;
 }
 

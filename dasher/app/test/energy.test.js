@@ -177,6 +177,29 @@ test("EnergyService requests only configured statistics with native changes and 
   assert.equal(calls.length, count);
 });
 
+test("cached historical statistics still read fresh daily prices and EV charging duration", async () => {
+  const { ha, calls } = fakeHA();
+  const today = energyWindow({ timeZone: core.time_zone, now });
+  const priceStart = Date.parse(today.start);
+  ha.states = new Map([
+    ["sensor.price", { state: "2", attributes: { unit_of_measurement: "DKK/kWh", raw_today: Array.from({ length: 24 }, (_, hour) => ({ hour: new Date(priceStart + hour * 3600_000).toISOString(), price: 2 })) } }],
+    ["sensor.ev", { attributes: { charging_number_of_hours: 4.5, charging_is_planned: true } }],
+  ]);
+  const service = new EnergyService({ ha, logger: silent, now: () => now, getEvInfoEntity: () => "sensor.ev" });
+  service.configure({ enabled: true });
+  const first = await service.overview({ date: "2026-10-30" });
+  assert.equal(first.range.date, "2026-10-30");
+  assert.equal(first.prices.date, "2026-10-31");
+  assert.equal(first.prices.ev.hours, 4.5);
+  const count = calls.length;
+  ha.states.get("sensor.price").attributes.raw_today[12].price = -1;
+  ha.states.get("sensor.ev").attributes.charging_number_of_hours = 3;
+  const second = await service.overview({ date: "2026-10-30" });
+  assert.equal(calls.length, count);
+  assert.equal(second.prices.ev.hours, 3);
+  assert.equal(second.prices.slots[12].value, -1);
+});
+
 test("no Energy prefs is an expected empty state, not an unrestricted statistics request", async () => {
   const { ha, calls } = fakeHA({
     fail: async (message) => { if (message.type === "energy/get_prefs") throw Object.assign(new Error("No prefs"), { code: "not_found" }); },

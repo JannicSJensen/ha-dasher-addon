@@ -18,25 +18,26 @@ export function startOfDay(date) {
  * Supports Nordpool / Energi Data Service style objects as well as plain number arrays
  * (assumed to cover the local day evenly, e.g. 24 or 96 values).
  */
-export function normalizeSlots(attributes, { attribute, now = new Date() } = {}) {
+export function normalizeSlots(attributes, { attribute, now = new Date(), dayStart = startOfDay(now).getTime(), dayEnd = dayStart + DAY_MS } = {}) {
   const key = attribute ?? ATTRIBUTE_CANDIDATES.find((k) => Array.isArray(attributes?.[k]));
   const list = key ? attributes?.[key] : null;
   if (!Array.isArray(list) || list.length === 0) return [];
 
-  const dayStart = startOfDay(now).getTime();
-
-  if (typeof list[0] === "number") {
-    const step = DAY_MS / list.length;
-    return list.map((value, i) => ({ start: dayStart + i * step, end: dayStart + (i + 1) * step, value }));
+  if (list.every((value) => value == null || typeof value === "number")) {
+    const step = (dayEnd - dayStart) / list.length;
+    return list.map((value, i) => ({ start: dayStart + i * step, end: dayStart + (i + 1) * step, value }))
+      .filter((slot) => typeof slot.value === "number" && Number.isFinite(slot.value));
   }
 
   const slots = [];
   for (const item of list) {
     if (!item || typeof item !== "object") continue;
     const startRaw = pick(item, START_KEYS);
-    const value = Number(pick(item, VALUE_KEYS));
+    const rawValue = pick(item, VALUE_KEYS);
+    if (rawValue == null || rawValue === "" || typeof rawValue === "boolean") continue;
+    const value = Number(rawValue);
     const start = new Date(startRaw).getTime();
-    if (Number.isNaN(start) || Number.isNaN(value)) continue;
+    if (!Number.isFinite(start) || !Number.isFinite(value)) continue;
     const endRaw = pick(item, END_KEYS);
     const end = endRaw ? new Date(endRaw).getTime() : NaN;
     slots.push({ start, end, value });
@@ -44,13 +45,40 @@ export function normalizeSlots(attributes, { attribute, now = new Date() } = {})
   slots.sort((a, b) => a.start - b.start);
 
   // Fill in missing ends from the next slot, or the median step for the last one.
-  const steps = slots.slice(1).map((s, i) => s.start - slots[i].start).sort((a, b) => a - b);
-  const fallbackStep = steps[Math.floor(steps.length / 2)] ?? 3600 * 1000;
+  const steps = slots.slice(1).map((s, i) => s.start - slots[i].start).filter((step) => step > 0).sort((a, b) => a - b);
+  const fallbackStep = Math.min(steps[Math.floor(steps.length / 2)] ?? 3600_000, 3600_000);
   slots.forEach((s, i) => {
-    if (Number.isNaN(s.end)) s.end = slots[i + 1]?.start ?? s.start + fallbackStep;
+    if (Number.isNaN(s.end)) s.end = Math.min(slots[i + 1]?.start ?? Infinity, s.start + fallbackStep);
   });
 
-  return slots.filter((s) => s.end > dayStart && s.start < dayStart + DAY_MS);
+  return slots.filter((s) => s.end > s.start && s.end > dayStart && s.start < dayEnd);
+}
+
+/** Cheapest continuous run, weighted by elapsed time; missing or overlapping rates cannot cover a run. */
+export function cheapestPriceWindow(slots, hours, { now = Date.now(), end = Infinity } = {}) {
+  const duration = hours * 3600_000;
+  if (!Number.isFinite(duration) || duration <= 0 || !Number.isFinite(now)) return null;
+  const rows = slots.filter((slot) => Number.isFinite(slot.start) && Number.isFinite(slot.end) && Number.isFinite(slot.value) && slot.end > slot.start).sort((a, b) => a.start - b.start);
+  const candidates = [...new Set([now, ...rows.flatMap((slot) => [slot.start, slot.end - duration])])]
+    .filter((start) => start >= now && start + duration <= end).sort((a, b) => a - b);
+  let best = null;
+  for (const start of candidates) {
+    const stop = start + duration;
+    let cursor = start;
+    let weighted = 0;
+    for (const slot of rows) {
+      if (slot.end <= cursor) continue;
+      if (slot.start > cursor || cursor > start && slot.start < cursor) break;
+      const until = Math.min(stop, slot.end);
+      weighted += slot.value * (until - cursor);
+      cursor = until;
+      if (cursor === stop) break;
+    }
+    if (cursor !== stop) continue;
+    const average = weighted / duration;
+    if (!best || average < best.average - 1e-10) best = { start, end: stop, average, hours };
+  }
+  return best;
 }
 
 export function currentSlot(slots, now = Date.now()) {
