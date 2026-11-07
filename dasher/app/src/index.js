@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { buildAreaModel, imageSignature, scanImages } from "./areas.js";
 import { HiddenDevices } from "./hidden.js";
 import { ConfigStore } from "./config.js";
+import { MenuOptionsSync } from "./menu-options.js";
 import { discoverMusicAssistant } from "./discovery.js";
 import { discoverEv, resolveEv } from "./ev.js";
 import { resolveClimate } from "./climate.js";
@@ -86,6 +87,7 @@ const send = (res, event, data) => res.write(`event: ${event}\ndata: ${JSON.stri
 const broadcast = (event, data) => clients.forEach((res) => send(res, event, data));
 
 const ha = new HAClient({ wsUrl: haWsUrl, token: haToken, logger });
+const menuOptionsSync = supervisorToken ? new MenuOptionsSync({ token: supervisorToken, logger }) : null;
 const configStore = new ConfigStore({
   dir: configDir,
   logger,
@@ -95,6 +97,7 @@ const configStore = new ConfigStore({
   calendarPageOption: options.enable_calendar === true || process.env.ENABLE_CALENDAR === "1",
   familyOption: { enabled: options.enable_family === true || process.env.ENABLE_FAMILY === "1", children: options.family_children ?? [] },
   onChange: () => {
+    menuOptionsSync?.update(configStore.current.config);
     rebuild({ refresh: true });
     broadcast("config", configPayload());
   },
@@ -1213,6 +1216,7 @@ heartbeat.unref();
 
 configStore.seedIfMissing(path.join(appRoot, "examples", "dashboard.yaml"));
 configStore.watch();
+menuOptionsSync?.update(configStore.current.config);
 rescanImages();
 allowed = new Set(configStore.current.entities);
 ha.setWatched(allowed, { refresh: false });

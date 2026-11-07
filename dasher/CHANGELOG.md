@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.43.0
+
+- **Menu configuration:** Existing built-in and dashboard pages are listed automatically in the app's Menu items options, without changing their visibility or existing overrides.
+
 ## 0.42.0
 
 - **Animated weather on the front page.** The hero replaces its background with HA's current weather: day/night skies, drifting clouds, rain, snow/sleet/hail, fog, wind and thunderstorms over a layered landscape. The clock, reminders and quick buttons remain. Reuses the calendar's weather entity or discovers one; unknown weather restores the existing background. On by default, with an **Animated weather background** app option to restore the old picture, per-tile overrides, English/Danish labels, and reduced-motion/hidden-tab support.

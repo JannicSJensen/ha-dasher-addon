@@ -20,14 +20,17 @@ configuration:
         description: "The entity of your Home Assistant to use instead, for example sensor.fordpass_elveh."
   menu_items:
     name: Menu items
-    description: "Configure visibility, label, icon and order for built-in and dashboard pages. Built-in IDs: climate, areas, music, calendar, family, meals, todo, devices, media, ev, energy. For a dashboard page use its id (for example home), or page:home. Omitted fields keep existing settings; these overrides take precedence over dashboard.yaml and the Family/Calendar switches. Restart the app after changing."
+    description: "Rows for built-in and dashboard pages are added automatically when the app starts or dashboard.yaml changes. Refresh this page to see them. Edit a row and set Visibility to hide to hide a page, show to enable it, or default to keep its existing setting. Overrides take precedence over dashboard.yaml and the Family/Calendar switches. Restart the app after changing."
     fields:
       id:
         name: Menu item ID
         description: "A built-in ID or a page id from dashboard.yaml. Prefix custom ids with page: if they collide with a built-in ID."
+      visibility:
+        name: Visibility
+        description: "Choose default to keep the existing setting, show to enable the page, or hide to remove it from the menu. Overrides the legacy Visible field."
       visible:
-        name: Visible
-        description: "Show or hide this page. Showing a built-in page also enables it; Music and Media still need compatible players. Leave unset to keep the existing setting."
+        name: Visible (legacy)
+        description: "Older true/false override, used only when Visibility is unset. Use Visibility instead."
       title:
         name: Label
         description: "The menu label. Leave empty to keep the existing or translated label."

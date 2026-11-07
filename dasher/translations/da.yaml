@@ -20,14 +20,17 @@ configuration:
         description: "Entiteten i din Home Assistant der skal bruges i stedet, fx sensor.fordpass_elveh."
   menu_items:
     name: Menupunkter
-    description: "Indstil synlighed, navn, ikon og rækkefølge for indbyggede sider og dashboardsider. Indbyggede id'er: climate, areas, music, calendar, family, meals, todo, devices, media, ev, energy. Brug en dashboardsides id (fx home) eller page:home. Udeladte felter bevarer eksisterende indstillinger; disse valg har forrang over dashboard.yaml og Familie-/Kalenderkontakterne. Genstart appen efter ændring."
+    description: "Rækker for indbyggede sider og dashboardsider tilføjes automatisk, når appen starter eller dashboard.yaml ændres. Opdater siden for at se dem. Rediger en række og vælg hide under Synlighed for at skjule siden, show for at slå den til eller default for at bevare dens indstilling. Valgene har forrang over dashboard.yaml og Familie-/Kalenderkontakterne. Genstart appen efter ændring."
     fields:
       id:
         name: Menupunktets id
         description: "Et indbygget id eller et side-id fra dashboard.yaml. Sæt page: foran brugerdefinerede id'er, der også er indbyggede id'er."
+      visibility:
+        name: Synlighed
+        description: "Vælg default for at bevare indstillingen, show for at slå siden til eller hide for at skjule den i menuen. Har forrang over det ældre felt Synlig."
       visible:
-        name: Synlig
-        description: "Vis eller skjul siden. At vise en indbygget side slår den også til; Musik og Medier kræver stadig kompatible afspillere. Udelad for at bevare den eksisterende indstilling."
+        name: Synlig (ældre felt)
+        description: "Ældre true/false-indstilling, som kun bruges når Synlighed ikke er angivet. Brug Synlighed i stedet."
       title:
         name: Navn
         description: "Navnet i menuen. Lad stå tomt for at bevare det eksisterende eller oversatte navn."

@@ -66,7 +66,12 @@ function parseMenuItems(raw, pages, errors) {
     }
     seen.add(id);
     const item = { id };
-    if (value.visible != null) {
+    if (value.visibility != null && !["default", "show", "hide"].includes(value.visibility)) {
+      errors.push(`${where}.visibility: use default, show or hide.`);
+    }
+    if (value.visibility === "show" || value.visibility === "hide") {
+      item.visible = value.visibility === "show";
+    } else if (value.visibility !== "default" && value.visible != null) {
       if (typeof value.visible === "boolean") item.visible = value.visible;
       else errors.push(`${where}.visible: must be true or false.`);
     }

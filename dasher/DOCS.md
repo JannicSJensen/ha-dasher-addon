@@ -20,7 +20,7 @@ If the file has a mistake, the page shows what is wrong instead of failing silen
 | `log_level` | `info` | `debug`, `info`, `warning` or `error`. |
 | `read_only` | `false` | Show states but refuse every command from tablets. |
 | `entity_map` | empty | [Entity mapping](#missing-entities): a list of rows, each with the entity id as written in `dashboard.yaml` (*From*) and the entity of your Home Assistant to use instead (*To*). |
-| `menu_items` | empty | [Menu items](#menu-items): configure visibility, label, icon and order for every built-in and custom dashboard page. Empty keeps the existing menu. |
+| `menu_items` | populated automatically | [Menu items](#menu-items): configure visibility, label, icon and order for every built-in and custom dashboard page. New rows keep the existing menu settings. |
 | `weather_background` | `true` | [Animated weather](#animated-weather-background): replace the front-page hero's picture with current HA weather animations. Off restores its existing picture/room. |
 | `music_assistant_url` | empty | Address of your Music Assistant server, e.g. `http://192.168.1.10:8095`. **Leave it empty when Music Assistant runs as a Home Assistant app**: Dasher then finds it through the Supervisor (and keeps looking if Music Assistant starts later). Only needed for the browsing tabs of the [Music page](#music). |
 | `music_assistant_token` | empty | A long-lived access token from Music Assistant (*Settings → Profile → Long-lived access tokens*). Needed for the browsing tabs, also when Music Assistant runs as an app. Only used to read the library. |
@@ -42,12 +42,15 @@ Changes to the options take effect when the app is restarted.
 
 ### Menu items
 
-Open **Settings → Apps → Dasher → Configuration → Menu items**. Add a row for each page you want to change; pages without a row keep their existing settings.
+Open **Settings → Apps → Dasher → Configuration → Menu items**. When the app starts, it adds rows for every built-in page and every page in `dashboard.yaml`, including on existing installations. New dashboard pages are added after the file reloads. Refresh the Configuration tab to see new rows. Edit a row and set **Visibility** to `hide` to hide it, `show` to enable it, or `default` to keep the page's existing setting. New rows do not turn pages on or off.
+
+Existing rows and other app options are preserved. Rows for removed dashboard pages are not deleted automatically, so you can keep their settings if the page returns; remove those rows manually if no longer needed. Removing a row for a page that still exists does not hide it, and Dasher adds it again on the next start or dashboard change. The app logs a warning and retries if the Supervisor cannot update the list.
 
 | Field | Description |
 | --- | --- |
 | `id` | Required. Built-in menu ID from the table below, or a page's `id` from `dashboard.yaml` (for example `home` or `garage`). `page:home` also works; use the `page:` prefix if a custom ID is the same as a built-in ID. |
-| `visible` | Show or hide the page. Showing a built-in also enables its page, including Calendar and Family. Music and Media still need compatible players. Omit to preserve the existing enabled/automatic setting. |
+| `visibility` | `default`, `show` or `hide`. Showing a built-in also enables its page, including Calendar and Family. Music and Media still need compatible players. `default` preserves the existing enabled/automatic setting. |
+| `visible` | Legacy true/false override. Only used when `visibility` is omitted; existing overrides continue to work. |
 | `title` | Menu label. Empty or omitted keeps the dashboard's label or the translated default. |
 | `icon` | Material Design Icon name, with or without `mdi:`. Empty or omitted keeps the existing icon. |
 | `order` | Non-negative position starting at `0`. Lower numbers appear first. Omitted uses the original position (custom pages first, then built-ins in the order below); ties keep the original order. |
@@ -71,7 +74,7 @@ For example, in the app configuration's YAML editor:
 ```yaml
 menu_items:
   - id: calendar
-    visible: true
+    visibility: show
     title: Our calendar
     icon: mdi:calendar-month
     order: 0
@@ -79,13 +82,13 @@ menu_items:
     title: Overview
     order: 1
   - id: garage
-    visible: false
+    visibility: hide
   - id: music
     title: Speakers
     icon: mdi:speaker
 ```
 
-Restart the app after saving. These fields take precedence over menu settings in `dashboard.yaml` and the `enable_calendar` / `enable_family` switches, without rewriting your dashboard file. Other settings (entities, tabs, family members, PINs, etc.) are preserved.
+Restart the app after saving. These fields take precedence over menu settings in `dashboard.yaml` and the `enable_calendar` / `enable_family` switches, without rewriting your dashboard file. Other settings (entities, tabs, family members, PINs, etc.) are preserved. Avoid editing app options while a newly added dashboard page is being synchronized, since Supervisor option updates are not atomic.
 
 The first visible, available menu item is the start page and the page used by `idle_return`. Hidden pages are omitted from navigation; old links and navigation buttons targeting them fall back to the first available page. If every page is hidden, the dashboard shows a message explaining how to enable one.
 

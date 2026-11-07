@@ -181,7 +181,7 @@ test("ConfigStore reapplies app menu options on reload without rewriting dashboa
 test("HA exposes and translates every menu override field", () => {
   const addon = YAML.parse(fs.readFileSync(new URL("../../config.yaml", import.meta.url), "utf8"));
   assert.deepEqual(addon.options.menu_items, []);
-  assert.deepEqual(addon.schema.menu_items, [{ id: "str", visible: "bool?", title: "str?", icon: "str?", order: "int(0,)?" }]);
+  assert.deepEqual(addon.schema.menu_items, [{ id: "str", visibility: "list(default|show|hide)?", visible: "bool?", title: "str?", icon: "str?", order: "int(0,)?" }]);
   for (const lang of ["en", "da"]) {
     const texts = YAML.parse(fs.readFileSync(new URL(`../../translations/${lang}.yaml`, import.meta.url), "utf8")).configuration.menu_items;
     for (const field of Object.keys(addon.schema.menu_items[0])) assert.ok(texts.fields[field]?.name && texts.fields[field]?.description, `${lang}: ${field}`);
