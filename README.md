@@ -8,6 +8,7 @@ This repository contains the **Dasher** app (add-on) for Home Assistant: a dark,
 * Dashboards are described in one `dashboard.yaml` and hot-reload on save.
 * **Menu items:** configure visibility, labels, icons and ordering for every built-in and custom dashboard page under **Settings → Apps → Dasher → Configuration**; see [Menu items](dasher/DOCS.md#menu-items). The first visible, available item is the start and idle-return page.
 * Tiles: area hero with clock, status messages (like waste pick-up reminders) and quick buttons, lights/switches (with brightness slider), electricity price timeline, calendar agenda with weather, vehicle, "now playing", heat pump/AC and button grids.
+* **Animated weather:** the front-page hero follows HA's current weather with day/night scenes, clouds, rain, snow, fog and wind, keeping the clock and controls over it. On by default; the app's *Animated weather background* switch restores the old picture. Uses local CSS/SVG and respects reduced motion; see [Animated weather](dasher/DOCS.md#animated-weather-background).
 * **Area pages:** every Home Assistant area as a clickable picture card; each opens a sub-page with its temperature, humidity, windows and a picture tile for every light, player and thermostat (unavailable devices are left out). Devices you do not want can be removed from the overview with the pencil, and restored.
 * **Now playing tile and full-screen player:** the tile follows whichever speaker is playing, with controls, volume and progress; when everything is stopped it shows the last track that played (remembered by the app). When music starts, a full-screen player opens with big artwork, seeking, shuffle/repeat and volume.
 * **Music page:** swipeable tabs for Discover, Radio, Albums, Artists, Podcasts (with episodes), Party (QR code and live queue of Music Assistant's Party plugin) and Search, a speaker picker with Music Assistant grouping and a now-playing bar. Browsing uses Music Assistant's API with a read-only token in the app options; playback goes through Home Assistant.
@@ -105,6 +106,14 @@ node src/index.js             # then open http://localhost:8099
 ```
 
 `npm run dev` starts all three at once. The screenshots above are made by `dev/screenshots.mjs` (see the top of that file). The first start copies `examples/dashboard.yaml` to `dev/config/`; edit that copy and the page reloads.
+
+The **mock HA server only** accepts `GET`/`POST /api/states/weather.forecast_home` and `/api/states/sun.sun` for weather previews. For example, the following changes the fake weather and streams it to Dasher; use `sun.sun` with `below_horizon` to preview night:
+
+```sh
+curl -X POST -H 'Content-Type: application/json' \
+  -d '{"state":"rainy","attributes":{"temperature":11,"temperature_unit":"°C"}}' \
+  http://127.0.0.1:8123/api/states/weather.forecast_home
+```
 
 Against a real Home Assistant, create a long-lived access token (Profile → Security), keep it in your shell rather than in a file, and set `HA_URL` and `HA_TOKEN`. For the Music Assistant tabs also set `MA_URL` and `MA_TOKEN`. Entities in `dashboard.yaml` that Home Assistant does not know are logged as a warning and shown in a banner on the tablet.
 

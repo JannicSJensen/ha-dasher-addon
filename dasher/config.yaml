@@ -1,5 +1,5 @@
 name: Dasher
-version: "0.41.1"
+version: "0.42.0"
 slug: dasher
 url: https://github.com/JannicSJensen/ha-dasher-addon
 description: Wall-tablet dashboard that serves a ready-to-use web page for tablets
@@ -26,6 +26,7 @@ options:
   read_only: false
   entity_map: []
   menu_items: []
+  weather_background: true
   allow_todo_management: true
   allow_area_editing: true
   allow_area_picture_upload: true
@@ -38,6 +39,7 @@ options:
 schema:
   log_level: list(debug|info|warning|error)
   read_only: bool
+  weather_background: bool
   entity_map:
     - from: str
       to: str

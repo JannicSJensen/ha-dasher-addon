@@ -99,7 +99,7 @@ const mealEvents = []; // { uid, calendar, summary, description, start, end }
 put("calendar.family", "off", { friendly_name: "Family", supported_features: 7 });
 put("calendar.privat", "off", { friendly_name: "Privat", supported_features: 7 });
 put("calendar.skole", "off", { friendly_name: "Skole", supported_features: 0 });
-put("weather.forecast_home", "cloudy", { friendly_name: "Forecast Home", temperature: 11 });
+put("weather.forecast_home", "cloudy", { friendly_name: "Forecast Home", temperature: 11, temperature_unit: "°C" });
 const TIMES = ["None", ...Array.from({ length: 96 }, (_, i) => `${String(Math.floor(i / 4)).padStart(2, "0")}:${String((i % 4) * 15).padStart(2, "0")}`)];
 put("sensor.ev_smart_charging_status", "waiting_for_charging_to_begin", { friendly_name: "EV Smart Charging Status" });
 put("sensor.ev_smart_charging_charging", "off", { friendly_name: "EV Smart Charging Lading", ev_soc: "67.0", ev_target_soc: "80.0", charging_is_planned: true, charging_start_time: new Date(day.getTime() + 25 * 3600_000).toISOString(), charging_stop_time: new Date(day.getTime() + 28.5 * 3600_000).toISOString() });
@@ -606,6 +606,26 @@ const slugOf = (name) => name.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]
 const uploadedImages = new Map();
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, "http://localhost");
+  // Native state API for previewing weather/day-night changes without a real HA instance.
+  const weatherState = url.pathname.match(/^\/api\/states\/((?:weather|sun)\.[a-z0-9_]+)$/);
+  if (weatherState) {
+    const id = weatherState[1];
+    const send = (status, data) => { res.writeHead(status, { "Content-Type": "application/json" }); res.end(JSON.stringify(data)); };
+    if (req.method === "GET") return states.has(id) ? send(200, states.get(id)) : send(404, { message: "Entity not found" });
+    if (req.method !== "POST") return send(405, { message: "Method not allowed" });
+    const chunks = [];
+    req.on("data", (chunk) => chunks.push(chunk));
+    req.on("end", () => {
+      let data;
+      try { data = JSON.parse(Buffer.concat(chunks).toString()); }
+      catch { return send(400, { message: "Invalid JSON" }); }
+      if (typeof data?.state !== "string" || (data.attributes != null && (typeof data.attributes !== "object" || Array.isArray(data.attributes)))) return send(400, { message: "Expected state and optional attributes" });
+      put(id, data.state, data.attributes ?? states.get(id)?.attributes ?? {});
+      emit(id);
+      send(200, states.get(id));
+    });
+    return;
+  }
   if (req.method === "POST" && url.pathname === "/api/image/upload") {
     const chunks = [];
     req.on("data", (c) => chunks.push(c));

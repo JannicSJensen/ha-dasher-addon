@@ -482,7 +482,7 @@ function parseEnergy(raw, errors) {
  * Never throws: problems end up in `errors` and offending tiles are dropped.
  */
 /** App menu overrides take precedence; the legacy Family/Calendar switches fill in missing sections. */
-export function parseConfig(text, { entityMap = {}, family: familyOption = {}, calendarPage: calendarPageOption = false, menuItems: menuItemsOption = [] } = {}) {
+export function parseConfig(text, { entityMap = {}, family: familyOption = {}, calendarPage: calendarPageOption = false, menuItems: menuItemsOption = [], weatherBackground: weatherBackgroundOption = true } = {}) {
   const errors = [];
   const failed = (message) => ({ config: null, errors: [message], entities: new Set(), rawEntities: new Set(), usage: new Map() });
   let raw;
@@ -537,8 +537,18 @@ export function parseConfig(text, { entityMap = {}, family: familyOption = {}, c
         errors.push(`${where}: invalid entity id(s): ${bad.join(", ")}`);
         continue;
       }
+      if (tile.type === "hero") {
+        if (tile.weather_background != null && typeof tile.weather_background !== "boolean") errors.push(`${where}.weather_background: use true or false.`);
+        for (const [key, domain] of [["weather_entity", "weather"], ["sun_entity", "sun"]]) {
+          if (tile[key] != null && (typeof tile[key] !== "string" || !tile[key].startsWith(`${domain}.`))) {
+            errors.push(`${where}.${key}: use a ${domain} entity id.`);
+            delete tile[key];
+          }
+        }
+      }
       tiles.push({
         ...tile,
+        ...(tile.type === "hero" ? { weather_background: weatherBackgroundOption !== false && (typeof tile.weather_background === "boolean" ? tile.weather_background : i === 0) } : {}),
         col: tile.col == null ? null : posInt(tile.col, null),
         row: tile.row == null ? null : posInt(tile.row, null),
         w: posInt(tile.w, 1),
@@ -624,7 +634,8 @@ export function parseConfig(text, { entityMap = {}, family: familyOption = {}, c
 /** Watches dashboard.yaml and keeps the parsed result current. */
 export class ConfigStore {
   /** `entityMapOption`: the app option `entity_map` (a list of { from, to }). */
-  constructor({ dir, onChange, logger, entityMapOption = [], familyOption = {}, calendarPageOption = false, menuItemsOption = [] }) {
+  constructor({ dir, onChange, logger, entityMapOption = [], familyOption = {}, calendarPageOption = false, menuItemsOption = [], weatherBackgroundOption = true }) {
+    this.weatherBackgroundOption = weatherBackgroundOption !== false;
     this.menuItemsOption = menuItemsOption;
     this.calendarPageOption = calendarPageOption === true;
     this.dir = dir;
@@ -675,7 +686,7 @@ export class ConfigStore {
       return this.current;
     }
     this.entityMap = this._readEntityMap();
-    this.current = parseConfig(text, { entityMap: this.entityMap, family: this.familyOption, calendarPage: this.calendarPageOption, menuItems: this.menuItemsOption });
+    this.current = parseConfig(text, { entityMap: this.entityMap, family: this.familyOption, calendarPage: this.calendarPageOption, menuItems: this.menuItemsOption, weatherBackground: this.weatherBackgroundOption });
     for (const e of this.current.errors) this.log.warn(`${e.startsWith("menu_items") ? "App configuration" : "dashboard.yaml"}: ${e}`);
     return this.current;
   }

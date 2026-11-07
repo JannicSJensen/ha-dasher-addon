@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.42.0
+
+- **Animated weather on the front page.** The hero replaces its background with HA's current weather: day/night skies, drifting clouds, rain, snow/sleet/hail, fog, wind and thunderstorms over a layered landscape. The clock, reminders and quick buttons remain. Reuses the calendar's weather entity or discovers one; unknown weather restores the existing background. On by default, with an **Animated weather background** app option to restore the old picture, per-tile overrides, English/Danish labels, and reduced-motion/hidden-tab support.
+
 ## 0.41.1
 
 - **Half-degree climate buttons.** The Climate page and room thermostat tiles now change the setpoint by 0.5°C per −/+ tap for every entity, rather than using HA's reported temperature step. Entity temperature limits are preserved; dial dragging still uses the entity's reported step.

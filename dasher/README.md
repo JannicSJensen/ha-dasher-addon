@@ -1,5 +1,7 @@
 # Dasher
 
+The front-page hero shows locally animated current HA weather with day/night scenes, while keeping its clock, reminders and buttons. Disable **Animated weather background** in the app configuration to restore the original picture; see [Animated weather](DOCS.md#animated-weather-background).
+
 A wall-tablet dashboard for Home Assistant, served as a plain web page that any tablet can open.
 
 * Open `http://<home-assistant>:8099/` on the tablet. No Home Assistant login is needed on the tablet.

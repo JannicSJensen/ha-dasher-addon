@@ -9,6 +9,7 @@ import { discoverMusicAssistant } from "./discovery.js";
 import { discoverEv, resolveEv } from "./ev.js";
 import { resolveClimate } from "./climate.js";
 import { EnergyService } from "./energy.js";
+import { resolveWeatherBackgrounds } from "./weather.js";
 import { MealsAI, allergenWarnings } from "./meals-ai.js";
 import { FamilyStore } from "./family.js";
 import { Mealie } from "./mealie.js";
@@ -90,6 +91,7 @@ const configStore = new ConfigStore({
   logger,
   entityMapOption: options.entity_map ?? process.env.ENTITY_MAP ?? [],
   menuItemsOption: options.menu_items ?? [],
+  weatherBackgroundOption: options.weather_background !== false,
   calendarPageOption: options.enable_calendar === true || process.env.ENABLE_CALENDAR === "1",
   familyOption: { enabled: options.enable_family === true || process.env.ENABLE_FAMILY === "1", children: options.family_children ?? [] },
   onChange: () => {
@@ -228,6 +230,7 @@ const devicesPayload = () => (devicesState.enabled ? { ...devicesState, editable
 let todoState = { enabled: false, lists: [], manage: false };
 const todoPayload = () => (todoState.enabled ? todoState : { enabled: false, lists: [], manage: false });
 let climateState = { enabled: false, entities: [] };
+let weatherModel = { config: null, entities: new Set() };
 const climatePayload = () => (climateState.enabled ? climateState : { enabled: false, entities: [] });
 const evPayload = () => (evState.enabled ? evState : { enabled: false, roles: {} });
 
@@ -252,6 +255,9 @@ const musicPayload = () => {
 /** Recompute everything derived from the config and the registries, and tell the tablets. */
 function rebuild({ refresh }) {
   const current = configStore.current;
+  const nextWeather = resolveWeatherBackgrounds(current.config, ha.entityIndex);
+  const weatherChanged = JSON.stringify(nextWeather.config) !== JSON.stringify(weatherModel.config);
+  weatherModel = nextWeather;
   energy.configure(current.config?.energy);
   areaModel = buildAreaModel({
     registries: ha.registries,
@@ -297,7 +303,8 @@ function rebuild({ refresh }) {
     ...(climateState.enabled ? climateState.entities : []),
     ...plexState.players,
   ]);
-  ha.setWatched(allowed, { refresh, required: current.entities });
+  ha.setWatched(new Set([...allowed, ...weatherModel.entities]), { refresh, required: current.entities });
+  if (weatherChanged) broadcast("config", configPayload());
   broadcast("areas", areasPayload());
   broadcast("music", musicPayload());
   broadcast("ev", evPayload());
@@ -326,7 +333,7 @@ function publicConfig(config) {
   if (!config?.family?.people?.some((p) => p.pin)) return config;
   return { ...config, family: { ...config.family, people: config.family.people.map(({ pin, ...rest }) => ({ ...rest, has_pin: Boolean(pin) })) } };
 }
-const configPayload = () => ({ config: publicConfig(configStore.current.config), errors: configStore.current.errors });
+const configPayload = () => ({ config: publicConfig(weatherModel.config ?? configStore.current.config), errors: configStore.current.errors });
 const statusPayload = () => ({
   ha: ha.connected,
   readOnly: READ_ONLY,

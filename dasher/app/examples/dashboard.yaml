@@ -143,7 +143,12 @@ pages:
         row: 1
         w: 2
         h: 2
-        # image: living-room.jpg          # fallback background (file in the assets folder)
+        # Current weather animates over the background by default on the first page.
+        # The app option "Animated weather background" turns it off for every hero.
+        # weather_background: false       # restore this tile's picture/room
+        # weather_entity: weather.forecast_home   # default: calendar tile's weather, or the first HA weather entity
+        # sun_entity: sun.sun              # optional day/night source, found automatically when available
+        # image: living-room.jpg          # fallback when weather is unavailable or switched off
         # backgrounds:                    # first matching entry wins
         #   - when: { entity: light.living_room_lamp, state: "on" }
         #     image: living-room-on.jpg

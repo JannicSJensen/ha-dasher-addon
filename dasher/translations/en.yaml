@@ -5,6 +5,9 @@ configuration:
   read_only:
     name: Read-only
     description: "Show states on the tablets but refuse every command from them."
+  weather_background:
+    name: Animated weather background
+    description: "Replace the front-page hero background with animated current weather, keeping the clock, reminders and buttons. Uses the calendar tile's weather entity, or the first HA weather entity; follows sun.sun for day/night. Turn off to restore the original picture/room. Respects reduced-motion preferences. Restart the app after changing."
   entity_map:
     name: Entity mapping
     description: "Use entities of your Home Assistant in place of the ones dashboard.yaml names, without editing the file. Each row has the entity id as written in dashboard.yaml (From) and the entity to use instead (To); both must be of the same kind (a light for a light, a sensor for a sensor). Dashboard entities that Home Assistant does not know are shown at the bottom of the tablet page and listed in the app log with suggestions. Restart the app after changing."

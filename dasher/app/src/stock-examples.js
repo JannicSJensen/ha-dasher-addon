@@ -30,6 +30,7 @@ export const STOCK_EXAMPLE_HASHES = new Set([
   "60db975aaa5a2e4d573a65509f828c818898d88cff0480ad05156e353f55f29a",
   "23bb8f42e3809f5ddce0d34df8e80b3d49b44d69d572efe0e60e2477eefdc0bf",
   "34d6aaf98e629c6e0a82c6ba09a9a1dfe6752c6abe24cb3feb3e049241f5246e",
+  "85a0092b1a2446bb58f1ef49e230175c132aa07ba3ba665907164a28e492a4b8",
 ]);
 
 export const hashDashboard = (text) => crypto.createHash("sha256").update(String(text).replace(/\r/g, "")).digest("hex");

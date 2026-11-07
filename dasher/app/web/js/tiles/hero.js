@@ -1,9 +1,11 @@
 import { h } from "../core/h.js";
 import { assetUrl } from "../core/api.js";
-import { formatDate, formatTime } from "../lib/format.js";
+import { formatDate, formatNumber, formatTime } from "../lib/format.js";
 import { icon } from "../core/icons.js";
 import { pickFirst } from "../lib/conditions.js";
 import { activeMessages, withVacuumMessages } from "../lib/messages.js";
+import { weatherPresentation } from "../lib/weather.js";
+import { createWeatherScene } from "../components/weather-scene.js";
 import { backgroundImage, createButtonRow } from "./common.js";
 
 /** Large area tile: state-dependent background, clock/date and a row of quick buttons. */
@@ -14,6 +16,8 @@ export function createHeroTile(cfg, ctx) {
 
   const clock = h("div", { class: "hero__clock" });
   const date = h("div", { class: "hero__date" });
+  const weather = cfg.weather_background ? createWeatherScene() : null;
+  const weatherLabel = h("div", { class: "hero__weather", hidden: !weather });
   const buttons = createButtonRow(cfg.buttons, ctx, { labels: cfg.button_labels !== false });
   // With no picture of its own the tile shows a built-in room: dim, and lit while one of `scene_entities` is on.
   const defaultScene = cfg.scene === false ? null : typeof cfg.scene === "string" ? cfg.scene : cfg.image || cfg.backgrounds?.length ? null : "living";
@@ -24,8 +28,10 @@ export function createHeroTile(cfg, ctx) {
     "div",
     { class: "tile tile--hero" },
     layers,
+    weather?.el,
     h("div", { class: "hero__shade" }),
-    cfg.show_clock === false ? null : h("div", { class: "hero__top" }, clock, date),
+    cfg.show_clock === false ? null : h("div", { class: "hero__top" }, clock, date, weatherLabel),
+    cfg.show_clock === false && weather ? h("div", { class: "hero__weather-status" }, weatherLabel) : null,
     messages,
     buttons.el,
   );
@@ -44,11 +50,13 @@ export function createHeroTile(cfg, ctx) {
   };
   schedule();
   const onVisible = () => {
+    weather?.pause(document.hidden);
     if (!document.hidden) {
       clearTimeout(timer);
       schedule();
     }
   };
+  weather?.pause(document.hidden);
   document.addEventListener("visibilitychange", onVisible);
 
   const setBackground = (url) => {
@@ -91,6 +99,13 @@ export function createHeroTile(cfg, ctx) {
     },
     update() {
       paintMessages();
+      if (weather) {
+        const model = weatherPresentation(ctx.getState(cfg.weather_entity), ctx.getState(cfg.sun_entity));
+        weather.set(model);
+        el.classList.toggle("has-weather", Boolean(model.scene));
+        const temperature = model.temperature == null ? "" : ` · ${formatNumber(model.temperature, { locale: ctx.locale, decimals: 1 })}${model.unit}`;
+        weatherLabel.textContent = model.condition ? `${ctx.t(`weather_${model.condition.replaceAll("-", "_")}`)}${temperature}` : ctx.t("hero_weather_unavailable");
+      }
       const match = pickFirst(cfg.backgrounds, ctx.getState);
       setBackground(assetUrl(match?.image ?? cfg.image ?? (defaultScene ? `scene:${defaultScene}` : null)));
       const sources = cfg.scene_entities ?? [];

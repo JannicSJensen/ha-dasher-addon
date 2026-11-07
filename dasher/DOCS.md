@@ -21,6 +21,7 @@ If the file has a mistake, the page shows what is wrong instead of failing silen
 | `read_only` | `false` | Show states but refuse every command from tablets. |
 | `entity_map` | empty | [Entity mapping](#missing-entities): a list of rows, each with the entity id as written in `dashboard.yaml` (*From*) and the entity of your Home Assistant to use instead (*To*). |
 | `menu_items` | empty | [Menu items](#menu-items): configure visibility, label, icon and order for every built-in and custom dashboard page. Empty keeps the existing menu. |
+| `weather_background` | `true` | [Animated weather](#animated-weather-background): replace the front-page hero's picture with current HA weather animations. Off restores its existing picture/room. |
 | `music_assistant_url` | empty | Address of your Music Assistant server, e.g. `http://192.168.1.10:8095`. **Leave it empty when Music Assistant runs as a Home Assistant app**: Dasher then finds it through the Supervisor (and keeps looking if Music Assistant starts later). Only needed for the browsing tabs of the [Music page](#music). |
 | `music_assistant_token` | empty | A long-lived access token from Music Assistant (*Settings → Profile → Long-lived access tokens*). Needed for the browsing tabs, also when Music Assistant runs as an app. Only used to read the library. |
 | `plex_url` | empty | Address of your Plex server **as your players reach it**, e.g. `http://192.168.1.10:32400`. Only needed to play Plex on Apple TVs and DLNA players with [stream links](#stream-links-apple-tv-dlna); the [Media page](#media) itself uses Home Assistant's Plex integration. |
@@ -151,11 +152,14 @@ tap: { action: service, service: scene.turn_on, entity: scene.cozy, data: {} }
 #### `hero`
 
 ![Front page](https://raw.githubusercontent.com/JannicSJensen/ha-dasher-addon/main/docs/screenshots/home.png)
-Large area picture with clock, date and quick buttons.
+Large area tile with clock, date and quick buttons, and an animated weather background on the front page.
 
 | Key | Description |
 | --- | --- |
-| `image` | Default background. |
+| `weather_background` | Animated current weather. Defaults to `true` on heroes of the first page in `pages`, `false` on other pages. Set `false` to retain a tile's picture, or `true` to opt in another hero. The HA app switch `weather_background: false` disables it for all tiles. |
+| `weather_entity` | Optional HA `weather.*` entity. Otherwise uses the calendar tile's weather entity on this page, then one on another page, then the first HA weather entity (sorted by ID). Entity mapping applies as usual. |
+| `sun_entity` | Optional HA `sun.*` entity for day/night; `sun.sun` is discovered when available. Without sun data, HA's `clear-night` condition selects the night scene. |
+| `image` | Default background when animated weather is disabled or unavailable. |
 | `backgrounds` | List of `{ when, image }`; the first match wins, an entry without `when` is the fallback. An image can also be `scene:<room>` (a built-in room picture, e.g. `scene:bedroom` for a night background). |
 | `scene` | Without `image` and `backgrounds` the tile shows a built-in room picture (`living` by default). Give another room (`kitchen`, `bedroom` ...) or `false` for a plain tile. |
 | `scene_entities` | Lights (or any entities) that light the scene up while one of them is `on`; otherwise the scene stays dim. |
@@ -164,6 +168,23 @@ Large area picture with clock, date and quick buttons.
 | `messages` | [Status messages](#status-messages) shown under the clock while they apply. |
 | `show_clock` | `false` to hide clock and date. |
 | `time_format` | `24h` (default) or `12h`. |
+
+##### Animated weather background
+
+On the first dashboard page, the hero follows the **current state** of your HA weather entity, not tomorrow's forecast. Sunny/clear nights, drifting clouds, rain/heavy rain, snow/sleet/hail, fog, wind and thunderstorms have their own scenes over a layered landscape. The clock, reminders and quick buttons stay in place. Current condition and temperature are shown in English or Danish, using the weather entity's temperature unit.
+
+It is **on by default**, also for an existing edited dashboard: no YAML changes are required. Open **Settings → Apps → Dasher → Configuration → Animated weather background**, switch it off and restart to restore your previous picture or built-in room. The weather layer never changes your saved images or HA's weather settings.
+
+```yaml
+- type: hero
+  weather_entity: weather.forecast_home   # optional; reuses the calendar's weather by default
+  # weather_background: false             # keep this tile's original background
+  image: living-room.jpg                  # fallback
+```
+
+Without a weather entity, or when its state is unknown/unavailable/unsupported, the original background returns with **Weather unavailable**. `exceptional` uses a neutral scene rather than guessing precipitation. HA state updates change the scene without reloading the page. Day/night follows the sun entity when available, otherwise `clear-night` selects night; no tablet-local sunrise/sunset guesses are made.
+
+Animations use local CSS/SVG only (no external videos, images, weather APIs or animation libraries). They pause in a hidden browser tab, stop when leaving the page, and become static when the browser requests **reduced motion**.
 
 ##### Status messages
 Short reminders on the front page that only appear while they apply, as cards between the clock and the buttons:
