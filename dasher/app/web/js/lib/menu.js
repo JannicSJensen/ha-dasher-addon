@@ -10,6 +10,7 @@ export const BUILTIN_MENU_ITEMS = [
   { id: "media", section: "plex", title: "plex_media" },
   { id: "ev", section: "ev", title: "ev_car" },
   { id: "energy", section: "energy", title: "energy_title" },
+  { id: "alarms", section: "alarms", title: "alarm_title" },
 ];
 
 export function menuItems(config, state, t, { includePending = false } = {}) {
@@ -25,7 +26,7 @@ export function menuItems(config, state, t, { includePending = false } = {}) {
     return {
       key: item.id, kind: item.section, id: null,
       href: `#/${item.id}`, title: settings?.title ?? t(item.title), icon: settings?.icon,
-      enabled: settings?.enabled !== false && (item.id === "calendar" ? settings?.enabled : model?.enabled || pending),
+      enabled: settings?.enabled !== false && (["calendar", "alarms"].includes(item.id) ? settings?.enabled : model?.enabled || pending),
     };
   });
   return [...pages, ...builtins]

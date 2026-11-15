@@ -68,6 +68,7 @@ Existing rows and other app options are preserved. Rows for removed dashboard pa
 | `media` | Plex Media (`plex:` in the dashboard file) |
 | `ev` | Car |
 | `energy` | Energy (Home Assistant's configured energy sources and devices) |
+| `alarms` | Alarms (local cooking and custom countdown timers) |
 
 For example, in the app configuration's YAML editor:
 
@@ -397,6 +398,14 @@ climate:
 * `entities` wins over `source`, and its entities take part in entity mapping.
 * **−** / **+** changes the setpoint by **0.5°C** per tap for every entity, within its minimum/maximum temperature limits, regardless of the step reported by HA. Dragging the dial still follows the entity's reported step.
 * A change of the setpoint is sent half a second after the last tap. Cards of entities that are unavailable are dimmed.
+
+## Alarms
+
+The **Alarms** menu page has illustrated quick timers for a soft-boiled egg (6 minutes), hard-boiled egg (10 minutes), tea (4 minutes), and pizza (12 minutes). Tap a preset to start it. Use **Custom timer** for a named countdown from one second to 24 hours. Multiple timers can run together; each can be cancelled separately.
+
+Timers are stored **only in this tablet's browser**, not in Home Assistant or on other tablets. They survive navigation and browser refresh, and overdue timers are shown on return. A finished timer shows an alert over any Dasher page and repeats a sound until dismissed. Keep Dasher open, the tablet awake, and its volume on: browsers or the operating system can suspend background pages, block audio, or delay alerts. If sound is blocked, the alert explains how to enable it. These are convenience timers, not reliable safety alarms.
+
+The page can be hidden or renamed using the `alarms` row in **Menu items**. Alternatively use `alarms: false` in `dashboard.yaml`. Hiding the page does not cancel already running timers. Local timers work in read-only mode and do not control Home Assistant entities.
 
 ## Energy
 

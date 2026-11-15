@@ -482,6 +482,17 @@ function parseEnergy(raw, errors) {
   };
 }
 
+function parseAlarms(raw, errors) {
+  const r = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+  if (raw != null && typeof raw !== "boolean" && (typeof raw !== "object" || Array.isArray(raw))) errors.push("alarms: use true, false or a mapping.");
+  if (r.enabled != null && typeof r.enabled !== "boolean") errors.push("alarms.enabled: use true or false.");
+  return {
+    enabled: raw !== false && r.enabled !== false,
+    title: r.title != null ? String(r.title) : null,
+    icon: String(r.icon ?? "timer-outline"),
+  };
+}
+
 /**
  * Parse and normalise a dashboard.yaml document.
  * Never throws: problems end up in `errors` and offending tiles are dropped.
@@ -585,6 +596,7 @@ export function parseConfig(text, { entityMap = {}, family: familyOption = {}, c
   const ev = parseEv(section("ev", raw.ev), errors);
   const climate = parseClimate(section("climate", raw.climate), errors);
   const energy = parseEnergy(section("energy", raw.energy), errors);
+  const alarms = parseAlarms(section("alarms", raw.alarms), errors);
   const plex = parsePlex(section("media", raw.plex), errors);
   const devices = parseDevices(section("devices", raw.devices), errors);
   const todo = parseTodo(section("todo", raw.todo), errors);
@@ -604,6 +616,7 @@ export function parseConfig(text, { entityMap = {}, family: familyOption = {}, c
     ev,
     climate,
     energy,
+    alarms,
     plex,
     devices,
     todo,

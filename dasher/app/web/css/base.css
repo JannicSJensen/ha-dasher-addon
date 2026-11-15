@@ -30,10 +30,11 @@ img { -webkit-user-drag: none; }
   background: var(--sidebar-bg);
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: safe center;
   align-items: center;
   gap: 14px;
   padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  overflow: auto;
 }
 .sidebar[hidden] { display: none; }
 .sidebar__item {

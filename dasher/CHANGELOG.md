@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.45.0
+
+- **Alarms page.** Start multiple local cooking timers from illustrated egg, tea and pizza presets or set a custom countdown. Timers survive page navigation and browser refresh, and finished timers show an alert and repeat a sound on that tablet. The new `alarms` menu item can be hidden or renamed in app configuration.
+
 ## 0.44.0
 
 - **Energy prices and cheapest-start advice.** Today's published HA electricity prices are graphed with current-price and accessible table views. EV recommendations use EV Smart Charging's reported duration; dryer, washer and dishwasher recommendations use two-hour runs. Suggestions cover only the remaining day, use time-weighted prices, and never bridge missing rates or control devices. Energy card columns now have matching widths and gaps.

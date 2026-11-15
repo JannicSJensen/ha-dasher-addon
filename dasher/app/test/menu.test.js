@@ -20,7 +20,7 @@ test("empty menu options preserve the existing defaults and sidebar order", () =
   assert.equal(config.family.enabled, false);
   assert.equal(config.calendar.enabled, false);
   const items = menuItems(config, ready, t);
-  assert.deepEqual(items.map((i) => i.key), ["page:home", "page:garage", "climate", "areas", "music", "meals", "todo", "devices", "media", "ev", "energy"]);
+  assert.deepEqual(items.map((i) => i.key), ["page:home", "page:garage", "climate", "areas", "music", "meals", "todo", "devices", "media", "ev", "energy", "alarms"]);
   assert.deepEqual(menuRoute("", items), { kind: "page", id: "home" });
   assert.deepEqual(menuRoute("#/unknown", items), { kind: "page", id: "home" });
 });
@@ -76,7 +76,7 @@ test("custom pages accept shorthand and explicit ids; hidden pages cannot be sel
   assert.deepEqual(errors, []);
   assert.equal(config.pages[1].title, "Workshop");
   const items = menuItems(config, {}, t);
-  assert.deepEqual(items.map((i) => [i.key, i.title, i.icon]), [["page:garage", "Workshop", "tools"]]);
+  assert.deepEqual(items.map((i) => [i.key, i.title, i.icon]), [["page:garage", "Workshop", "tools"], ["alarms", "Alarms", "timer-outline"]]);
   assert.deepEqual(menuRoute("#/home", items), { kind: "page", id: "garage" });
   const collision = parse([{ id: "page:music", visible: false }], `${base}  - { id: music }\n`);
   assert.deepEqual(collision.errors, []);
@@ -123,11 +123,11 @@ test("a custom radio page remains reachable when the built-in Music page is hidd
 
 test("availability updates and pending data do not expose disabled menu items", () => {
   const { config } = parse([{ id: "home", visible: false }, { id: "garage", visible: false }, { id: "calendar", visible: true }]);
-  assert.deepEqual(menuItems(config, {}, t).map((i) => i.key), ["calendar"]);
-  assert.deepEqual(menuItems(config, { music: { enabled: true } }, t).map((i) => i.key), ["music", "calendar"]);
-  assert.deepEqual(menuItems(config, {}, t, { includePending: true }).map((i) => i.key), ["areas", "music", "calendar", "energy"]);
+  assert.deepEqual(menuItems(config, {}, t).map((i) => i.key), ["calendar", "alarms"]);
+  assert.deepEqual(menuItems(config, { music: { enabled: true } }, t).map((i) => i.key), ["music", "calendar", "alarms"]);
+  assert.deepEqual(menuItems(config, {}, t, { includePending: true }).map((i) => i.key), ["areas", "music", "calendar", "energy", "alarms"]);
   const hidden = parse([{ id: "areas", visible: false }, { id: "music", visible: false }, { id: "energy", visible: false }]).config;
-  assert.deepEqual(menuItems(hidden, {}, t, { includePending: true }).map((i) => i.key), ["page:home", "page:garage"]);
+  assert.deepEqual(menuItems(hidden, {}, t, { includePending: true }).map((i) => i.key), ["page:home", "page:garage", "alarms"]);
 });
 
 test("all menu items can be hidden without removing tile definitions or crashing routing", () => {

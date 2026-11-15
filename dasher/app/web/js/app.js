@@ -8,6 +8,9 @@ import { menuItemActive, menuItems, menuRoute } from "./lib/menu.js";
 import { createAreaPage } from "./pages/area.js";
 import { createAreasPage } from "./pages/areas.js";
 import { createAmbient } from "./components/ambient.js";
+import { createAlarmAlert } from "./components/alarm-alert.js";
+import { AlarmTimers, ALARM_STORAGE_KEY } from "./lib/alarms.js";
+import { createAlarmsPage } from "./pages/alarms.js";
 import { createNowPlayingScreen } from "./components/nowplaying-screen.js";
 import { createCalendarPage } from "./pages/calendar.js";
 import { createClimatePage } from "./pages/climate.js";
@@ -58,6 +61,17 @@ const stage = h("main", { class: "stage" });
 const banner = h("div", { class: "banner", hidden: true });
 const toasts = h("div", { class: "toasts", "aria-live": "polite" });
 root.append(sidebar, stage, banner, toasts);
+const alarms = new AlarmTimers({
+  storage: {
+    getItem: (key) => localStorage.getItem(key),
+    setItem: (key, value) => localStorage.setItem(key, value),
+  },
+  onError: (error) => { console.error("Alarm storage failed:", error); toast(t("alarm_storage_error")); },
+});
+const alarmAlert = createAlarmAlert(alarms, () => t);
+root.append(alarmAlert.el);
+window.addEventListener("storage", (event) => { if (event.key === ALARM_STORAGE_KEY || event.key === null) alarms.load(); });
+document.addEventListener("visibilitychange", () => { if (!document.hidden) alarmAlert.paint(); });
 
 // ---- helpers ------------------------------------------------------------------
 
@@ -72,6 +86,8 @@ const getState = (id) => store.getState().entities[id];
 function makeContext(config) {
   return {
     t,
+    alarms,
+    alarmAlert,
     language: config.language,
     locale: config.locale ?? config.language,
     getState,
@@ -196,6 +212,8 @@ function renderRoute() {
     mountSingle(createClimatePage(climate, ctx));
   } else if (route.kind === "energy") {
     mountSingle(createEnergyPage(energy ?? config.energy, ctx));
+  } else if (route.kind === "alarms") {
+    mountSingle(createAlarmsPage(config.alarms, ctx));
   } else if (route.kind === "ev") {
     mountSingle(createEvPage(ev, ctx));
   } else if (route.kind === "music") {
@@ -294,6 +312,7 @@ function applyConfig() {
     return renderConfigError(errors.length ? errors : ["No configuration loaded."]);
   }
   t = makeTranslator(config.language);
+  alarmAlert.refreshTranslation();
   document.documentElement.lang = config.language;
   document.documentElement.style.setProperty("--accent", config.accent);
   document.title = config.title;
