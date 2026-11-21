@@ -1,20 +1,59 @@
 * { box-sizing: border-box; }
-body { margin: 0; background: #101b2c; color: #f1f5f9; font: 16px -apple-system, BlinkMacSystemFont, sans-serif; }
-header { padding: 18px; background: #18283c; }
-header strong { font-size: 22px; }
+body { margin: 0; background: #07090a; color: #f0f1ee; font: 16px -apple-system, BlinkMacSystemFont, sans-serif; }
+header { padding: 18px 22px; background: #101416; border-bottom: 1px solid #252b2d; }
+header strong { font-size: 20px; letter-spacing: .03em; }
 header span, header a { display: inline-block; margin-left: 16px; }
-a { color: #8fe6dc; }
-nav { padding: 8px; background: #18283c; }
-nav a { display: inline-block; padding: 10px 14px; margin: 3px; border-radius: 6px; text-decoration: none; background: #263d52; }
-nav a.active { background: #0e766e; color: white; }
-main { max-width: 1000px; margin: auto; padding: 18px; }
-h1 { font-size: 26px; }
-h2 { font-size: 20px; margin: 0 0 10px; }
+header span { color: #a9b5b2; font-size: 14px; }
+a { color: #b7d6ca; }
+nav { padding: 8px 14px; background: #101416; border-bottom: 1px solid #252b2d; }
+nav a { display: inline-block; padding: 10px 15px; margin: 4px; border-radius: 22px; text-decoration: none; color: #c6cfcc; background: #202729; }
+nav a.active { background: #c2ded3; color: #10211b; }
+main { max-width: 1080px; margin: auto; padding: 20px; }
+h1 { margin: 8px 0 20px; font-size: 24px; font-weight: 500; }
+h2 { font-size: 19px; font-weight: 500; margin: 0 0 12px; }
 p { line-height: 1.4; }
-.card { display: inline-block; vertical-align: top; width: 100%; max-width: 460px; padding: 18px; margin: 0 10px 12px 0; border-radius: 8px; background: #203247; }
-.muted { color: #c1d0dd; }
-button, select { font: inherit; margin: 4px; padding: 10px 14px; min-height: 44px; border: 0; border-radius: 6px; color: white; background: #126d68; }
+.card { display: inline-block; vertical-align: top; width: 100%; max-width: 460px; padding: 20px; margin: 0 10px 14px 0; border: 1px solid #30383a; border-radius: 18px; background: #151a1c; }
+.muted { color: #b6c0bd; }
+button, select { font: inherit; margin: 4px; padding: 10px 16px; min-height: 44px; border: 1px solid #3a4844; border-radius: 22px; color: #e7f2ed; background: #273733; }
 button:disabled { opacity: .45; }
-select { background: #30475c; }
-#notice { padding: 0 18px; color: #ffd1bd; }
+button:focus, a:focus, select:focus { outline: 2px solid #d5f3e5; outline-offset: 2px; }
+select { background: #26302e; }
+#notice { padding: 0 22px; color: #ffd1bd; }
 #notice:not(:empty) { padding-top: 12px; }
+.hero-card { display: block; max-width: none; margin-right: 0; padding: 34px 20px 24px; text-align: center; background: #101415; }
+.clock-date { color: #aab4b1; font-size: 16px; letter-spacing: .06em; }
+.clock-digits { margin: 20px 0; white-space: nowrap; }
+.clock-block { position: relative; display: inline-block; min-width: 1.4em; padding: .08em .12em; border: 1px solid #3a4141; border-radius: 12px; background: #202526; color: #f4f5f2; font-size: 58px; font-weight: 700; line-height: 1; letter-spacing: -.05em; }
+.clock-block:after { position: absolute; top: 50%; left: 0; right: 0; border-top: 1px solid #0b0d0e; content: ""; }
+.clock-colon { display: inline-block; margin: 0 .08em; color: #c9d4cf; font-size: 50px; font-weight: 700; vertical-align: .08em; }
+.clock-suffix { display: inline-block; color: #b6c0bd; font-size: 16px; vertical-align: bottom; }
+.weather-panel { margin: 16px 0 24px; color: #b6c0bd; font-size: 18px; }
+.weather-symbol, .weather-temperature, .weather-condition { display: inline-block; margin: 0 6px; vertical-align: middle; }
+.weather-symbol { color: #d3e8de; font-size: 27px; }
+.weather-temperature { color: #f0f1ee; font-size: 24px; }
+.hero-actions { margin-top: 18px; }
+.music-card { display: block; max-width: 560px; margin: 0 auto 18px; padding: 22px; text-align: center; }
+.music-card h2 { color: #c0cbc7; }
+.turntable { position: relative; width: 100%; max-width: 310px; margin: 18px auto 22px; padding: 20px; overflow: hidden; border: 1px solid #4b5851; border-radius: 18px; background: #283a32; }
+.record { position: relative; width: 100%; height: 0; padding-bottom: 100%; border: 4px solid #0a0c0d; border-radius: 50%; background: repeating-radial-gradient(circle, #181c1d 0, #181c1d 4px, #262c2b 5px, #101314 7px); box-shadow: 0 8px 20px rgba(0,0,0,.45); }
+.record.is-playing { -webkit-animation: record-spin 9s linear infinite; animation: record-spin 9s linear infinite; }
+.record-label { position: absolute; top: 32%; left: 32%; width: 36%; height: 36%; overflow: hidden; border: 4px solid #111818; border-radius: 50%; background: #a9c5b5; }
+.record-label:after { position: absolute; top: 46%; left: 46%; width: 8%; height: 8%; border-radius: 50%; background: #101414; content: ""; }
+.record-art { display: block; width: 100%; height: 100%; object-fit: cover; }
+.tonearm { position: absolute; top: 13%; right: 12%; width: 6px; height: 53%; border-radius: 6px; background: #c8d0ca; box-shadow: 2px 3px 4px rgba(0,0,0,.5); -webkit-transform: rotate(20deg); transform: rotate(20deg); -webkit-transform-origin: top center; transform-origin: top center; }
+.tonearm:before { position: absolute; top: -5px; left: -6px; width: 18px; height: 18px; border-radius: 50%; background: #dce5df; content: ""; }
+.tonearm:after { position: absolute; bottom: -5px; left: -4px; width: 14px; height: 22px; border-radius: 3px; background: #111817; content: ""; }
+.track-title { font-size: 22px; line-height: 1.25; }
+.track-artist { margin-top: 6px; color: #b6c0bd; }
+.player-controls { margin-top: 12px; }
+@-webkit-keyframes record-spin { from { -webkit-transform: rotate(0deg); } to { -webkit-transform: rotate(360deg); } }
+@keyframes record-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@media (min-width: 600px) {
+  .hero-card { padding: 46px 28px 32px; }
+  .clock-block { font-size: 108px; }
+  .clock-colon { font-size: 90px; }
+  .weather-panel { font-size: 21px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .record.is-playing { -webkit-animation: none; animation: none; }
+}

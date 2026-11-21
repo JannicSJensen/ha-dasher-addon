@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.47.0
+
+- **Refreshed legacy interface.** A dark tablet-friendly design adds a large live clock with current weather and an independently drawn turntable for Music players, inspired by the iPad picture-frame project. The playing speaker is shown first and remains there when paused if nothing else is playing; the record respects reduced motion. Existing legacy controls and the standard dashboard remain unchanged. Physical iOS 12.5.8 testing is still needed.
+
 ## 0.46.0
 
 - **Legacy tablet interface.** A separate `/legacy/` dashboard targets iOS 12.5.8 with ES5 JavaScript and simplified Home, Climate, Areas, Energy, Calendar, Music, Media and Car views. It honors menu visibility and read-only mode and uses the existing service policy. Advanced features remain on the standard dashboard; physical iOS 12 device testing is still needed. See [Legacy mode](DOCS.md#legacy-mode-for-older-tablets).

@@ -12,13 +12,23 @@ test("legacy script uses ES5 grammar", () => {
 
 function harness() {
   class Element {
-    constructor(tag) { this.tag = tag; this.children = []; this._text = ""; }
+    constructor(tag) { this.tag = tag; this.children = []; this._text = ""; this.attributes = {}; this.style = {}; }
     set textContent(value) { this._text = String(value); this.children = []; }
     get textContent() { return this._text + this.children.map((child) => child.textContent).join(""); }
     appendChild(child) { this.children.push(child); return child; }
+    setAttribute(name, value) { this.attributes[name] = String(value); }
+    getAttribute(name) { return this.attributes[name] ?? null; }
+    querySelector(selector) {
+      return all(this).find((item) => selector[0] === "." && (item.className || "").split(" ").includes(selector.slice(1))) ?? null;
+    }
   }
+  const all = (root) => [root, ...root.children.flatMap(all)];
   const elements = Object.fromEntries(["notice", "content", "menu", "title", "connection"].map((id) => [id, new Element("div")]));
-  const document = { getElementById: (id) => elements[id], createElement: (tag) => new Element(tag) };
+  const document = {
+    getElementById: (id) => elements[id], createElement: (tag) => new Element(tag),
+    querySelectorAll: (selector) => Object.values(elements).flatMap(all).filter((item) =>
+      selector === "[data-legacy-clock]" && item.getAttribute("data-legacy-clock") !== null),
+  };
   const listeners = {};
   const location = { hash: "" };
   const window = { location, addEventListener: (type, fn) => { listeners[type] = fn; } };
@@ -39,13 +49,17 @@ function harness() {
   }
   let timerId = 0;
   const timers = new Map();
+  const intervals = new Map();
+  let now = Date.parse("2026-01-02T10:15:00Z");
+  class ClockDate extends Date {
+    constructor(...args) { super(...(args.length ? args : [now])); }
+  }
   vm.runInNewContext(script, {
     document, window, EventSource: Source, XMLHttpRequest: Xhr,
     setTimeout: (fn) => { timers.set(++timerId, fn); return timerId; },
-    clearTimeout: (id) => timers.delete(id), setInterval() {}, Date, JSON, Math, Array,
+    clearTimeout: (id) => timers.delete(id), setInterval: (fn, delay) => intervals.set(delay, fn), Date: ClockDate, JSON, Math, Array,
     encodeURIComponent, isFinite,
   });
-  const all = (root) => [root, ...root.children.flatMap(all)];
   function find(text) {
     const node = all(elements.content).find((item) => item.tag === "button" && item.textContent === text);
     assert.ok(node, `Missing button: ${text}; content: ${elements.content.textContent}`);
@@ -53,7 +67,9 @@ function harness() {
   }
   const route = (id) => { location.hash = "#/" + id; listeners.hashchange(); };
   const flush = () => { const callbacks = [...timers.values()]; timers.clear(); callbacks.forEach((fn) => fn()); };
-  return { elements, source, requests, find, route, flush };
+  const findClass = (name) => all(elements.content).find((item) => (item.className || "").split(" ").includes(name));
+  const tick = (time) => { now = Date.parse(time); intervals.get(1000)(); };
+  return { elements, source, requests, find, findClass, route, flush, tick };
 }
 
 const config = {
@@ -101,6 +117,51 @@ test("legacy home honors hidden menu items, configured actions, ingress-relative
   assert.equal(h.requests.at(-1).body.service, "turn_on");
   h.source.emit("status", { ha: true, readOnly: true });
   assert.equal(h.find("Lights · on").disabled, true);
+});
+
+test("legacy clock updates in place and shows real weather without inventing temperatures", () => {
+  const h = harness(); setup(h);
+  const hero = { type: "hero", time_format: "12h", weather_entity: "weather.home", buttons: [] };
+  h.source.emit("config", { config: { ...config, pages: [{ id: "home", title: "Home", tiles: [hero] }] }, errors: [] });
+  h.source.emit("state", entity("weather.home", "rainy", { temperature: 0, temperature_unit: "°C" }));
+  const clock = h.findClass("clock-panel");
+  assert.ok(clock);
+  assert.match(h.elements.content.textContent, /0°C/);
+  assert.match(h.elements.content.textContent, /Rain/);
+  const before = clock.getAttribute("aria-label");
+  h.tick("2026-01-02T10:16:00Z");
+  assert.notEqual(clock.getAttribute("aria-label"), before);
+  assert.equal(h.findClass("clock-panel"), clock);
+  h.source.emit("state", entity("weather.home", "unavailable"));
+  assert.match(h.elements.content.textContent, /Unavailable/);
+  assert.doesNotMatch(h.elements.content.textContent, /0°C/);
+  h.source.emit("config", { config: { ...config, pages: [{ id: "home", title: "Home", tiles: [{ ...hero, show_clock: false }] }] }, errors: [] });
+  assert.equal(h.findClass("clock-panel"), undefined);
+  h.source.emit("config", { config: { ...config, locale: "not_a_locale", pages: [{ id: "home", title: "Home", tiles: [hero] }] }, errors: [] });
+  assert.match(h.elements.notice.textContent, /Invalid dashboard locale/);
+  assert.ok(h.findClass("clock-date").textContent);
+});
+
+test("legacy music presents artwork through the proxy and responds to playback state", () => {
+  const h = harness(); setup(h);
+  h.source.emit("music", { enabled: true, players: ["media_player.idle", "media_player.speaker"] });
+  h.source.emit("state", entity("media_player.idle", "idle", { friendly_name: "Idle speaker" }));
+  h.source.emit("state", entity("media_player.speaker", "playing", {
+    friendly_name: "Active speaker", media_title: "A song", media_artist: "An artist",
+    entity_picture: "/api/media_player_proxy/media_player.speaker?token=mock",
+  }));
+  h.route("music");
+  assert.equal(h.elements.content.children[1].children[0].textContent, "Active speaker");
+  assert.match(h.elements.content.textContent, /A song/);
+  assert.match(h.elements.content.textContent, /An artist/);
+  assert.match(h.findClass("record").className, /is-playing/);
+  assert.equal(h.findClass("record-art").src, "../api/proxy?path=%2Fapi%2Fmedia_player_proxy%2Fmedia_player.speaker%3Ftoken%3Dmock");
+  h.find("Play / pause").onclick();
+  assert.equal(h.requests.at(-1).body.service, "media_play_pause");
+  h.source.emit("state", entity("media_player.speaker", "paused", { friendly_name: "Active speaker", entity_picture: "javascript:alert(1)" }));
+  assert.equal(h.elements.content.children[1].children[0].textContent, "Active speaker");
+  assert.doesNotMatch(h.findClass("record").className, /is-playing/);
+  assert.equal(h.findClass("record-art"), undefined);
 });
 
 test("legacy climate batches half-degree changes and preserves thermostat power modes", () => {

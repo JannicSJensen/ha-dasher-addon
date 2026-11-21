@@ -10,6 +10,7 @@
   var calendar = { data: null, error: null, loading: false };
   var agendas = {};
   var pending = {};
+  var musicFocus = null;
   var notice = document.getElementById("notice");
   var content = document.getElementById("content");
   var menuElement = document.getElementById("menu");
@@ -23,7 +24,7 @@
       play: "Play / pause", back: "Previous track", forward: "Next track", volumeDown: "Volume −", volumeUp: "Volume +",
       home: "Home", battery: "Battery", grid_import: "Grid consumption", grid_export: "Returned to grid", solar: "Solar", battery_charge: "Battery charging",
       battery_discharge: "Battery discharging", net_cost: "Net cost", noenergy: "Energy is not configured in Home Assistant.",
-      calendarPartial: "Some calendars could not be loaded", calendarReadOnly: "Upcoming events (read-only)" },
+      calendarPartial: "Some calendars could not be loaded", calendarReadOnly: "Upcoming events (read-only)", nothingPlaying: "Nothing playing" },
     da: { climate: "Klima", areas: "Områder", music: "Musik", media: "Medier", calendar: "Kalender", ev: "Bil", energy: "Energi",
       connecting: "Forbinder", connected: "Forbundet", disconnected: "Ingen forbindelse til Home Assistant", readonly: "Skrivebeskyttet",
       unavailable: "Ikke tilgængelig", unknown: "Ukendt", empty: "Intet at vise.", unsupported: "Dette element er ikke tilgængeligt i legacy-tilstand.",
@@ -33,7 +34,15 @@
       play: "Afspil / pause", back: "Forrige nummer", forward: "Næste nummer", volumeDown: "Lydstyrke −", volumeUp: "Lydstyrke +",
       home: "Hjem", battery: "Batteri", grid_import: "Fra elnet", grid_export: "Til elnet", solar: "Solenergi", battery_charge: "Batteriopladning",
       battery_discharge: "Batteriafladning", net_cost: "Nettopris", noenergy: "Energi er ikke konfigureret i Home Assistant.",
-      calendarPartial: "Nogle kalendere kunne ikke indlæses", calendarReadOnly: "Kommende begivenheder (skrivebeskyttet)" }
+      calendarPartial: "Nogle kalendere kunne ikke indlæses", calendarReadOnly: "Kommende begivenheder (skrivebeskyttet)", nothingPlaying: "Intet spiller" }
+  };
+  var weatherLabels = {
+    en: { sunny: "Sunny", "clear-night": "Clear night", partlycloudy: "Partly cloudy", cloudy: "Cloudy", fog: "Fog",
+      rainy: "Rain", pouring: "Heavy rain", snowy: "Snow", "snowy-rainy": "Sleet", hail: "Hail",
+      lightning: "Lightning", "lightning-rainy": "Thunderstorm", windy: "Windy", "windy-variant": "Windy and cloudy", exceptional: "Exceptional weather" },
+    da: { sunny: "Solskin", "clear-night": "Klar nat", partlycloudy: "Delvist skyet", cloudy: "Skyet", fog: "Tåge",
+      rainy: "Regn", pouring: "Kraftig regn", snowy: "Sne", "snowy-rainy": "Slud", hail: "Hagl",
+      lightning: "Lyn", "lightning-rainy": "Tordenvejr", windy: "Blæsende", "windy-variant": "Blæsende og skyet", exceptional: "Usædvanligt vejr" }
   };
   function t(key) {
     var lang = config && config.language === "da" ? "da" : "en";
@@ -185,6 +194,67 @@
     }
     return date + " · " + event.summary + (event.location ? " · " + event.location : "");
   }
+  function updateClock(clock, now) {
+    var hours = now.getHours(), minutes = now.getMinutes(), twelve = clock.getAttribute("data-format") === "12h";
+    var key = now.getFullYear() + "-" + now.getMonth() + "-" + now.getDate() + "-" + hours + "-" + minutes;
+    if (clock.getAttribute("data-minute") === key) return;
+    clock.setAttribute("data-minute", key);
+    var suffix = twelve ? (hours < 12 ? " AM" : " PM") : "";
+    if (twelve) hours = hours % 12 || 12;
+    var hour = ("0" + hours).slice(-2), minute = ("0" + minutes).slice(-2);
+    clock.querySelector(".clock-hour").textContent = hour;
+    clock.querySelector(".clock-minute").textContent = minute;
+    clock.querySelector(".clock-suffix").textContent = suffix;
+    clock.setAttribute("aria-label", hour + ":" + minute + suffix);
+    var locale = config.locale || config.language || "en", options = {
+      weekday: "long", day: "numeric", month: "long", year: "numeric"
+    }, date;
+    try { date = now.toLocaleDateString(locale, options); }
+    catch (err) {
+      if (err.name !== "RangeError") throw err;
+      fail("Invalid dashboard locale: " + locale);
+      date = now.toLocaleDateString();
+    }
+    clock.querySelector(".clock-date").textContent = date;
+  }
+  function updateClocks() {
+    var clocks = document.querySelectorAll("[data-legacy-clock]"), now = new Date(), i;
+    for (i = 0; i < clocks.length; i++) updateClock(clocks[i], now);
+  }
+  function clockPanel(tile) {
+    var panel = el("div", null, "clock-panel"), digits = el("div", null, "clock-digits");
+    panel.setAttribute("data-legacy-clock", "");
+    panel.setAttribute("data-format", tile.time_format || "24h");
+    panel.appendChild(el("div", null, "clock-date"));
+    digits.appendChild(el("span", null, "clock-hour clock-block"));
+    digits.appendChild(el("span", ":", "clock-colon"));
+    digits.appendChild(el("span", null, "clock-minute clock-block"));
+    digits.appendChild(el("span", null, "clock-suffix"));
+    panel.appendChild(digits);
+    updateClock(panel, new Date());
+    return panel;
+  }
+  function weatherPanel(id) {
+    var panel = el("div", null, "weather-panel"), e = states[id], attrs = e && e.attributes || {};
+    if (!available(id)) {
+      line(panel, name(id) + ": " + t("unavailable"));
+      return panel;
+    }
+    var condition = String(e.state), lang = config.language === "da" ? "da" : "en";
+    var glyphs = { sunny: "☀", "clear-night": "☾", partlycloudy: "⛅", cloudy: "☁", fog: "☁", rainy: "☂",
+      pouring: "☂", snowy: "❄", "snowy-rainy": "❄", hail: "❄", lightning: "ϟ", "lightning-rainy": "ϟ",
+      windy: "≋", "windy-variant": "≋", exceptional: "!" };
+    var glyph = Object.prototype.hasOwnProperty.call(glyphs, condition) ? glyphs[condition] : "·";
+    var symbol = el("span", glyph, "weather-symbol");
+    symbol.setAttribute("aria-hidden", "true");
+    panel.appendChild(symbol);
+    if (typeof attrs.temperature === "number" && isFinite(attrs.temperature)) {
+      panel.appendChild(el("span", attrs.temperature + (typeof attrs.temperature_unit === "string" ? attrs.temperature_unit : "°"), "weather-temperature"));
+    }
+    var weatherName = Object.prototype.hasOwnProperty.call(weatherLabels[lang], condition) ? weatherLabels[lang][condition] : condition;
+    panel.appendChild(el("span", weatherName, "weather-condition"));
+    return panel;
+  }
   function agenda(tile, key, box) {
     var entry = agendas[key], days = Math.min(31, Math.max(1, Number(tile.days) || 7));
     if (!entry) {
@@ -211,10 +281,12 @@
     (page.tiles || []).forEach(function (tile, index) {
       var box, id = tile.entity;
       if (tile.type === "hero") {
-        box = card(page.title);
-        line(box, new Date().toLocaleString());
-        if (tile.weather_entity) line(box, name(tile.weather_entity) + ": " + stateText(tile.weather_entity));
-        (tile.buttons || []).forEach(function (b) { quickAction(box, b); });
+        box = el("section", null, "card hero-card");
+        if (tile.show_clock !== false) box.appendChild(clockPanel(tile));
+        if (tile.weather_entity) box.appendChild(weatherPanel(tile.weather_entity));
+        var quick = el("div", null, "hero-actions");
+        (tile.buttons || []).forEach(function (b) { quickAction(quick, b); });
+        box.appendChild(quick);
         content.appendChild(box);
       } else if (tile.type === "toggle" && id) {
         box = card(tile.name || name(id));
@@ -308,14 +380,55 @@
     control(box, t("volumeDown"), id, "volume_down");
     control(box, t("volumeUp"), id, "volume_up");
   }
-  function players(model) {
-    (model.players || []).forEach(function (id) {
+  function artworkUrl(picture) {
+    if (typeof picture !== "string" || !picture) return null;
+    if (/^https?:\/\//i.test(picture)) return picture;
+    return picture.charAt(0) === "/" && picture.charAt(1) !== "/" ? "../api/proxy?path=" + encodeURIComponent(picture) : null;
+  }
+  function players(model, turntable) {
+    var ids = model.players || [];
+    if (turntable) {
+      var playing = ids.filter(function (id) { return states[id] && states[id].state === "playing"; });
+      if (playing.length && playing.indexOf(musicFocus) === -1) musicFocus = playing[0];
+      else if (!playing.length && ids.indexOf(musicFocus) === -1) musicFocus = null;
+      if (musicFocus) ids = [musicFocus].concat(ids.filter(function (id) { return id !== musicFocus; }));
+    }
+    ids.forEach(function (id) {
       var box = card(name(id)), attrs = states[id] && states[id].attributes || {};
+      if (turntable) {
+        box.className += " music-card";
+        var deck = el("div", null, "turntable");
+        deck.setAttribute("aria-hidden", "true");
+        var record = el("div", null, "record" + (states[id] && states[id].state === "playing" ? " is-playing" : ""));
+        // Keep the rotation continuous when live events rebuild the card.
+        var delay = -(Date.now() % 9000) / 1000 + "s";
+        record.style.animationDelay = delay;
+        record.style.webkitAnimationDelay = delay;
+        var label = el("div", null, "record-label"), picture = artworkUrl(attrs.entity_picture);
+        if (picture) {
+          var img = el("img", null, "record-art");
+          img.alt = "";
+          img.onerror = function () { this.style.display = "none"; };
+          img.src = picture;
+          label.appendChild(img);
+        }
+        record.appendChild(label);
+        deck.appendChild(record);
+        deck.appendChild(el("div", null, "tonearm"));
+        box.appendChild(deck);
+        box.appendChild(el("div", attrs.media_title || t("nothingPlaying"), "track-title"));
+        if (attrs.media_artist || attrs.media_album_name) {
+          box.appendChild(el("div", attrs.media_artist || attrs.media_album_name, "track-artist"));
+        }
+      }
       line(box, stateText(id));
-      if (attrs.media_title) line(box, attrs.media_title + (attrs.media_artist ? " — " + attrs.media_artist : ""));
-      playerControls(box, id);
+      if (!turntable && attrs.media_title) line(box, attrs.media_title + (attrs.media_artist ? " — " + attrs.media_artist : ""));
+      var controls = el("div", null, "player-controls");
+      playerControls(controls, id);
+      box.appendChild(controls);
       content.appendChild(box);
     });
+    if (!ids.length) line(content, t("empty"));
   }
   function evAction(roles, action, enabled) {
     var id = roles[action === "stop" ? "stop_entity" : "start_entity"] || roles.charge_switch_entity;
@@ -445,7 +558,7 @@
       content.appendChild(box);
       (area.entities || []).forEach(function (id) { device(id, content); });
     });
-    else if (item.id === "music") players(models.music);
+    else if (item.id === "music") players(models.music, true);
     else if (item.id === "media") players(models.plex);
     else if (item.id === "ev") renderEv(models.ev);
     else if (item.id === "calendar") renderCalendar();
@@ -480,6 +593,7 @@
     });
   }
   window.addEventListener("hashchange", render);
+  setInterval(updateClocks, 1000);
   setInterval(function () {
     agendas = {};
     calendar.data = null;

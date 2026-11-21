@@ -11,14 +11,16 @@ Open `http://<home-assistant-ip>:8099/legacy/` on the tablet. For ingress, appen
 
 The separately written, simplified interface targets Safari on iOS/iPadOS 12.5.8 and uses the same dashboard configuration, entity mapping, enabled pages, menu labels, order and visibility. Unsupported built-in pages are omitted. It shows:
 
-* **Dashboard pages:** hero clock, current weather state, configured quick buttons and button grids, toggle and vehicle tiles, a calendar agenda and basic player controls. Other tile types are marked as unavailable; images, animations, hero reminders, forecasts, tile layouts, long-press actions and advanced tile controls are not reproduced.
+* **Dashboard pages:** a large clock, current weather and temperature when available, configured quick buttons and button grids, toggle and vehicle tiles, a calendar agenda and basic player controls. The clock follows the hero's `show_clock` and `time_format` settings. Other tile types are marked as unavailable; hero images, animated weather, reminders, forecasts, tile layouts, long-press actions and advanced tile controls are not reproduced.
 * **Climate and Areas:** temperatures and basic controls for visible area devices, with thermostat power and ±0.5° setpoint buttons. Devices removed from an area remain hidden. Area editing and advanced device settings are not included.
 * **Energy:** read-only day/week/month/year totals, source and device values and previous/next navigation. Charts, electricity prices and recommendations remain in the standard dashboard.
 * **Calendar:** the next seven days of events, read-only. Calendar editing, month/planner views and event details are not included. Individual calendar load failures are shown.
-* **Music and Media:** current state and play/pause, previous/next and volume controls for configured players. Radio selection, library browsing, grouping and Plex browsing/playback are not included.
+* **Music and Media:** current state and play/pause, previous/next and volume controls for configured players. Music shows a turntable with available artwork, prioritizes a playing speaker, and keeps the last playing speaker first if nothing else is playing. The record spins only while playing and respects reduced-motion settings. Radio selection, library browsing, grouping and Plex browsing/playback are not included.
 * **Car:** available battery, range and charging states, start/stop charging, smart charging, remote climate and defrost switches. Charging schedules, temperature settings and charger restart remain in the standard dashboard.
 
 The page uses the existing live state stream and the same server-side service allow-list and `read_only` option as the standard dashboard. As with the standard direct-port dashboard, anyone who can reach that port can operate the permitted controls; restrict network access accordingly. Data and command errors are displayed. Legacy mode has been checked with an ES5 syntax test and a modern browser against mock services, but has **not** been verified on a physical iPad running iOS 12.5.8.
+
+The dark clock and turntable presentation is independently implemented, inspired by [iPad picture frame and music player](https://github.com/caydin21/iPad-1st-gen-picture-frame-and-music-player-over-Home-Assistant). The standard Dasher interface is unchanged.
 
 ## Setup
 
