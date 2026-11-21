@@ -1196,7 +1196,11 @@ const server = http.createServer(async (req, res) => {
         return serveFile(res, path.resolve(configStore.assetsDir), p.slice("/assets/".length), "no-cache");
       }
       if (p.startsWith("/api/")) return json(res, 404, { error: "Not found." });
-      const rel = p === "/" ? "index.html" : p.slice(1);
+      if (p === "/legacy") {
+        res.writeHead(302, { Location: "legacy/" });
+        return res.end();
+      }
+      const rel = p === "/" ? "index.html" : p === "/legacy/" ? "legacy/index.html" : p.slice(1);
       const longCache = rel.startsWith("fonts/");
       return serveFile(res, webRoot, rel, longCache ? "public, max-age=31536000, immutable" : "no-cache");
     }

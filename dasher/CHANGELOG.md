@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.46.0
+
+- **Legacy tablet interface.** A separate `/legacy/` dashboard targets iOS 12.5.8 with ES5 JavaScript and simplified Home, Climate, Areas, Energy, Calendar, Music, Media and Car views. It honors menu visibility and read-only mode and uses the existing service policy. Advanced features remain on the standard dashboard; physical iOS 12 device testing is still needed. See [Legacy mode](DOCS.md#legacy-mode-for-older-tablets).
+
 ## 0.45.0
 
 - **Alarms page.** Start multiple local cooking timers from illustrated egg, tea and pizza presets or set a custom countdown. Timers survive page navigation and browser refresh, and finished timers show an alert and repeat a sound on that tablet. The new `alarms` menu item can be hidden or renamed in app configuration.

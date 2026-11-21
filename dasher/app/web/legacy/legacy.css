@@ -1,0 +1,20 @@
+* { box-sizing: border-box; }
+body { margin: 0; background: #101b2c; color: #f1f5f9; font: 16px -apple-system, BlinkMacSystemFont, sans-serif; }
+header { padding: 18px; background: #18283c; }
+header strong { font-size: 22px; }
+header span, header a { display: inline-block; margin-left: 16px; }
+a { color: #8fe6dc; }
+nav { padding: 8px; background: #18283c; }
+nav a { display: inline-block; padding: 10px 14px; margin: 3px; border-radius: 6px; text-decoration: none; background: #263d52; }
+nav a.active { background: #0e766e; color: white; }
+main { max-width: 1000px; margin: auto; padding: 18px; }
+h1 { font-size: 26px; }
+h2 { font-size: 20px; margin: 0 0 10px; }
+p { line-height: 1.4; }
+.card { display: inline-block; vertical-align: top; width: 100%; max-width: 460px; padding: 18px; margin: 0 10px 12px 0; border-radius: 8px; background: #203247; }
+.muted { color: #c1d0dd; }
+button, select { font: inherit; margin: 4px; padding: 10px 14px; min-height: 44px; border: 0; border-radius: 6px; color: white; background: #126d68; }
+button:disabled { opacity: .45; }
+select { background: #30475c; }
+#notice { padding: 0 18px; color: #ffd1bd; }
+#notice:not(:empty) { padding-top: 12px; }

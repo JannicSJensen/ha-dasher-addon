@@ -1,6 +1,6 @@
 {
   "name": "dasher-addon",
-  "version": "0.45.0",
+  "version": "0.46.0",
   "private": true,
   "type": "module",
   "description": "Tablet dashboard server for Home Assistant",
@@ -18,5 +18,8 @@
     "qrcode": "^1.5.4",
     "ws": "^8.18.0",
     "yaml": "^2.5.0"
+  },
+  "devDependencies": {
+    "acorn": "^8.8.1"
   }
 }

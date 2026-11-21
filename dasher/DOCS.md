@@ -5,6 +5,21 @@ Dasher serves a touch-friendly dashboard as a plain web page. Point any tablet's
 * Direct address for tablets: `http://<home-assistant-ip>:8099/`
 * In Home Assistant: the **Dasher** entry in the sidebar (ingress).
 
+## Legacy mode for older tablets
+
+Open `http://<home-assistant-ip>:8099/legacy/` on the tablet. For ingress, append `legacy/` to the app's ingress URL. The standard dashboard stays at its existing address; there is no automatic browser detection or redirect. The link at the top of the legacy page returns to the standard dashboard.
+
+The separately written, simplified interface targets Safari on iOS/iPadOS 12.5.8 and uses the same dashboard configuration, entity mapping, enabled pages, menu labels, order and visibility. Unsupported built-in pages are omitted. It shows:
+
+* **Dashboard pages:** hero clock, current weather state, configured quick buttons and button grids, toggle and vehicle tiles, a calendar agenda and basic player controls. Other tile types are marked as unavailable; images, animations, hero reminders, forecasts, tile layouts, long-press actions and advanced tile controls are not reproduced.
+* **Climate and Areas:** temperatures and basic controls for visible area devices, with thermostat power and ±0.5° setpoint buttons. Devices removed from an area remain hidden. Area editing and advanced device settings are not included.
+* **Energy:** read-only day/week/month/year totals, source and device values and previous/next navigation. Charts, electricity prices and recommendations remain in the standard dashboard.
+* **Calendar:** the next seven days of events, read-only. Calendar editing, month/planner views and event details are not included. Individual calendar load failures are shown.
+* **Music and Media:** current state and play/pause, previous/next and volume controls for configured players. Radio selection, library browsing, grouping and Plex browsing/playback are not included.
+* **Car:** available battery, range and charging states, start/stop charging, smart charging, remote climate and defrost switches. Charging schedules, temperature settings and charger restart remain in the standard dashboard.
+
+The page uses the existing live state stream and the same server-side service allow-list and `read_only` option as the standard dashboard. As with the standard direct-port dashboard, anyone who can reach that port can operate the permitted controls; restrict network access accordingly. Data and command errors are displayed. Legacy mode has been checked with an ES5 syntax test and a modern browser against mock services, but has **not** been verified on a physical iPad running iOS 12.5.8.
+
 ## Setup
 
 1. Install and start the app. On first start it creates `dashboard.yaml` and an `assets/` folder in the app's configuration folder (`/addon_configs/<id>_dasher/`, reachable with the *Samba* or *File editor* apps; mapped to `/config` inside the container).
