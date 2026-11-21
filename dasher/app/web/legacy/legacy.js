@@ -6,6 +6,10 @@
   var status = { ha: false, readOnly: true };
   var config = null;
   var menu = [];
+  var legacy = null;
+  var photos = { loading: false, data: null, error: null, album: null };
+  var cameras = { loading: false, data: null, error: null };
+  var faceTick = 0;
   var energy = { period: "day", date: null, key: null, data: null, error: null, request: 0 };
   var calendar = { data: null, error: null, loading: false };
   var agendas = {};
@@ -14,6 +18,7 @@
   var notice = document.getElementById("notice");
   var content = document.getElementById("content");
   var menuElement = document.getElementById("menu");
+  var faceElement = document.getElementById("faces");
   var labels = {
     en: { climate: "Climate", areas: "Areas", music: "Music", media: "Media", calendar: "Calendar", ev: "Car", energy: "Energy",
       connecting: "Connecting", connected: "Connected", disconnected: "Disconnected from Home Assistant", readonly: "Read-only",
@@ -24,7 +29,12 @@
       play: "Play / pause", back: "Previous track", forward: "Next track", volumeDown: "Volume −", volumeUp: "Volume +",
       home: "Home", battery: "Battery", grid_import: "Grid consumption", grid_export: "Returned to grid", solar: "Solar", battery_charge: "Battery charging",
       battery_discharge: "Battery discharging", net_cost: "Net cost", noenergy: "Energy is not configured in Home Assistant.",
-      calendarPartial: "Some calendars could not be loaded", calendarReadOnly: "Upcoming events (read-only)", nothingPlaying: "Nothing playing" },
+      calendarPartial: "Some calendars could not be loaded", calendarReadOnly: "Upcoming events (read-only)", nothingPlaying: "Nothing playing",
+      home_plus: "Home Modular Plus", modular: "Modular", weather: "Weather", clock: "Clock", analog: "Analog", flow: "Flow",
+      photos: "Photos", cameras: "Home Camera", homeFace: "Home Modular", albums: "Album", allAlbums: "All albums",
+      photosDisabled: "Enable legacy photo albums in the app configuration.", camerasDisabled: "Enable legacy camera snapshots in the app configuration.",
+      noPhotos: "No photos found in the selected albums.", photoFolderMissing: "The assets/photos folder does not exist.", noCameras: "No cameras discovered.", imageError: "Could not load image.",
+      wind: "Wind", humidity: "Humidity", pressure: "Pressure" },
     da: { climate: "Klima", areas: "Områder", music: "Musik", media: "Medier", calendar: "Kalender", ev: "Bil", energy: "Energi",
       connecting: "Forbinder", connected: "Forbundet", disconnected: "Ingen forbindelse til Home Assistant", readonly: "Skrivebeskyttet",
       unavailable: "Ikke tilgængelig", unknown: "Ukendt", empty: "Intet at vise.", unsupported: "Dette element er ikke tilgængeligt i legacy-tilstand.",
@@ -34,7 +44,12 @@
       play: "Afspil / pause", back: "Forrige nummer", forward: "Næste nummer", volumeDown: "Lydstyrke −", volumeUp: "Lydstyrke +",
       home: "Hjem", battery: "Batteri", grid_import: "Fra elnet", grid_export: "Til elnet", solar: "Solenergi", battery_charge: "Batteriopladning",
       battery_discharge: "Batteriafladning", net_cost: "Nettopris", noenergy: "Energi er ikke konfigureret i Home Assistant.",
-      calendarPartial: "Nogle kalendere kunne ikke indlæses", calendarReadOnly: "Kommende begivenheder (skrivebeskyttet)", nothingPlaying: "Intet spiller" }
+      calendarPartial: "Nogle kalendere kunne ikke indlæses", calendarReadOnly: "Kommende begivenheder (skrivebeskyttet)", nothingPlaying: "Intet spiller",
+      home_plus: "Hjem Modular Plus", modular: "Modular", weather: "Vejr", clock: "Ur", analog: "Analog", flow: "Flow",
+      photos: "Fotos", cameras: "Hjemmekamera", homeFace: "Hjem Modular", albums: "Album", allAlbums: "Alle album",
+      photosDisabled: "Slå legacy-fotoalbum til i appens konfiguration.", camerasDisabled: "Slå legacy-kamerabilleder til i appens konfiguration.",
+      noPhotos: "Ingen billeder fundet i de valgte album.", photoFolderMissing: "Mappen assets/photos findes ikke.", noCameras: "Ingen kameraer fundet.", imageError: "Kunne ikke indlæse billedet.",
+      wind: "Vind", humidity: "Luftfugtighed", pressure: "Lufttryk" }
   };
   var weatherLabels = {
     en: { sunny: "Sunny", "clear-night": "Clear night", partlycloudy: "Partly cloudy", cloudy: "Cloudy", fog: "Fog",
@@ -177,6 +192,34 @@
       a.href = "#/" + item.id;
       menuElement.appendChild(a);
     });
+  }
+  function currentFace() {
+    if (!legacy || !legacy.faces.length) return null;
+    var hash = window.location.hash.replace(/^#\/?/, "");
+    if (!hash) return legacy.faces[0];
+    if (hash.indexOf("face/") !== 0) return null;
+    var id = hash.slice(5);
+    return legacy.faces.indexOf(id) === -1 ? null : id;
+  }
+  function faceTitle(id) { return id === "home" ? t("homeFace") : t(id); }
+  function renderFaces(active) {
+    if (!faceElement) return;
+    var scroll = faceElement.scrollLeft;
+    faceElement.textContent = "";
+    if (!legacy) return;
+    if (active && legacy.faces.length > 1) button(faceElement, t("previous"), function () { shiftFace(-1); });
+    legacy.faces.forEach(function (id) {
+      var a = el("a", faceTitle(id), id === active ? "active" : "");
+      a.href = "#/face/" + id;
+      if (id === active) a.setAttribute("aria-current", "page");
+      faceElement.appendChild(a);
+    });
+    if (active && legacy.faces.length > 1) button(faceElement, t("next"), function () { shiftFace(1); });
+    faceElement.scrollLeft = scroll;
+  }
+  function shiftFace(amount) {
+    var id = currentFace(), index = legacy && legacy.faces.indexOf(id);
+    if (index >= 0) navigate("face/" + legacy.faces[(index + amount + legacy.faces.length) % legacy.faces.length]);
   }
   function upcoming(events) {
     var now = new Date(), today = now.getFullYear() + "-" + ("0" + (now.getMonth() + 1)).slice(-2) + "-" + ("0" + now.getDate()).slice(-2);
@@ -540,14 +583,159 @@
     content.appendChild(box);
     if (!energy.key) loadEnergy();
   }
+  function homePage() {
+    var found = null;
+    menu.forEach(function (item) { if (!found && item.page) found = item.page; });
+    return found;
+  }
+  function heroTile(page) {
+    var hero = null;
+    (page && page.tiles || []).forEach(function (tile) { if (!hero && tile.type === "hero") hero = tile; });
+    return hero || {};
+  }
+  function showClock(tile) {
+    var box = el("section", null, "card face-clock");
+    box.appendChild(clockPanel(tile));
+    content.appendChild(box);
+  }
+  function showWeather(tile) {
+    var box = el("section", null, "card face-weather"), id = tile.weather_entity, e = states[id], attrs = e && e.attributes || {};
+    box.appendChild(el("h2", t("weather")));
+    if (!id) line(box, t("unavailable"));
+    else {
+      box.appendChild(weatherPanel(id));
+      if (available(id)) {
+        if (attrs.humidity != null) line(box, t("humidity") + ": " + attrs.humidity + " %");
+        if (attrs.wind_speed != null) line(box, t("wind") + ": " + attrs.wind_speed + " " + (attrs.wind_speed_unit || ""));
+        if (attrs.pressure != null) line(box, t("pressure") + ": " + attrs.pressure + " " + (attrs.pressure_unit || ""));
+      }
+    }
+    content.appendChild(box);
+  }
+  function showAnalog() {
+    var box = el("section", null, "card face-analog"), dial = el("div", null, "analog-dial");
+    dial.setAttribute("data-analog-clock", "");
+    [12, 3, 6, 9].forEach(function (number) { dial.appendChild(el("span", number, "analog-number analog-n" + number)); });
+    dial.appendChild(el("span", null, "analog-hour"));
+    dial.appendChild(el("span", null, "analog-minute"));
+    dial.appendChild(el("span", null, "analog-center"));
+    box.appendChild(dial);
+    box.appendChild(clockPanel({}));
+    content.appendChild(box);
+    updateAnalog();
+  }
+  function updateAnalog() {
+    var clocks = document.querySelectorAll("[data-analog-clock]"), now = new Date(), i, hour, minute;
+    for (i = 0; i < clocks.length; i++) {
+      hour = clocks[i].querySelector(".analog-hour");
+      minute = clocks[i].querySelector(".analog-minute");
+      hour.style.webkitTransform = hour.style.transform = "rotate(" + ((now.getHours() % 12) * 30 + now.getMinutes() / 2) + "deg)";
+      minute.style.webkitTransform = minute.style.transform = "rotate(" + (now.getMinutes() * 6) + "deg)";
+    }
+  }
+  function loadPhotos() {
+    if (photos.loading) return;
+    photos.loading = true; photos.error = null;
+    var current = photos;
+    request("GET", "legacy/photos", null, function (err, data) {
+      if (current !== photos) return;
+      photos.loading = false; photos.error = err; photos.data = data || null; render();
+    });
+  }
+  function showPhotos() {
+    var box = el("section", null, "card face-photos");
+    content.appendChild(box);
+    if (!legacy.photos) { line(box, t("photosDisabled")); return; }
+    if (!photos.data && !photos.error && !photos.loading) loadPhotos();
+    button(box, t("retry"), loadPhotos, !photos.loading);
+    if (photos.loading) { line(box, t("loading")); return; }
+    if (photos.error) { line(box, photos.error); return; }
+    if (photos.data.missing) { line(box, t("photoFolderMissing")); return; }
+    var albums = photos.data.albums || [], items = [], select = el("select"), choice;
+    select.setAttribute("aria-label", t("albums"));
+    choice = el("option", t("allAlbums")); choice.value = "*"; select.appendChild(choice);
+    albums.forEach(function (album) {
+      choice = el("option", album.name); choice.value = ":" + album.id; select.appendChild(choice);
+      if (photos.album === null || photos.album === album.id) {
+        album.photos.forEach(function (name) { items.push({ album: album.id, name: name }); });
+      }
+    });
+    select.value = photos.album === null ? "*" : ":" + photos.album;
+    select.onchange = function () { photos.album = select.value === "*" ? null : select.value.slice(1); render(); };
+    box.appendChild(select);
+    if (!items.length) { line(box, t("noPhotos")); return; }
+    var item = items[Math.floor(Date.now() / (legacy.photo_interval * 1000)) % items.length];
+    var image = el("img", null, "face-image");
+    image.alt = item.name;
+    image.onerror = function () { image.style.display = "none"; line(box, t("imageError") + " " + item.name); };
+    image.src = "../api/legacy/photo?album=" + encodeURIComponent(item.album) + "&name=" + encodeURIComponent(item.name);
+    box.appendChild(image);
+  }
+  function loadCameras() {
+    if (cameras.loading) return;
+    cameras.loading = true; cameras.error = null;
+    var current = cameras;
+    request("GET", "legacy/cameras", null, function (err, data) {
+      if (current !== cameras) return;
+      cameras.loading = false; cameras.error = err; cameras.data = data || null; render();
+    });
+  }
+  function showCameras() {
+    var box = el("section", null, "card face-cameras");
+    content.appendChild(box);
+    if (!legacy.cameras) { line(box, t("camerasDisabled")); return; }
+    if (!cameras.data && !cameras.error && !cameras.loading) loadCameras();
+    button(box, t("retry"), loadCameras, !cameras.loading);
+    if (cameras.loading) { line(box, t("loading")); return; }
+    if (cameras.error) { line(box, cameras.error); return; }
+    if (!cameras.data.cameras.length) line(box, t("noCameras"));
+    cameras.data.cameras.forEach(function (camera) {
+      var frame = el("div", null, "camera-frame"), image = el("img", null, "face-image");
+      frame.appendChild(el("h2", camera.name));
+      image.alt = camera.name;
+      image.onerror = function () { image.style.display = "none"; line(frame, t("imageError")); };
+      image.src = "../api/legacy/camera?entity=" + encodeURIComponent(camera.id) +
+        "&t=" + Math.floor(Date.now() / (legacy.camera_interval * 1000));
+      frame.appendChild(image);
+      box.appendChild(frame);
+    });
+  }
+  function renderFace(id) {
+    var page = homePage(), hero = heroTile(page), rest;
+    content.className = "legacy-face face-" + id;
+    if (id === "photos") showPhotos();
+    else if (id === "cameras") showCameras();
+    else if (id === "analog") showAnalog();
+    else if (id === "clock") showClock(hero);
+    else if (id === "weather") { showClock(hero); showWeather(hero); }
+    else if (id === "calendar") {
+      showClock(hero);
+      if (menu.some(function (item) { return item.id === "calendar" && !item.page; })) renderCalendar();
+      else line(content, t("unavailable"));
+    } else if (id === "home" || id === "home_plus") {
+      if (page) renderPage(page); else line(content, t("empty"));
+      if (id === "home_plus" && menu.some(function (item) { return item.id === "climate" && !item.page; })) {
+        (models.climate.entities || []).forEach(function (entity) { climate(entity, content); });
+      }
+    } else {
+      showClock(hero); showWeather(hero);
+      if (page) {
+        rest = { id: page.id, tiles: (page.tiles || []).filter(function (tile) { return tile.type !== "hero"; }) };
+        renderPage(rest);
+      }
+    }
+  }
   function render() {
     if (!config) return;
     menu = menuItems();
-    var item = currentItem();
+    var face = currentFace(), item = face ? null : currentItem();
     renderMenu(item);
+    renderFaces(face);
     content.textContent = "";
+    content.className = "";
     document.getElementById("title").textContent = config.title || "Dasher";
     document.getElementById("connection").textContent = (status.ha ? t("connected") : t("disconnected")) + (status.readOnly ? " · " + t("readonly") : "");
+    if (face) { content.appendChild(el("h1", faceTitle(face))); renderFace(face); return; }
     if (!item) { line(content, t("empty")); return; }
     content.appendChild(el("h1", item.title));
     if (item.page) renderPage(item.page);
@@ -578,11 +766,15 @@
         if (type === "status") status = data;
         else if (type === "config") {
           config = data.config;
+          legacy = data.legacy || null;
+          photos = { loading: false, data: null, error: null, album: null };
+          cameras = { loading: false, data: null, error: null };
           agendas = {};
           calendar = { data: null, error: null, loading: false };
           energy.request++;
           energy.key = null;
           if (data.errors && data.errors.length) fail(data.errors.join("; "));
+          if (legacy && legacy.errors && legacy.errors.length) fail(legacy.errors.join("; "));
         } else if (type === "snapshot") states = data;
         else if (type === "state") {
           states[data.entity_id] = data;
@@ -593,10 +785,38 @@
     });
   }
   window.addEventListener("hashchange", render);
-  setInterval(updateClocks, 1000);
+  if (content.addEventListener) {
+    var swipe = null;
+    content.addEventListener("touchstart", function (event) {
+      var target = event.target;
+      swipe = null;
+      while (target && target !== content) {
+        if (/^(BUTTON|A|SELECT|INPUT|TEXTAREA)$/.test(target.tagName)) return;
+        target = target.parentNode;
+      }
+      if (event.touches.length === 1) swipe = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+    });
+    content.addEventListener("touchend", function (event) {
+      if (!swipe || !event.changedTouches.length) return;
+      var dx = event.changedTouches[0].clientX - swipe.x, dy = event.changedTouches[0].clientY - swipe.y;
+      swipe = null;
+      if (currentFace() && Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 2) shiftFace(dx < 0 ? 1 : -1);
+    });
+    content.addEventListener("touchcancel", function () { swipe = null; });
+  }
+  setInterval(function () {
+    updateClocks(); updateAnalog();
+    var face = currentFace(), interval = face === "photos" ? legacy.photo_interval : face === "cameras" ? legacy.camera_interval : 0;
+    if (interval) {
+      var tick = Math.floor(Date.now() / (interval * 1000));
+      if (tick !== faceTick) { faceTick = tick; render(); }
+    }
+  }, 1000);
   setInterval(function () {
     agendas = {};
     calendar.data = null;
+    if (currentFace() === "cameras" && legacy.cameras) loadCameras();
+    if (currentFace() === "photos" && legacy.photos) loadPhotos();
     if (currentItem() && currentItem().id === "energy" && energy.key) loadEnergy();
     else render();
   }, 300000);

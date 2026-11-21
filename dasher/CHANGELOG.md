@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.48.0
+
+- **Legacy dashboard faces.** Ten independently designed faces offer modular home controls, weather, a read-only calendar, clocks, photos and camera snapshots, with configurable ordering and touch navigation. Existing legacy pages remain available.
+- **Photo and camera options.** Optional local photo albums and automatically discovered HA camera snapshots are off by default; see the [privacy and setup notes](DOCS.md#legacy-mode-for-older-tablets). Physical iOS 12.5.8 testing remains necessary.
+
 ## 0.47.0
 
 - **Refreshed legacy interface.** A dark tablet-friendly design adds a large live clock with current weather and an independently drawn turntable for Music players, inspired by the iPad picture-frame project. The playing speaker is shown first and remains there when paused if nothing else is playing; the record respects reduced motion. Existing legacy controls and the standard dashboard remain unchanged. Physical iOS 12.5.8 testing is still needed.

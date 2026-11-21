@@ -37,6 +37,7 @@ put("sensor.waste_general", "1", { friendly_name: "Waste general", description: 
 put("sensor.waste_paper", "8", { friendly_name: "Waste paper", description: "240 l Pap Egenløsning (Privat)", next_pickup_date: dayLabel(8), icon: "mdi:note", icon_color: "#9E9E9E", unit_of_measurement: "dage" });
 put("sensor.waste_plastic", "0", { friendly_name: "Waste plastic", description: "370 l Plast+MDK/Papir - Egenløsning (Privat)", next_pickup_date: dayLabel(0), icon: "mdi:trash-can", icon_color: "#9E9E9E", unit_of_measurement: "dage" });
 put("sun.sun", "above_horizon", {});
+put("camera.front_door", "idle", { friendly_name: "Front door" });
 // the family
 put("person.mor", "home", { friendly_name: "Mor" });
 put("person.far", "not_home", { friendly_name: "Far" });
@@ -609,6 +610,11 @@ const slugOf = (name) => name.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]
 const uploadedImages = new Map();
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, "http://localhost");
+  if (req.method === "GET" && url.pathname === "/api/camera_proxy/camera.front_door") {
+    const image = fs.readFileSync(new URL("../web/img/rooms/room.jpg", import.meta.url));
+    res.writeHead(200, { "Content-Type": "image/jpeg", "Content-Length": image.length });
+    return res.end(image);
+  }
   // Native state API for previewing weather/day-night changes without a real HA instance.
   const weatherState = url.pathname.match(/^\/api\/states\/((?:weather|sun)\.[a-z0-9_]+)$/);
   if (weatherState) {

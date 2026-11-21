@@ -12,10 +12,11 @@ test("legacy script uses ES5 grammar", () => {
 
 function harness() {
   class Element {
-    constructor(tag) { this.tag = tag; this.children = []; this._text = ""; this.attributes = {}; this.style = {}; }
+    constructor(tag) { this.tag = tag; this.tagName = tag.toUpperCase(); this.children = []; this._text = ""; this.attributes = {}; this.style = {}; this.listeners = {}; }
     set textContent(value) { this._text = String(value); this.children = []; }
     get textContent() { return this._text + this.children.map((child) => child.textContent).join(""); }
-    appendChild(child) { this.children.push(child); return child; }
+    appendChild(child) { child.parentNode = this; this.children.push(child); return child; }
+    addEventListener(type, fn) { this.listeners[type] = fn; }
     setAttribute(name, value) { this.attributes[name] = String(value); }
     getAttribute(name) { return this.attributes[name] ?? null; }
     querySelector(selector) {
@@ -23,11 +24,12 @@ function harness() {
     }
   }
   const all = (root) => [root, ...root.children.flatMap(all)];
-  const elements = Object.fromEntries(["notice", "content", "menu", "title", "connection"].map((id) => [id, new Element("div")]));
+  const elements = Object.fromEntries(["notice", "content", "menu", "faces", "title", "connection"].map((id) => [id, new Element("div")]));
   const document = {
     getElementById: (id) => elements[id], createElement: (tag) => new Element(tag),
     querySelectorAll: (selector) => Object.values(elements).flatMap(all).filter((item) =>
-      selector === "[data-legacy-clock]" && item.getAttribute("data-legacy-clock") !== null),
+      (selector === "[data-legacy-clock]" && item.getAttribute("data-legacy-clock") !== null) ||
+      (selector === "[data-analog-clock]" && item.getAttribute("data-analog-clock") !== null)),
   };
   const listeners = {};
   const location = { hash: "" };
@@ -69,7 +71,8 @@ function harness() {
   const flush = () => { const callbacks = [...timers.values()]; timers.clear(); callbacks.forEach((fn) => fn()); };
   const findClass = (name) => all(elements.content).find((item) => (item.className || "").split(" ").includes(name));
   const tick = (time) => { now = Date.parse(time); intervals.get(1000)(); };
-  return { elements, source, requests, find, findClass, route, flush, tick };
+  const findTag = (tag) => all(elements.content).find((item) => item.tag === tag);
+  return { elements, source, requests, find, findClass, findTag, route, flush, tick, location };
 }
 
 const config = {
@@ -255,4 +258,52 @@ test("legacy discards calendar responses from an old configuration", () => {
   assert.doesNotMatch(h.elements.content.textContent, /Old/);
   current.respond({ events: [{ start: "2099-01-02", allDay: true, summary: "New" }], failed: [] });
   assert.match(h.elements.content.textContent, /New/);
+});
+
+test("legacy faces preserve menu controls and load configured albums and cameras", () => {
+  const h = harness(); setup(h);
+  const legacy = { faces: ["home", "home_plus", "modular", "weather", "calendar", "clock", "analog", "flow", "photos", "cameras"],
+    photos: true, photo_interval: 120, cameras: true, camera_interval: 30, errors: [] };
+  h.source.emit("config", { config, errors: [], legacy });
+  assert.match(h.elements.faces.textContent, /Home Modular Plus/);
+  assert.match(h.elements.faces.textContent, /Home Camera/);
+  h.find("Lights · on").onclick();
+  assert.equal(h.requests.at(-1).body.service, "toggle");
+  for (const id of ["home_plus", "modular", "weather", "clock", "analog", "flow"]) {
+    h.route("face/" + id);
+    assert.ok(h.elements.content.textContent.length, id);
+  }
+  h.route("face/photos");
+  const photos = h.requests.at(-1);
+  assert.equal(photos.url, "../api/legacy/photos");
+  photos.respond({ albums: [{ id: "Family", name: "Family", photos: ["holiday.jpg"] }] });
+  assert.match(h.findClass("face-image").src, /legacy\/photo\?album=Family&name=holiday.jpg/);
+  const select = h.findTag("select");
+  select.value = ":Family";
+  select.onchange();
+  assert.match(h.findClass("face-image").src, /legacy\/photo\?album=Family&name=holiday.jpg/);
+  h.findClass("face-image").onerror();
+  assert.match(h.elements.content.textContent, /Could not load image/);
+  h.route("face/cameras");
+  const cameras = h.requests.at(-1);
+  assert.equal(cameras.url, "../api/legacy/cameras");
+  cameras.respond({ cameras: [{ id: "camera.front", name: "Front" }] });
+  assert.match(h.findClass("face-image").src, /legacy\/camera\?entity=camera.front/);
+  h.route("climate");
+  assert.match(h.elements.content.textContent, /0.5°/);
+});
+
+test("disabled legacy image faces avoid requests and swipe switches faces", () => {
+  const h = harness(); setup(h);
+  const legacy = { faces: ["photos", "cameras"], photos: false, cameras: false, photo_interval: 120, camera_interval: 30, errors: [] };
+  h.source.emit("config", { config, errors: [], legacy });
+  assert.match(h.elements.content.textContent, /Enable legacy photo/);
+  assert.ok(!h.requests.some((r) => /legacy\/photos/.test(r.url)));
+  const target = h.elements.content;
+  target.listeners.touchstart({ target, touches: [{ clientX: 200, clientY: 100 }] });
+  target.listeners.touchend({ changedTouches: [{ clientX: 100, clientY: 102 }] });
+  assert.equal(h.location.hash, "#/face/cameras");
+  h.route("face/cameras");
+  assert.match(h.elements.content.textContent, /Enable legacy camera/);
+  assert.ok(!h.requests.some((r) => /legacy\/cameras/.test(r.url)));
 });

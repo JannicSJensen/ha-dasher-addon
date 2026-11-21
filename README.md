@@ -5,7 +5,7 @@
 This repository contains the **Dasher** app (add-on) for Home Assistant: a dark, card-based wall-tablet dashboard that is served as a plain web page. The visual style is inspired by [ruudmens/home-assistant-dashboard](https://github.com/ruudmens/home-assistant-dashboard) (MIT).
 
 * Tablets just open `http://<home-assistant>:8099/`; no Home Assistant login, no HACS cards.
-* **Legacy mode:** `http://<home-assistant>:8099/legacy/` provides simplified controls, a large clock and a turntable-inspired music player for older tablets, targeting iOS 12.5.8; see [Legacy mode](dasher/DOCS.md#legacy-mode-for-older-tablets) for supported features and limitations.
+* **Legacy mode:** `http://<home-assistant>:8099/legacy/` provides ten configurable faces, simplified controls, optional photos and camera snapshots, and a turntable-inspired music player for older tablets, targeting iOS 12.5.8. See [Legacy mode](dasher/DOCS.md#legacy-mode-for-older-tablets) for limitations and important image privacy notes.
 * Dashboards are described in one `dashboard.yaml` and hot-reload on save.
 * **Menu items:** configure visibility, labels, icons and ordering for every built-in and custom dashboard page under **Settings → Apps → Dasher → Configuration**; see [Menu items](dasher/DOCS.md#menu-items). The first visible, available item is the start and idle-return page.
 * Tiles: area hero with clock, status messages (like waste pick-up reminders) and quick buttons, lights/switches (with brightness slider), electricity price timeline, calendar agenda with weather, vehicle, "now playing", heat pump/AC and button grids.
