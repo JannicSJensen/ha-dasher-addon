@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.49.1
+
+- **HomeView design refinements.** The Modular face now uses enlarged, background-free tiles inspired by Apple's widget guidance. Add a manual red-tinted Night mode for iOS 12 Safari, which does not provide a reliable ambient-light signal.
+
 ## 0.49.0
 
 - **Redesigned legacy dashboard.** The ten faces and legacy pages use a new HomeView-inspired modular interface with oversized clocks, rounded controls, an original gradient background and a simplified music player. Flow is a quiet clock and weather view; existing page controls remain available through the page menu.

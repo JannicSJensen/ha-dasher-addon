@@ -12,7 +12,7 @@ test("legacy script uses ES5 grammar", () => {
 
 function harness() {
   class Element {
-    constructor(tag) { this.tag = tag; this.tagName = tag.toUpperCase(); this.children = []; this._text = ""; this.attributes = {}; this.style = {}; this.listeners = {}; }
+    constructor(tag) { this.tag = tag; this.tagName = tag.toUpperCase(); this.children = []; this._text = ""; this.attributes = {}; this.style = {}; this.listeners = {}; this.className = ""; }
     set textContent(value) { this._text = String(value); this.children = []; }
     get textContent() { return this._text + this.children.map((child) => child.textContent).join(""); }
     appendChild(child) { child.parentNode = this; this.children.push(child); return child; }
@@ -24,7 +24,7 @@ function harness() {
     }
   }
   const all = (root) => [root, ...root.children.flatMap(all)];
-  const elements = Object.fromEntries(["notice", "content", "menu", "faces", "title", "connection"].map((id) => [id, new Element("div")]));
+  const elements = Object.fromEntries(["notice", "content", "menu", "faces", "title", "connection", "night-mode"].map((id) => [id, new Element("div")]));
   const images = [];
   const document = {
     body: new Element("body"),
@@ -311,6 +311,14 @@ test("legacy wallpaper loads local assets, reports errors and ignores stale load
   assert.equal(h.document.body.style.backgroundImage, "");
   second.onload();
   assert.match(h.document.body.style.backgroundImage, /new\.png/);
+  h.elements["night-mode"].onclick();
+  assert.equal(h.elements["night-mode"].getAttribute("aria-pressed"), "true");
+  assert.match(h.document.body.className, /legacy-night/);
+  assert.match(h.document.body.style.backgroundImage, /rgba\(35,0,0,.82\)/);
+  h.elements["night-mode"].onclick();
+  assert.equal(h.elements["night-mode"].getAttribute("aria-pressed"), "false");
+  assert.doesNotMatch(h.document.body.className, /legacy-night/);
+  assert.match(h.document.body.style.backgroundImage, /rgba\(12,16,30,.35\)/);
   h.source.emit("config", { config, errors: [], legacy });
   h.images.at(-1).onerror();
   assert.match(h.elements.notice.textContent, /Could not load legacy wallpaper: home view.jpg/);

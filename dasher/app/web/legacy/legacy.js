@@ -16,6 +16,7 @@
   var pending = {};
   var musicFocus = null;
   var wallpaperRequest = 0;
+  var nightModeEnabled = false;
   var notice = document.getElementById("notice");
   var content = document.getElementById("content");
   var menuElement = document.getElementById("menu");
@@ -35,7 +36,7 @@
       photos: "Photos", cameras: "Home Camera", homeFace: "Home Modular", albums: "Album", allAlbums: "All albums",
       photosDisabled: "Enable legacy photo albums in the app configuration.", camerasDisabled: "Enable legacy camera snapshots in the app configuration.",
       noPhotos: "No photos found in the selected albums.", photoFolderMissing: "The assets/photos folder does not exist.", noCameras: "No cameras discovered.", imageError: "Could not load image.",
-      wind: "Wind", humidity: "Humidity", pressure: "Pressure", wallpaperError: "Could not load legacy wallpaper" },
+      wind: "Wind", humidity: "Humidity", pressure: "Pressure", wallpaperError: "Could not load legacy wallpaper", nightMode: "Night mode" },
     da: { climate: "Klima", areas: "Områder", music: "Musik", media: "Medier", calendar: "Kalender", ev: "Bil", energy: "Energi",
       connecting: "Forbinder", connected: "Forbundet", disconnected: "Ingen forbindelse til Home Assistant", readonly: "Skrivebeskyttet",
       unavailable: "Ikke tilgængelig", unknown: "Ukendt", empty: "Intet at vise.", unsupported: "Dette element er ikke tilgængeligt i legacy-tilstand.",
@@ -50,7 +51,7 @@
       photos: "Fotos", cameras: "Hjemmekamera", homeFace: "Hjem Modular", albums: "Album", allAlbums: "Alle album",
       photosDisabled: "Slå legacy-fotoalbum til i appens konfiguration.", camerasDisabled: "Slå legacy-kamerabilleder til i appens konfiguration.",
       noPhotos: "Ingen billeder fundet i de valgte album.", photoFolderMissing: "Mappen assets/photos findes ikke.", noCameras: "Ingen kameraer fundet.", imageError: "Kunne ikke indlæse billedet.",
-      wind: "Vind", humidity: "Luftfugtighed", pressure: "Lufttryk", wallpaperError: "Kunne ikke indlæse legacy-baggrund" }
+      wind: "Vind", humidity: "Luftfugtighed", pressure: "Lufttryk", wallpaperError: "Kunne ikke indlæse legacy-baggrund", nightMode: "Nattilstand" }
   };
   var weatherLabels = {
     en: { sunny: "Sunny", "clear-night": "Clear night", partlycloudy: "Partly cloudy", cloudy: "Cloudy", fog: "Fog",
@@ -732,6 +733,10 @@
     content.className = "";
     document.getElementById("title").textContent = config.title || "Dasher";
     document.getElementById("connection").textContent = (status.ha ? t("connected") : t("disconnected")) + (status.readOnly ? " · " + t("readonly") : "");
+    var nightButton = document.getElementById("night-mode");
+    nightButton.textContent = t("nightMode");
+    nightButton.setAttribute("aria-label", t("nightMode"));
+    nightButton.setAttribute("aria-pressed", nightModeEnabled ? "true" : "false");
     if (face) { content.appendChild(el("h1", faceTitle(face))); renderFace(face); return; }
     if (!item) { line(content, t("empty")); return; }
     content.appendChild(el("h1", item.title));
@@ -749,23 +754,39 @@
     else if (item.id === "calendar") renderCalendar();
     else if (item.id === "energy") renderEnergy();
   }
+  function applyWallpaper() {
+    if (document.body.className.indexOf("legacy-wallpaper-loaded") === -1 || !legacy || !legacy.wallpaper) return;
+    var overlay = nightModeEnabled ? "linear-gradient(rgba(35,0,0,.82), rgba(35,0,0,.82))" :
+      "linear-gradient(rgba(12,16,30,.35), rgba(12,16,30,.35))";
+    document.body.style.backgroundImage = overlay + ", url(\"../assets/" + encodeURIComponent(legacy.wallpaper) + "\")";
+    document.body.style.backgroundSize = "cover";
+  }
+  function setNightMode(enabled) {
+    nightModeEnabled = enabled;
+    document.body.className = document.body.className.replace(/(^|\s)legacy-night(?=\s|$)/g, " ").replace(/^\s+|\s+$/g, "");
+    if (nightModeEnabled) document.body.className += (document.body.className ? " " : "") + "legacy-night";
+    applyWallpaper();
+    render();
+  }
   function setWallpaper(file) {
     var requestId = ++wallpaperRequest;
     document.body.style.backgroundImage = "";
     document.body.style.backgroundSize = "";
+    document.body.className = document.body.className.replace(/(^|\s)legacy-wallpaper-loaded(?=\s|$)/g, " ").replace(/^\s+|\s+$/g, "");
     if (!file) return;
     var image = el("img");
     var url = "../assets/" + encodeURIComponent(file);
     image.onload = function () {
       if (requestId !== wallpaperRequest) return;
-      document.body.style.backgroundImage = "linear-gradient(rgba(12,16,30,.35), rgba(12,16,30,.35)), url(\"" + url + "\")";
-      document.body.style.backgroundSize = "cover";
+      document.body.className += (document.body.className ? " " : "") + "legacy-wallpaper-loaded";
+      applyWallpaper();
     };
     image.onerror = function () {
       if (requestId === wallpaperRequest) fail(t("wallpaperError") + ": " + file);
     };
     image.src = url;
   }
+  document.getElementById("night-mode").onclick = function () { setNightMode(!nightModeEnabled); };
   function connect() {
     var source = new EventSource("../api/events");
     source.onerror = function () {

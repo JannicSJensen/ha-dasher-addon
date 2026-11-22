@@ -9,10 +9,16 @@ body {
     linear-gradient(140deg, #343251, #526d9a 55%, #917282);
   background-attachment: fixed;
 }
+body.legacy-night {
+  color: #f3d9d8; background-color: #080708;
+  background-image: radial-gradient(ellipse at 85% 4%, #241216 0%, transparent 52%),
+    radial-gradient(ellipse at 9% 85%, #110d13 0%, transparent 55%),
+    linear-gradient(140deg, #090809, #181013 55%, #1c1115);
+}
 header { padding: 18px 24px 6px; }
 header strong { font-size: 22px; font-weight: 700; }
 header span, header a { display: inline-block; margin-left: 14px; font-size: 13px; }
-header span { color: rgba(255,255,255,.75); }
+header span { color: rgba(255,255,255,.75); font-size: 15px; }
 a { color: #fff; }
 header a { opacity: .8; }
 nav { padding: 7px 20px; white-space: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; }
@@ -20,7 +26,7 @@ nav::-webkit-scrollbar { display: none; }
 nav a, nav button {
   display: inline-block; vertical-align: middle; min-height: 40px; margin: 3px;
   padding: 10px 15px; border: 0; border-radius: 22px; text-decoration: none;
-  color: #fff; background: rgba(18,24,44,.4); font-size: 14px; font-weight: 600;
+  color: #fff; background: rgba(18,24,44,.4); font-size: 16px; font-weight: 600;
 }
 nav a.active { color: #202539; background: #fff; }
 #faces:empty { display: none; }
@@ -45,7 +51,14 @@ button:focus, a:focus, select:focus { outline: 2px solid #fff; outline-offset: 2
 select { background: #444e69; }
 #notice { padding: 0 24px; color: #fff0b8; font-weight: 600; }
 #notice:not(:empty) { padding-top: 12px; }
-.legacy-face > h1 { font-size: 16px; color: rgba(255,255,255,.8); letter-spacing: .02em; }
+.legacy-face > h1 { font-size: 18px; color: rgba(255,255,255,.8); letter-spacing: .02em; }
+.legacy-face.face-modular .card { border-color: transparent; background: transparent; box-shadow: none; }
+.legacy-face.face-modular .card h2 { font-size: 21px; }
+.legacy-face.face-modular .card p, .legacy-face.face-modular .card button { font-size: 18px; }
+.legacy-face.face-modular .clock-digits { margin: 4px 0; }
+.legacy-face.face-modular .clock-block, .legacy-face.face-modular .clock-colon { font-size: 58px; }
+.legacy-face.face-modular .weather-panel { margin: 8px 0; font-size: 16px; }
+.legacy-face.face-modular .weather-temperature { font-size: 40px; }
 .legacy-face .card { background: rgba(23,29,49,.68); }
 .hero-card { display: block; width: 100%; min-width: 0; padding: 28px; }
 .clock-date { color: rgba(255,255,255,.8); font-size: 17px; font-weight: 600; }
@@ -85,6 +98,15 @@ select { background: #444e69; }
 .track-artist { margin-top: 6px; color: rgba(255,255,255,.72); }
 .player-controls { margin-top: 12px; }
 .face-flow .card { background: rgba(91,70,126,.38); }
+body.legacy-night nav a, body.legacy-night nav button { color: #f3d9d8; background: rgba(70,20,28,.52); }
+body.legacy-night nav a.active { color: #281517; background: #f3d9d8; }
+body.legacy-night .card { border-color: rgba(255,150,150,.13); background: rgba(20,10,13,.83); }
+body.legacy-night button, body.legacy-night select { color: #ffd2d0; background: rgba(112,25,34,.5); }
+body.legacy-night .muted, body.legacy-night .clock-date, body.legacy-night .track-artist { color: #d3a9a8; }
+body.legacy-night .legacy-face.face-modular { color: #ff7773; }
+body.legacy-night .legacy-face.face-modular .card { border-color: transparent; background: transparent; box-shadow: none; }
+body.legacy-night .legacy-face.face-modular .weather-symbol { color: inherit; }
+body.legacy-night .legacy-face.face-modular button { color: #ffaaa6; background: rgba(130,20,28,.35); }
 @media (min-width: 700px) {
   .legacy-face.face-home, .legacy-face.face-home_plus, .legacy-face.face-modular, .legacy-face.face-flow, .legacy-face.face-calendar, .legacy-face.face-weather {
     display: -webkit-flex; display: flex; -webkit-flex-wrap: wrap; flex-wrap: wrap; -webkit-align-items: stretch; align-items: stretch;
