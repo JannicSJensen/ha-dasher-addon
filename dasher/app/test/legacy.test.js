@@ -19,13 +19,18 @@ function harness() {
     addEventListener(type, fn) { this.listeners[type] = fn; }
     setAttribute(name, value) { this.attributes[name] = String(value); }
     getAttribute(name) { return this.attributes[name] ?? null; }
+    focus() { document.activeElement = this; }
     querySelector(selector) {
       return all(this).find((item) => selector[0] === "." && (item.className || "").split(" ").includes(selector.slice(1))) ?? null;
     }
   }
   const all = (root) => [root, ...root.children.flatMap(all)];
   const elements = Object.fromEntries(["notice", "content", "menu", "faces", "title", "connection", "connection-warning",
-    "night-mode", "navigation", "navigation-toggle", "standard-dashboard"].map((id) => [id, new Element("div")]));
+    "night-mode", "navigation", "navigation-toggle", "standard-dashboard", "face-picker", "face-picker-toggle",
+    "face-picker-label", "face-picker-close", "face-picker-title", "face-picker-hint", "face-picker-list",
+    "face-picker-status", "face-picker-notice"].map((id) => [id, new Element("div")]));
+  elements["face-picker"].hidden = true;
+  elements["face-picker-toggle"].disabled = true;
   const images = [];
   const document = {
     body: new Element("body"),
@@ -80,7 +85,11 @@ function harness() {
   const findClass = (name) => all(elements.content).find((item) => (item.className || "").split(" ").includes(name));
   const tick = (time) => { now = Date.parse(time); intervals.get(1000)(); };
   const findTag = (tag) => all(elements.content).find((item) => item.tag === tag);
-  const keydown = (key) => listeners.keydown({ key });
+  const keydown = (key, options = {}) => {
+    const event = { key, ...options, prevented: false, preventDefault() { this.prevented = true; } };
+    listeners.keydown(event);
+    return event;
+  };
   return { elements, document, images, source, requests, find, findClass, findTag, route, flush, tick, keydown, location };
 }
 
@@ -365,6 +374,149 @@ test("legacy navigation opens on demand and keeps connection warnings visible", 
   assert.equal(h.elements.menu.getAttribute("aria-label"), "Dashboardsider");
 });
 
+test("legacy face picker previews configured faces without loading private images", () => {
+  const h = harness();
+  const toggle = h.elements["face-picker-toggle"], picker = h.elements["face-picker"];
+  assert.equal(toggle.disabled, true);
+  toggle.onclick();
+  assert.equal(picker.hidden, true);
+  setup(h);
+  const legacy = { faces: ["home", "weather", "analog", "photos", "cameras"], photos: false, cameras: false,
+    photo_interval: 120, camera_interval: 30, errors: [] };
+  h.source.emit("config", { config, errors: [], legacy });
+  h.elements["navigation-toggle"].onclick();
+  const requestCount = h.requests.length;
+  toggle.onclick();
+  assert.equal(h.elements.navigation.hidden, true);
+  assert.equal(picker.hidden, false);
+  assert.equal(toggle.getAttribute("aria-expanded"), "true");
+  assert.equal(h.document.activeElement, h.elements["face-picker-close"]);
+  const choices = h.elements["face-picker-list"].children;
+  assert.deepEqual(choices.map((choice) => choice.getAttribute("data-face")), legacy.faces);
+  assert.equal(choices[0].getAttribute("aria-current"), "true");
+  assert.match(choices[0].getAttribute("aria-label"), /Selected/);
+  assert.equal(choices[0].children[0].getAttribute("aria-hidden"), "true");
+  assert.match(choices[0].children[0].textContent, /20°/);
+  assert.match(choices[3].getAttribute("aria-label"), /Not enabled/);
+  assert.match(choices[4].getAttribute("aria-label"), /Not enabled/);
+  const dial = allElements(choices[2]).find((item) => item.getAttribute("data-analog-clock") !== null);
+  assert.match(dial.querySelector(".analog-hour").style.transform, /^rotate\(/);
+  assert.equal(h.requests.length, requestCount);
+  choices[1].onclick();
+  assert.equal(h.location.hash, "#/face/weather");
+  assert.equal(picker.hidden, true);
+  assert.equal(toggle.getAttribute("aria-expanded"), "false");
+  assert.equal(h.document.activeElement, toggle);
+  h.route("face/weather");
+  assert.match(h.elements.content.className, /face-weather/);
+  toggle.onclick();
+  const selected = h.elements["face-picker-list"].children[1];
+  assert.equal(selected.getAttribute("aria-current"), "true");
+  selected.onclick();
+  assert.equal(picker.hidden, true);
+  assert.equal(h.location.hash, "#/face/weather");
+  assert.ok(!h.requests.some((request) => /legacy\/(photos|cameras)/.test(request.url)));
+});
+
+function allElements(root) {
+  return [root, ...root.children.flatMap(allElements)];
+}
+
+test("legacy face previews use configured climate and weather without inventing values", () => {
+  const h = harness(); setup(h);
+  const hero = { ...config.pages[0].tiles[0], weather_entity: "weather.home" };
+  const weatherConfig = { ...config, pages: [{ ...config.pages[0], tiles: [hero] }] };
+  const legacy = { faces: ["home", "weather"], errors: [] };
+  h.source.emit("config", { config: weatherConfig, errors: [], legacy });
+  h.source.emit("state", entity("weather.home", "cloudy", { temperature: 0, temperature_unit: "°C" }));
+  const toggle = h.elements["face-picker-toggle"], list = h.elements["face-picker-list"];
+  toggle.onclick();
+  assert.match(list.children[0].children[0].textContent, /20°/);
+  assert.match(list.children[1].children[0].textContent, /0°C/);
+  h.keydown("Escape");
+  h.source.emit("state", entity("climate.room", "heat", { temperature: null }));
+  h.source.emit("state", entity("weather.home", "unavailable"));
+  toggle.onclick();
+  assert.match(list.children[0].children[0].textContent, /—/);
+  assert.doesNotMatch(list.children[0].children[0].textContent, /20°/);
+  assert.match(list.children[1].children[0].textContent, /—/);
+  h.keydown("Escape");
+  h.source.emit("config", { config: { ...weatherConfig, menu_items: [{ id: "climate", visible: false }] }, errors: [], legacy });
+  toggle.onclick();
+  assert.ok(!allElements(list.children[0]).some((item) => item.className.split(" ").includes("preview-primary")));
+  const twelveHourConfig = { ...weatherConfig, pages: [{ ...weatherConfig.pages[0], tiles: [{ ...hero, time_format: "12h" }] }] };
+  h.source.emit("config", { config: twelveHourConfig, errors: [], legacy });
+  assert.match(list.children[0].children[0].textContent, /\b(?:AM|PM)\b/);
+});
+
+test("legacy face chooser only loads enabled photos and cameras after selecting them", () => {
+  const h = harness(); setup(h);
+  const legacy = { faces: ["home", "photos", "cameras"], photos: true, cameras: true,
+    photo_interval: 120, camera_interval: 30, errors: [] };
+  h.source.emit("config", { config, errors: [], legacy });
+  const toggle = h.elements["face-picker-toggle"], list = h.elements["face-picker-list"];
+  h.route("climate");
+  toggle.onclick();
+  assert.ok(list.children.every((choice) => choice.getAttribute("aria-current") === null));
+  assert.ok(!h.requests.some((request) => /legacy\/(photos|cameras)/.test(request.url)));
+  list.children[1].onclick();
+  h.route("face/photos");
+  assert.equal(h.requests.filter((request) => request.url === "../api/legacy/photos").length, 1);
+  toggle.onclick();
+  assert.ok(!h.requests.some((request) => request.url === "../api/legacy/cameras"));
+  list.children[2].onclick();
+  h.route("face/cameras");
+  assert.equal(h.requests.filter((request) => request.url === "../api/legacy/cameras").length, 1);
+});
+
+test("legacy face picker updates configuration, warnings and labels while open", () => {
+  const h = harness(); setup(h);
+  h.source.emit("config", { config, errors: [], legacy: { faces: ["home", "clock", "photos"], errors: [] } });
+  const toggle = h.elements["face-picker-toggle"], list = h.elements["face-picker-list"];
+  toggle.onclick();
+  const stale = list.children[1];
+  h.source.emit("state", entity("light.lamp", "off"));
+  assert.equal(list.children[1], stale);
+  h.source.emit("status", { ha: false, readOnly: true });
+  assert.match(h.elements["face-picker-status"].textContent, /Disconnected.*Read-only/);
+  h.source.emit("config", { config: { ...config, language: "da" }, errors: [],
+    legacy: { faces: ["analog"], errors: [] } });
+  assert.equal(h.elements["face-picker-label"].textContent, "Visninger");
+  assert.equal(h.elements["face-picker-title"].textContent, "Vælg en visning");
+  assert.equal(h.elements["face-picker-close"].getAttribute("aria-label"), "Luk visningsvælger");
+  assert.deepEqual(list.children.map((choice) => choice.getAttribute("data-face")), ["analog"]);
+  assert.equal(h.document.activeElement, h.elements["face-picker-close"]);
+  stale.onclick();
+  assert.equal(h.location.hash, "");
+  assert.equal(h.elements["face-picker"].hidden, false);
+  h.source.emit("config", { config: { ...config, language: "da" }, errors: [],
+    legacy: { faces: [], errors: ["Invalid face list"] } });
+  assert.match(list.textContent, /Ingen visninger er konfigureret/);
+  assert.equal(h.elements["face-picker-notice"].textContent, "Invalid face list");
+  h.keydown("Escape");
+  assert.equal(h.elements["face-picker"].hidden, true);
+  assert.equal(h.document.activeElement, toggle);
+});
+
+test("legacy face picker traps keyboard focus and closes on navigation", () => {
+  const h = harness(); setup(h);
+  h.source.emit("config", { config, errors: [], legacy: { faces: ["home", "clock"], errors: [] } });
+  const toggle = h.elements["face-picker-toggle"], close = h.elements["face-picker-close"];
+  toggle.onclick();
+  const choices = h.elements["face-picker-list"].children;
+  assert.equal(h.keydown("Tab", { shiftKey: true }).prevented, true);
+  assert.equal(h.document.activeElement, choices[1]);
+  assert.equal(h.keydown("Tab").prevented, true);
+  assert.equal(h.document.activeElement, close);
+  h.route("face/clock");
+  assert.equal(h.elements["face-picker"].hidden, true);
+  assert.equal(h.document.activeElement, toggle);
+  toggle.onclick();
+  h.elements["navigation-toggle"].onclick();
+  assert.equal(h.elements["face-picker"].hidden, true);
+  assert.equal(h.elements.navigation.hidden, false);
+});
+
 test("home plus keeps additional thermostats after the main controls", () => {
   const h = harness(); setup(h);
   h.source.emit("climate", { enabled: true, entities: ["climate.room", "climate.second"] });
@@ -388,6 +540,11 @@ test("legacy wallpaper loads local assets, reports errors and ignores stale load
   assert.equal(h.document.body.style.backgroundImage, "");
   second.onload();
   assert.match(h.document.body.style.backgroundImage, /new\.png/);
+  const imagesBeforePicker = h.images.length;
+  h.elements["face-picker-toggle"].onclick();
+  assert.equal(h.elements["face-picker-list"].children[0].children[0].style.backgroundImage, h.document.body.style.backgroundImage);
+  assert.equal(h.images.length, imagesBeforePicker);
+  h.elements["face-picker-close"].onclick();
   h.elements["night-mode"].onclick();
   assert.equal(h.elements["night-mode"].getAttribute("aria-pressed"), "true");
   assert.match(h.document.body.className, /legacy-night/);

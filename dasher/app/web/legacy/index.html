@@ -7,7 +7,12 @@
   <link rel="stylesheet" href="legacy.css">
 </head>
 <body>
-  <button id="navigation-toggle" type="button" aria-controls="navigation" aria-expanded="false" aria-label="Open dashboard menu">☰</button>
+  <div id="bottom-dock">
+    <button id="navigation-toggle" type="button" aria-controls="navigation" aria-expanded="false" aria-label="Open dashboard menu">☰</button>
+    <button id="face-picker-toggle" type="button" aria-controls="face-picker" aria-expanded="false" aria-haspopup="dialog" disabled>
+      <span aria-hidden="true">▦</span> <span id="face-picker-label">Faces</span>
+    </button>
+  </div>
   <div id="navigation" hidden>
     <header>
       <strong id="title">Dasher</strong>
@@ -21,6 +26,20 @@
   <div id="connection-warning" role="status"></div>
   <div id="notice" role="alert"></div>
   <main id="content"><p>Connecting to Dasher...</p></main>
+  <section id="face-picker" role="dialog" aria-modal="true" aria-labelledby="face-picker-title" aria-describedby="face-picker-hint" hidden>
+    <div class="face-picker-inner">
+      <div class="face-picker-header">
+        <button id="face-picker-close" type="button" aria-label="Close face chooser">×</button>
+        <div>
+          <h1 id="face-picker-title">Choose a face</h1>
+          <p id="face-picker-hint">Tap a face to display it. Previews are illustrations.</p>
+        </div>
+      </div>
+      <p id="face-picker-status" role="status"></p>
+      <p id="face-picker-notice" role="alert"></p>
+      <div id="face-picker-list"></div>
+    </div>
+  </section>
   <script src="legacy.js"></script>
 </body>
 </html>

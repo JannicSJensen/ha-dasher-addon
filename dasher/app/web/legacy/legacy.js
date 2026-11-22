@@ -18,12 +18,19 @@
   var wallpaperRequest = 0;
   var nightModeEnabled = false;
   var navigationOpen = false;
+  var facePickerOpen = false;
   var notice = document.getElementById("notice");
   var content = document.getElementById("content");
   var menuElement = document.getElementById("menu");
   var faceElement = document.getElementById("faces");
   var navigation = document.getElementById("navigation");
   var navigationToggle = document.getElementById("navigation-toggle");
+  var facePicker = document.getElementById("face-picker");
+  var facePickerToggle = document.getElementById("face-picker-toggle");
+  var facePickerClose = document.getElementById("face-picker-close");
+  var facePickerList = document.getElementById("face-picker-list");
+  var facePickerStatus = document.getElementById("face-picker-status");
+  var facePickerNotice = document.getElementById("face-picker-notice");
   var labels = {
     en: { climate: "Climate", areas: "Areas", music: "Music", media: "Media", calendar: "Calendar", ev: "Car", energy: "Energy",
       connecting: "Connecting", connected: "Connected", disconnected: "Disconnected from Home Assistant", readonly: "Read-only",
@@ -41,7 +48,10 @@
       noPhotos: "No photos found in the selected albums.", photoFolderMissing: "The assets/photos folder does not exist.", noCameras: "No cameras discovered.", imageError: "Could not load image.",
       wind: "Wind", humidity: "Humidity", pressure: "Pressure", wallpaperError: "Could not load legacy wallpaper", nightMode: "Night mode",
       openMenu: "Open dashboard menu", closeMenu: "Close dashboard menu", dashboardFaces: "Dashboard faces",
-      dashboardPages: "Dashboard pages", standardDashboard: "Standard dashboard", iconError: "Could not load icon" },
+      dashboardPages: "Dashboard pages", standardDashboard: "Standard dashboard", iconError: "Could not load icon",
+      facesButton: "Faces", chooseFace: "Choose a face", closeFacePicker: "Close face chooser",
+      facePickerHint: "Tap a face to display it. Previews are illustrations.", selectedFace: "Selected", faceNotEnabled: "Not enabled",
+      noFacesConfigured: "No faces are configured. Enable them in the Dasher app configuration." },
     da: { climate: "Klima", areas: "Områder", music: "Musik", media: "Medier", calendar: "Kalender", ev: "Bil", energy: "Energi",
       connecting: "Forbinder", connected: "Forbundet", disconnected: "Ingen forbindelse til Home Assistant", readonly: "Skrivebeskyttet",
       unavailable: "Ikke tilgængelig", unknown: "Ukendt", empty: "Intet at vise.", unsupported: "Dette element er ikke tilgængeligt i legacy-tilstand.",
@@ -58,7 +68,10 @@
       noPhotos: "Ingen billeder fundet i de valgte album.", photoFolderMissing: "Mappen assets/photos findes ikke.", noCameras: "Ingen kameraer fundet.", imageError: "Kunne ikke indlæse billedet.",
       wind: "Vind", humidity: "Luftfugtighed", pressure: "Lufttryk", wallpaperError: "Kunne ikke indlæse legacy-baggrund", nightMode: "Nattilstand",
       openMenu: "Åbn dashboardmenu", closeMenu: "Luk dashboardmenu", dashboardFaces: "Dashboardvisninger",
-      dashboardPages: "Dashboardsider", standardDashboard: "Standarddashboard", iconError: "Kunne ikke indlæse ikon" }
+      dashboardPages: "Dashboardsider", standardDashboard: "Standarddashboard", iconError: "Kunne ikke indlæse ikon",
+      facesButton: "Visninger", chooseFace: "Vælg en visning", closeFacePicker: "Luk visningsvælger",
+      facePickerHint: "Tryk på en visning for at vælge den. Forhåndsvisningerne er illustrationer.", selectedFace: "Valgt", faceNotEnabled: "Ikke aktiveret",
+      noFacesConfigured: "Ingen visninger er konfigureret. Aktivér dem i Dasher-appens konfiguration." }
   };
   var weatherLabels = {
     en: { sunny: "Sunny", "clear-night": "Clear night", partlycloudy: "Partly cloudy", cloudy: "Cloudy", fog: "Fog",
@@ -84,7 +97,7 @@
     return node;
   }
   function line(node, text) { node.appendChild(el("p", text, "muted")); }
-  function fail(text) { notice.textContent = text; }
+  function fail(text) { notice.textContent = text; facePickerNotice.textContent = text; }
   function request(method, url, body, callback) {
     var xhr = new XMLHttpRequest();
     xhr.open(method, "../api/" + url, true);
@@ -239,6 +252,106 @@
     return legacy.faces.indexOf(id) === -1 ? null : id;
   }
   function faceTitle(id) { return id === "home" ? t("homeFace") : t(id); }
+  function previewTime() {
+    var now = new Date(), hour = now.getHours(), minute = now.getMinutes(), hero = heroTile(homePage());
+    var twelve = hero.time_format === "12h", suffix = twelve ? (hour < 12 ? " AM" : " PM") : "";
+    if (twelve) hour = hour % 12 || 12;
+    return ("0" + hour).slice(-2) + ":" + ("0" + minute).slice(-2) + suffix;
+  }
+  function previewTile(parent, text, cls) {
+    var tile = el("span", text, "face-preview-tile" + (cls ? " " + cls : ""));
+    parent.appendChild(tile);
+    return tile;
+  }
+  function previewWeather() {
+    var id = heroTile(homePage()).weather_entity;
+    if (!id || !available(id)) return "—";
+    var entity = states[id], temperature = weatherTemperature(entity.attributes || {});
+    return weatherGlyph(String(entity.state)) + (temperature === null ? "" : " " + temperature);
+  }
+  function facePreview(id) {
+    var preview = el("span", null, "face-preview face-preview-" + id);
+    var layout = el("span", null, "face-preview-layout"), time = previewTime();
+    preview.setAttribute("aria-hidden", "true");
+    if (document.body.className.indexOf("legacy-wallpaper-loaded") !== -1) {
+      preview.style.backgroundImage = document.body.style.backgroundImage;
+      preview.style.backgroundSize = "cover";
+      preview.style.backgroundPosition = "center";
+    }
+    preview.appendChild(layout);
+    if (id === "home" || id === "home_plus") {
+      var thermostats = homeThermostats(), first = thermostats[0], target;
+      var glyphs = ["⌂", "☼", "♪", "◉", "▰", "✓", "◇", "◉", "☼", "♪"];
+      if (first) {
+        target = climateTarget(first);
+        var active = available(first) && String(states[first].state).toLowerCase() !== "off";
+        previewTile(layout, validTemperature(target) ? target + "°" : "—", "preview-primary" + (active ? " preview-light" : ""));
+        previewTile(layout, time, "preview-time");
+      } else previewTile(layout, time, "preview-wide preview-time");
+      glyphs.slice(0, first ? (id === "home_plus" ? 7 : 3) : (id === "home_plus" ? 10 : 6)).forEach(function (glyph, index) {
+        previewTile(layout, glyph, index % 4 === 1 ? "preview-light" : "");
+      });
+    } else if (id === "modular") {
+      previewTile(layout, time, "preview-wide preview-time");
+      previewTile(layout, previewWeather(), "preview-wide");
+      ["⌂", "☼", "♪", "◉"].forEach(function (glyph) { previewTile(layout, glyph); });
+    } else if (id === "weather" || id === "calendar" || id === "flow") {
+      layout.className += " preview-split";
+      previewTile(layout, time, "preview-time");
+      if (id === "calendar") previewTile(layout, new Date().getDate(), "preview-calendar-block");
+      else previewTile(layout, previewWeather(), "preview-weather-block");
+    } else if (id === "clock") {
+      layout.className += " preview-solo";
+      previewTile(layout, time, "preview-clock-large");
+    } else if (id === "analog") {
+      layout.className += " preview-solo";
+      layout.appendChild(analogDial("span", "face-preview-dial"));
+    } else if (id === "photos") {
+      layout.className += " preview-solo";
+      layout.appendChild(el("span", null, "preview-picture"));
+    } else if (id === "cameras") {
+      layout.className += " preview-split";
+      previewTile(layout, "◉", "preview-camera");
+      previewTile(layout, "◉", "preview-camera");
+    }
+    return preview;
+  }
+  function renderFacePicker() {
+    var active = currentFace(), faces = legacy && legacy.faces || [];
+    document.getElementById("face-picker-title").textContent = t("chooseFace");
+    document.getElementById("face-picker-hint").textContent = t("facePickerHint");
+    facePickerClose.setAttribute("aria-label", t("closeFacePicker"));
+    facePickerList.textContent = "";
+    if (!faces.length) {
+      facePickerList.appendChild(el("p", t("noFacesConfigured"), "face-picker-empty"));
+      return;
+    }
+    faces.forEach(function (id) {
+      var selected = id === active;
+      var needsSetup = (id === "photos" && !legacy.photos) || (id === "cameras" && !legacy.cameras);
+      var title = faceTitle(id), accessibleName = title;
+      var choice = button(facePickerList, null, function () {
+        if (!legacy || legacy.faces.indexOf(id) === -1) { renderFacePicker(); return; }
+        setFacePicker(false, true);
+        navigate("face/" + id);
+      });
+      choice.className = "face-choice";
+      choice.setAttribute("data-face", id);
+      choice.appendChild(facePreview(id));
+      choice.appendChild(el("span", title, "face-choice-name"));
+      if (selected) {
+        choice.setAttribute("aria-current", "true");
+        choice.appendChild(el("span", t("selectedFace"), "face-choice-badge"));
+        accessibleName += " · " + t("selectedFace");
+      }
+      if (needsSetup) {
+        choice.appendChild(el("span", t("faceNotEnabled"), "face-choice-note"));
+        accessibleName += " · " + t("faceNotEnabled");
+      }
+      choice.setAttribute("aria-label", accessibleName);
+    });
+    updateAnalog();
+  }
   function renderFaces(active) {
     if (!faceElement) return;
     var scroll = faceElement.scrollLeft;
@@ -314,6 +427,16 @@
     updateClock(panel, new Date());
     return panel;
   }
+  function weatherGlyph(condition) {
+    var glyphs = { sunny: "☀", "clear-night": "☾", partlycloudy: "⛅", cloudy: "☁", fog: "☁", rainy: "☂",
+      pouring: "☂", snowy: "❄", "snowy-rainy": "❄", hail: "❄", lightning: "ϟ", "lightning-rainy": "ϟ",
+      windy: "≋", "windy-variant": "≋", exceptional: "!" };
+    return Object.prototype.hasOwnProperty.call(glyphs, condition) ? glyphs[condition] : "·";
+  }
+  function weatherTemperature(attrs) {
+    if (typeof attrs.temperature !== "number" || !isFinite(attrs.temperature)) return null;
+    return attrs.temperature + (typeof attrs.temperature_unit === "string" ? attrs.temperature_unit : "°");
+  }
   function weatherPanel(id) {
     var panel = el("div", null, "weather-panel"), e = states[id], attrs = e && e.attributes || {};
     if (!available(id)) {
@@ -321,16 +444,11 @@
       return panel;
     }
     var condition = String(e.state), lang = config.language === "da" ? "da" : "en";
-    var glyphs = { sunny: "☀", "clear-night": "☾", partlycloudy: "⛅", cloudy: "☁", fog: "☁", rainy: "☂",
-      pouring: "☂", snowy: "❄", "snowy-rainy": "❄", hail: "❄", lightning: "ϟ", "lightning-rainy": "ϟ",
-      windy: "≋", "windy-variant": "≋", exceptional: "!" };
-    var glyph = Object.prototype.hasOwnProperty.call(glyphs, condition) ? glyphs[condition] : "·";
-    var symbol = el("span", glyph, "weather-symbol");
+    var symbol = el("span", weatherGlyph(condition), "weather-symbol");
     symbol.setAttribute("aria-hidden", "true");
     panel.appendChild(symbol);
-    if (typeof attrs.temperature === "number" && isFinite(attrs.temperature)) {
-      panel.appendChild(el("span", attrs.temperature + (typeof attrs.temperature_unit === "string" ? attrs.temperature_unit : "°"), "weather-temperature"));
-    }
+    var temperature = weatherTemperature(attrs);
+    if (temperature !== null) panel.appendChild(el("span", temperature, "weather-temperature"));
     var weatherName = Object.prototype.hasOwnProperty.call(weatherLabels[lang], condition) ? weatherLabels[lang][condition] : condition;
     panel.appendChild(el("span", weatherName, "weather-condition"));
     return panel;
@@ -414,10 +532,14 @@
       }
     });
   }
+  function climateTarget(id) {
+    var e = states[id], attrs = e && e.attributes || {};
+    return pending[id] ? pending[id].value : attrs.temperature;
+  }
+  function validTemperature(value) { return value != null && value !== "" && isFinite(Number(value)); }
   function climate(id, parent, homeStyle) {
     var e = states[id], attrs = e && e.attributes || {}, box = card(name(id));
-    var target = pending[id] ? pending[id].value : attrs.temperature;
-    var validTarget = target != null && target !== "" && isFinite(Number(target));
+    var target = climateTarget(id), validTarget = validTemperature(target);
     var currentText = t("current") + ": " + (attrs.current_temperature == null ? t("unavailable") : attrs.current_temperature + "°");
     var targetText = t("target") + ": " + (target == null ? t("unavailable") : target + "°");
     if (homeStyle) {
@@ -643,6 +765,9 @@
     menu.forEach(function (item) { if (!found && item.page) found = item.page; });
     return found;
   }
+  function homeThermostats() {
+    return menu.some(function (item) { return item.id === "climate" && !item.page; }) ? (models.climate.entities || []) : [];
+  }
   function heroTile(page) {
     var hero = null;
     (page && page.tiles || []).forEach(function (tile) { if (!hero && tile.type === "hero") hero = tile; });
@@ -667,14 +792,18 @@
     }
     content.appendChild(box);
   }
-  function showAnalog() {
-    var box = el("section", null, "card face-analog"), dial = el("div", null, "analog-dial");
+  function analogDial(tag, cls) {
+    var dial = el(tag, null, cls);
     dial.setAttribute("data-analog-clock", "");
     [12, 3, 6, 9].forEach(function (number) { dial.appendChild(el("span", number, "analog-number analog-n" + number)); });
     dial.appendChild(el("span", null, "analog-hour"));
     dial.appendChild(el("span", null, "analog-minute"));
     dial.appendChild(el("span", null, "analog-center"));
-    box.appendChild(dial);
+    return dial;
+  }
+  function showAnalog() {
+    var box = el("section", null, "card face-analog");
+    box.appendChild(analogDial("div", "analog-dial"));
     box.appendChild(clockPanel({}));
     content.appendChild(box);
     updateAnalog();
@@ -768,11 +897,8 @@
       if (menu.some(function (item) { return item.id === "calendar" && !item.page; })) renderCalendar();
       else line(content, t("unavailable"));
     } else if (id === "home" || id === "home_plus") {
-      var thermostats = [];
-      if (menu.some(function (item) { return item.id === "climate" && !item.page; })) {
-        thermostats = models.climate.entities || [];
-        if (thermostats.length) climate(thermostats[0], content, true);
-      }
+      var thermostats = homeThermostats();
+      if (thermostats.length) climate(thermostats[0], content, true);
       if (page) renderPage(page, content, true); else line(content, t("empty"));
       if (id === "home_plus") thermostats.slice(1).forEach(function (entity) { climate(entity, content); });
     } else if (id === "flow") {
@@ -801,7 +927,11 @@
     var connectionText = (status.ha ? t("connected") : t("disconnected")) + (status.readOnly ? " · " + t("readonly") : "");
     document.getElementById("connection").textContent = connectionText;
     document.getElementById("connection-warning").textContent = !status.ha || status.readOnly ? connectionText : "";
+    facePickerStatus.textContent = !status.ha || status.readOnly ? connectionText : "";
     navigationToggle.setAttribute("aria-label", t(navigationOpen ? "closeMenu" : "openMenu"));
+    facePickerToggle.disabled = false;
+    facePickerToggle.setAttribute("aria-label", t("chooseFace"));
+    document.getElementById("face-picker-label").textContent = t("facesButton");
     var nightButton = document.getElementById("night-mode");
     nightButton.textContent = t("nightMode");
     nightButton.setAttribute("aria-label", t("nightMode"));
@@ -838,11 +968,26 @@
     render();
   }
   function setNavigation(open) {
+    if (open && facePickerOpen) setFacePicker(false, false);
     navigationOpen = open;
     navigation.hidden = !open;
     navigationToggle.textContent = open ? "×" : "☰";
     navigationToggle.setAttribute("aria-expanded", open ? "true" : "false");
     navigationToggle.setAttribute("aria-label", t(open ? "closeMenu" : "openMenu"));
+  }
+  function setFacePicker(open, restoreFocus) {
+    facePickerOpen = open;
+    facePicker.hidden = !open;
+    facePickerToggle.setAttribute("aria-expanded", open ? "true" : "false");
+    if (open) {
+      setNavigation(false);
+      renderFacePicker();
+      facePicker.scrollTop = 0;
+      if (facePickerClose.focus) facePickerClose.focus();
+    } else {
+      facePickerList.textContent = "";
+      if (restoreFocus && facePickerToggle.focus && !facePickerToggle.disabled) facePickerToggle.focus();
+    }
   }
   function setWallpaper(file) {
     var requestId = ++wallpaperRequest;
@@ -864,6 +1009,8 @@
   }
   navigationToggle.onclick = function () { setNavigation(!navigationOpen); };
   setNavigation(false);
+  facePickerToggle.onclick = function () { if (!facePickerToggle.disabled) setFacePicker(!facePickerOpen, true); };
+  facePickerClose.onclick = function () { setFacePicker(false, true); };
   document.getElementById("night-mode").onclick = function () { setNightMode(!nightModeEnabled); };
   function connect() {
     var source = new EventSource("../api/events");
@@ -897,16 +1044,37 @@
           if (pending[data.entity_id] && !pending[data.entity_id].timer && data.attributes && data.attributes.temperature === pending[data.entity_id].value) delete pending[data.entity_id];
         } else models[type] = data;
         render();
+        if (type === "config" && facePickerOpen) {
+          renderFacePicker();
+          if (facePickerClose.focus) facePickerClose.focus();
+        }
       });
     });
   }
   window.addEventListener("hashchange", function () {
     var restoreFocus = navigationOpen;
+    if (facePickerOpen) setFacePicker(false, true);
     setNavigation(false);
     if (restoreFocus && navigationToggle.focus) navigationToggle.focus();
     render();
   });
   window.addEventListener("keydown", function (event) {
+    if (facePickerOpen) {
+      if (event.key === "Escape" || event.keyCode === 27) {
+        setFacePicker(false, true);
+        return;
+      }
+      if (event.key === "Tab" || event.keyCode === 9) {
+        var last = facePickerClose, choices = facePickerList.children, i;
+        for (i = 0; i < choices.length; i++) if (choices[i].tagName === "BUTTON" && !choices[i].disabled) last = choices[i];
+        if (event.shiftKey && document.activeElement === facePickerClose) {
+          last.focus(); event.preventDefault();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          facePickerClose.focus(); event.preventDefault();
+        }
+      }
+      return;
+    }
     if (navigationOpen && (event.key === "Escape" || event.keyCode === 27)) {
       setNavigation(false);
       if (navigationToggle.focus) navigationToggle.focus();

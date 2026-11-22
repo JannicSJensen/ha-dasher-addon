@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.51.0
+
+- **Visual legacy face chooser.** Browse illustrated previews of the configured faces from the tablet, see the current selection and select a face directly. Photo and camera faces indicate when their features are disabled; the existing menu and swipe navigation remain available.
+
 ## 0.50.0
 
 - **Immersive legacy home faces.** A compact menu replaces the persistent navigation bars, leaving more room for a large thermostat and individual, stateful quick-action tiles inspired by the Rehome demonstration. Disconnection and read-only warnings remain visible, and additional thermostats remain on Home Modular Plus.
