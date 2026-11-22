@@ -314,6 +314,34 @@ test("legacy faces preserve menu controls and load configured albums and cameras
   assert.match(h.elements.content.textContent, /0.5°/);
 });
 
+test("analog face pairs the live local time with a sweeping second hand", () => {
+  const h = harness(); setup(h);
+  const hero = { ...config.pages[0].tiles[0], time_format: "12h" };
+  h.source.emit("config", {
+    config: { ...config, language: "da", pages: [{ ...config.pages[0], tiles: [hero] }] },
+    errors: [], legacy: { faces: ["analog"], errors: [] },
+  });
+  const root = h.elements.content;
+  assert.match(root.className, /face-analog/);
+  assert.match(root.textContent, /Klokken er/);
+  const clock = h.findClass("clock-panel"), dial = h.findClass("analog-dial");
+  assert.equal(clock.getAttribute("data-format"), "12h");
+  assert.match(clock.querySelector(".clock-date").textContent, /2026/);
+  assert.match(clock.querySelector(".clock-suffix").textContent, /AM|PM/);
+  assert.equal(allElements(dial).filter((node) => (node.className || "").split(" ").includes("analog-tick")).length, 12);
+  const secondHand = dial.querySelector(".analog-second");
+  const minuteHand = dial.querySelector(".analog-minute");
+  const hourHand = dial.querySelector(".analog-hour");
+  assert.equal(secondHand.style.transform, "rotate(0deg)");
+  h.tick("2026-01-02T10:15:30Z");
+  assert.equal(secondHand.style.transform, "rotate(180deg)");
+  assert.equal(minuteHand.style.transform, "rotate(93deg)");
+  const now = new Date("2026-01-02T10:15:30Z");
+  const expectedHour = (now.getHours() % 12) * 30 + now.getMinutes() / 2 + now.getSeconds() / 120;
+  assert.equal(hourHand.style.transform, "rotate(" + expectedHour + "deg)");
+  assert.equal(clock.querySelector(".clock-suffix").textContent, " AM");
+});
+
 test("legacy face controls reflect live state and honor climate visibility", () => {
   const h = harness(); setup(h);
   const legacy = { faces: ["home", "home_plus"], errors: [] };

@@ -84,12 +84,69 @@ select { background: #444e69; }
 .face-image { display: block; width: 100%; max-height: 65vh; margin: 14px auto; object-fit: contain; background: #171d30; border-radius: 18px; }
 .camera-frame { display: inline-block; vertical-align: top; width: 49%; padding: 10px; }
 .analog-dial { position: relative; width: 260px; height: 260px; max-width: 100%; margin: 0 auto 20px; border-radius: 50%; background: #a7d6ef; color: #213d5c; }
-.analog-number { position: absolute; font-size: 29px; font-weight: 700; }
-.analog-n12 { top: 8px; left: 42%; } .analog-n3 { top: 43%; right: 15px; }
-.analog-n6 { bottom: 8px; left: 46%; } .analog-n9 { top: 43%; left: 15px; }
-.analog-hour, .analog-minute { position: absolute; left: 50%; bottom: 50%; width: 6px; background: #213d5c; border-radius: 6px; -webkit-transform-origin: 50% 100%; transform-origin: 50% 100%; }
-.analog-hour { height: 25%; } .analog-minute { height: 34%; width: 4px; }
-.analog-center { position: absolute; left: 48.5%; top: 48.5%; width: 3%; height: 3%; border-radius: 50%; background: #213d5c; }
+.analog-ticks, .analog-tick { position: absolute; top: 0; right: 0; bottom: 0; left: 0; border-radius: 50%; }
+.analog-tick { -webkit-transform-origin: 50% 50%; transform-origin: 50% 50%; }
+.analog-tick:after {
+  position: absolute; top: 5%; left: 50%; width: 2px; height: 7%; margin-left: -1px;
+  border-radius: 2px; background: currentColor; content: "";
+}
+.analog-number { position: absolute; z-index: 1; font-size: 16px; font-weight: 600; }
+.analog-n12 { top: 12%; left: 50%; -webkit-transform: translateX(-50%); transform: translateX(-50%); }
+.analog-n3 { top: 50%; right: 12%; -webkit-transform: translateY(-50%); transform: translateY(-50%); }
+.analog-n6 { bottom: 12%; left: 50%; -webkit-transform: translateX(-50%); transform: translateX(-50%); }
+.analog-n9 { top: 50%; left: 12%; -webkit-transform: translateY(-50%); transform: translateY(-50%); }
+.analog-hour, .analog-minute, .analog-second {
+  position: absolute; left: 50%; bottom: 50%; border-radius: 6px;
+  -webkit-transform-origin: 50% 100%; transform-origin: 50% 100%;
+}
+.analog-hour { z-index: 2; width: 7px; height: 24%; margin-left: -3.5px; background: #213d5c; }
+.analog-minute { z-index: 3; width: 4px; height: 34%; margin-left: -2px; background: #213d5c; }
+.analog-second { z-index: 4; width: 2px; height: 39%; margin-left: -1px; border-radius: 2px; background: #c78654; }
+.analog-center { position: absolute; z-index: 5; left: 50%; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border: 2px solid #d5f1eb; border-radius: 50%; background: #c78654; }
+.analog-readout { grid-area: readout; min-width: 0; }
+.analog-caption {
+  margin: 0 0 12px; color: #8ad9ce; font-size: 14px; font-weight: 700;
+  letter-spacing: .2em; text-transform: uppercase;
+}
+.legacy-face.face-analog {
+  width: 100%; max-width: none; min-height: 100vh; padding-bottom: 80px;
+  background: radial-gradient(ellipse at 82% 48%, rgba(81,169,157,.33), transparent 38%),
+    radial-gradient(ellipse at 12% 90%, rgba(42,122,142,.3), transparent 45%),
+    linear-gradient(138deg, #10232e 0%, #173c48 58%, #315c5a 100%);
+}
+.legacy-face.face-analog > .card.face-analog {
+  display: grid; grid-template-areas: "readout dial"; grid-template-columns: minmax(0, 1.15fr) minmax(260px, .85fr);
+  gap: 5vw; align-items: center; width: 100%; min-width: 0; max-width: 1100px;
+  min-height: calc(100vh - 112px); margin: 0 auto; padding: 36px 4vw;
+  border: 0; border-radius: 0; background: transparent; box-shadow: none; text-align: left;
+}
+.legacy-face.face-analog .clock-panel { grid-area: readout; text-align: left; }
+.legacy-face.face-analog .clock-date { margin-bottom: 14px; color: rgba(224,244,238,.74); font-size: 19px; }
+.legacy-face.face-analog .clock-digits { display: block; margin: 0; }
+.legacy-face.face-analog .clock-block, .legacy-face.face-analog .clock-colon {
+  color: #eef7f3; font-size: 14vw; font-weight: 500; letter-spacing: -.075em;
+}
+.legacy-face.face-analog .clock-suffix { color: #8ad9ce; font-size: 18px; }
+.legacy-face.face-analog .analog-dial {
+  grid-area: dial; width: 34vw; height: 34vw; min-width: 260px; min-height: 260px;
+  max-width: 390px; max-height: 390px; margin: 0 auto;
+  border: 1px solid rgba(195,237,226,.38);
+  background: radial-gradient(circle at 34% 28%, rgba(111,194,179,.27), transparent 50%),
+    linear-gradient(145deg, #1d5059, #183b4a 72%);
+  box-shadow: 0 18px 60px rgba(2,15,22,.24), inset 0 0 42px rgba(151,221,202,.08);
+  color: #d3eee7;
+}
+body.legacy-night .legacy-face.face-analog {
+  background: radial-gradient(ellipse at 82% 48%, rgba(73,24,34,.45), transparent 38%),
+    linear-gradient(138deg, #120d14, #24121b 68%, #311a1c);
+}
+body.legacy-night .legacy-face.face-analog .analog-dial { background: linear-gradient(145deg, #321923, #1b111a); color: #f0c4bd; }
+body.legacy-wallpaper-loaded .legacy-face.face-analog { background: rgba(11,29,39,.62); }
+body.legacy-night.legacy-wallpaper-loaded .legacy-face.face-analog { background: rgba(24,7,12,.72); }
+.legacy-face.face-analog .analog-number { color: #d3eee7; }
+.legacy-face.face-analog .analog-hour, .legacy-face.face-analog .analog-minute { background: #eef7f3; }
+.legacy-face.face-analog .analog-second { background: #f2b887; }
+.legacy-face.face-analog .analog-center { border-color: #e4f4ee; }
 .face-analog .clock-digits { display: none; }
 .music-card { text-align: center; }
 .music-artwork { display: block; width: 100%; max-width: 230px; margin: 16px auto; border-radius: 20px; }
@@ -126,6 +183,13 @@ body.legacy-night .legacy-face.face-modular button { color: #ffaaa6; background:
   .card { display: block; width: 100%; min-width: 0; margin-right: 0; }
   .camera-frame { width: 100%; }
   .face-clock .clock-block, .face-clock .clock-colon { font-size: 76px; }
+  .legacy-face.face-analog > .card.face-analog {
+    grid-template-areas: "readout" "dial"; grid-template-columns: minmax(0, 1fr);
+    gap: 12px; min-height: calc(100vh - 112px); padding: 18px 4px 30px;
+  }
+  .legacy-face.face-analog .clock-block, .legacy-face.face-analog .clock-colon { font-size: 20vw; }
+  .legacy-face.face-analog .clock-date { font-size: 16px; }
+  .legacy-face.face-analog .analog-dial { width: 260px; height: 260px; min-width: 0; min-height: 0; }
 }
 #navigation {
   position: fixed; top: 12px; left: 12px; right: 12px; z-index: 20;

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.52.0
+
+- **Original analog watch face.** Pair an oversized live digital time and date with a separate round dial, hour markers and a sweeping second hand. The face follows the configured home time format and uses a distinct deep-teal palette; existing faces and optional wallpapers remain supported.
+
 ## 0.51.0
 
 - **Visual legacy face chooser.** Browse illustrated previews of the configured faces from the tablet, see the current selection and select a face directly. Photo and camera faces indicate when their features are disabled; the existing menu and swipe navigation remain available.

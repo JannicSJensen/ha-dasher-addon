@@ -43,6 +43,7 @@
       battery_discharge: "Battery discharging", net_cost: "Net cost", noenergy: "Energy is not configured in Home Assistant.",
       calendarPartial: "Some calendars could not be loaded", calendarReadOnly: "Upcoming events (read-only)", nothingPlaying: "Nothing playing",
       home_plus: "Home Modular Plus", modular: "Modular", weather: "Weather", clock: "Clock", analog: "Analog", flow: "Flow",
+      analogCaption: "Local time",
       photos: "Photos", cameras: "Home Camera", homeFace: "Home Modular", albums: "Album", allAlbums: "All albums",
       photosDisabled: "Enable legacy photo albums in the app configuration.", camerasDisabled: "Enable legacy camera snapshots in the app configuration.",
       noPhotos: "No photos found in the selected albums.", photoFolderMissing: "The assets/photos folder does not exist.", noCameras: "No cameras discovered.", imageError: "Could not load image.",
@@ -63,6 +64,7 @@
       battery_discharge: "Batteriafladning", net_cost: "Nettopris", noenergy: "Energi er ikke konfigureret i Home Assistant.",
       calendarPartial: "Nogle kalendere kunne ikke indlæses", calendarReadOnly: "Kommende begivenheder (skrivebeskyttet)", nothingPlaying: "Intet spiller",
       home_plus: "Hjem Modular Plus", modular: "Modular", weather: "Vejr", clock: "Ur", analog: "Analog", flow: "Flow",
+      analogCaption: "Klokken er",
       photos: "Fotos", cameras: "Hjemmekamera", homeFace: "Hjem Modular", albums: "Album", allAlbums: "Alle album",
       photosDisabled: "Slå legacy-fotoalbum til i appens konfiguration.", camerasDisabled: "Slå legacy-kamerabilleder til i appens konfiguration.",
       noPhotos: "Ingen billeder fundet i de valgte album.", photoFolderMissing: "Mappen assets/photos findes ikke.", noCameras: "Ingen kameraer fundet.", imageError: "Kunne ikke indlæse billedet.",
@@ -795,26 +797,42 @@
   function analogDial(tag, cls) {
     var dial = el(tag, null, cls);
     dial.setAttribute("data-analog-clock", "");
+    var ticks = el("span", null, "analog-ticks");
+    for (var index = 0; index < 12; index++) {
+      var tick = el("span", null, "analog-tick");
+      tick.style.webkitTransform = tick.style.transform = "rotate(" + index * 30 + "deg)";
+      ticks.appendChild(tick);
+    }
+    dial.appendChild(ticks);
     [12, 3, 6, 9].forEach(function (number) { dial.appendChild(el("span", number, "analog-number analog-n" + number)); });
     dial.appendChild(el("span", null, "analog-hour"));
     dial.appendChild(el("span", null, "analog-minute"));
+    dial.appendChild(el("span", null, "analog-second"));
     dial.appendChild(el("span", null, "analog-center"));
     return dial;
   }
   function showAnalog() {
     var box = el("section", null, "card face-analog");
+    var readout = el("div", null, "analog-readout");
+    readout.appendChild(el("p", t("analogCaption"), "analog-caption"));
+    readout.appendChild(clockPanel(heroTile(homePage())));
+    box.appendChild(readout);
     box.appendChild(analogDial("div", "analog-dial"));
-    box.appendChild(clockPanel({}));
     content.appendChild(box);
     updateAnalog();
   }
   function updateAnalog() {
-    var clocks = document.querySelectorAll("[data-analog-clock]"), now = new Date(), i, hour, minute;
+    var clocks = document.querySelectorAll("[data-analog-clock]"), now = new Date(), i, hour, minute, second;
     for (i = 0; i < clocks.length; i++) {
       hour = clocks[i].querySelector(".analog-hour");
       minute = clocks[i].querySelector(".analog-minute");
-      hour.style.webkitTransform = hour.style.transform = "rotate(" + ((now.getHours() % 12) * 30 + now.getMinutes() / 2) + "deg)";
-      minute.style.webkitTransform = minute.style.transform = "rotate(" + (now.getMinutes() * 6) + "deg)";
+      second = clocks[i].querySelector(".analog-second");
+      hour.style.webkitTransform = hour.style.transform = "rotate(" +
+        ((now.getHours() % 12) * 30 + now.getMinutes() / 2 + now.getSeconds() / 120) + "deg)";
+      minute.style.webkitTransform = minute.style.transform = "rotate(" +
+        (now.getMinutes() * 6 + now.getSeconds() / 10) + "deg)";
+      second.style.webkitTransform = second.style.transform = "rotate(" +
+        (now.getSeconds() * 6 + now.getMilliseconds() / 166.67) + "deg)";
     }
   }
   function loadPhotos() {
