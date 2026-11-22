@@ -17,10 +17,13 @@
   var musicFocus = null;
   var wallpaperRequest = 0;
   var nightModeEnabled = false;
+  var navigationOpen = false;
   var notice = document.getElementById("notice");
   var content = document.getElementById("content");
   var menuElement = document.getElementById("menu");
   var faceElement = document.getElementById("faces");
+  var navigation = document.getElementById("navigation");
+  var navigationToggle = document.getElementById("navigation-toggle");
   var labels = {
     en: { climate: "Climate", areas: "Areas", music: "Music", media: "Media", calendar: "Calendar", ev: "Car", energy: "Energy",
       connecting: "Connecting", connected: "Connected", disconnected: "Disconnected from Home Assistant", readonly: "Read-only",
@@ -36,7 +39,9 @@
       photos: "Photos", cameras: "Home Camera", homeFace: "Home Modular", albums: "Album", allAlbums: "All albums",
       photosDisabled: "Enable legacy photo albums in the app configuration.", camerasDisabled: "Enable legacy camera snapshots in the app configuration.",
       noPhotos: "No photos found in the selected albums.", photoFolderMissing: "The assets/photos folder does not exist.", noCameras: "No cameras discovered.", imageError: "Could not load image.",
-      wind: "Wind", humidity: "Humidity", pressure: "Pressure", wallpaperError: "Could not load legacy wallpaper", nightMode: "Night mode" },
+      wind: "Wind", humidity: "Humidity", pressure: "Pressure", wallpaperError: "Could not load legacy wallpaper", nightMode: "Night mode",
+      openMenu: "Open dashboard menu", closeMenu: "Close dashboard menu", dashboardFaces: "Dashboard faces",
+      dashboardPages: "Dashboard pages", standardDashboard: "Standard dashboard", iconError: "Could not load icon" },
     da: { climate: "Klima", areas: "Områder", music: "Musik", media: "Medier", calendar: "Kalender", ev: "Bil", energy: "Energi",
       connecting: "Forbinder", connected: "Forbundet", disconnected: "Ingen forbindelse til Home Assistant", readonly: "Skrivebeskyttet",
       unavailable: "Ikke tilgængelig", unknown: "Ukendt", empty: "Intet at vise.", unsupported: "Dette element er ikke tilgængeligt i legacy-tilstand.",
@@ -51,7 +56,9 @@
       photos: "Fotos", cameras: "Hjemmekamera", homeFace: "Hjem Modular", albums: "Album", allAlbums: "Alle album",
       photosDisabled: "Slå legacy-fotoalbum til i appens konfiguration.", camerasDisabled: "Slå legacy-kamerabilleder til i appens konfiguration.",
       noPhotos: "Ingen billeder fundet i de valgte album.", photoFolderMissing: "Mappen assets/photos findes ikke.", noCameras: "Ingen kameraer fundet.", imageError: "Kunne ikke indlæse billedet.",
-      wind: "Vind", humidity: "Luftfugtighed", pressure: "Lufttryk", wallpaperError: "Kunne ikke indlæse legacy-baggrund", nightMode: "Nattilstand" }
+      wind: "Vind", humidity: "Luftfugtighed", pressure: "Lufttryk", wallpaperError: "Kunne ikke indlæse legacy-baggrund", nightMode: "Nattilstand",
+      openMenu: "Åbn dashboardmenu", closeMenu: "Luk dashboardmenu", dashboardFaces: "Dashboardvisninger",
+      dashboardPages: "Dashboardsider", standardDashboard: "Standarddashboard", iconError: "Kunne ikke indlæse ikon" }
   };
   var weatherLabels = {
     en: { sunny: "Sunny", "clear-night": "Clear night", partlycloudy: "Partly cloudy", cloudy: "Cloudy", fog: "Fog",
@@ -136,12 +143,13 @@
     button(parent, label, function () { call(domain, service, id, data); }, enabled !== false && !status.readOnly && status.ha && canControl(id));
   }
   function navigate(target) { window.location.hash = "#/" + target; }
-  function quickAction(parent, cfg, fallback) {
-    var action = cfg.tap || "toggle", id = cfg.entity || fallback, service, domain, data = {};
+  function quickAction(parent, cfg, fallback, tileStyle) {
+    var action = cfg.tap || "toggle", id = cfg.entity || fallback, service, domain, data = {}, controlButton;
     if (typeof action === "string") action = { action: action };
     if (action.action === "none") return;
     if (action.action === "navigate") {
-      button(parent, cfg.name || action.page, function () { navigate(action.page); });
+      controlButton = button(parent, cfg.name || action.page, function () { navigate(action.page); });
+      if (tileStyle) styleAction(controlButton, cfg, null, cfg.name || action.page, null);
       return;
     }
     id = action.entity || id;
@@ -156,8 +164,34 @@
         media_player: states[id] && states[id].state === "off" ? "turn_on" : "media_play_pause" }[domain];
     }
     if (!service) { line(parent, (cfg.name || id) + ": " + t("unsupported")); return; }
-    button(parent, (cfg.name || name(id)) + " · " + stateText(id), function () { call(domain, service, id, data); },
+    controlButton = button(parent, (cfg.name || name(id)) + " · " + stateText(id), function () { call(domain, service, id, data); },
       !status.readOnly && status.ha && canControl(id));
+    if (tileStyle) styleAction(controlButton, cfg, id, cfg.name || name(id), stateText(id));
+  }
+  function styleAction(controlButton, cfg, id, title, state) {
+    var domain = id ? id.split(".")[0] : "navigate";
+    var fallback = { light: "lightbulb", switch: "power", input_boolean: "power", fan: "fan",
+      cover: "window-shutter", script: "script-text", scene: "palette", media_player: "play-circle",
+      navigate: "arrow-right" }[domain] || "gesture-tap-button";
+    var icon = typeof cfg.icon === "string" ? cfg.icon.replace(/^mdi:/, "") : fallback;
+    if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(icon)) {
+      fail(t("iconError") + ": " + cfg.icon);
+      icon = fallback;
+    }
+    var active = id && available(id) && ["on", "open", "playing"].indexOf(String(states[id].state).toLowerCase()) !== -1;
+    controlButton.className = "home-control" + (active ? " is-active" : "");
+    controlButton.textContent = "";
+    var image = el("img", null, "home-control-icon");
+    image.alt = "";
+    image.setAttribute("aria-hidden", "true");
+    image.onerror = function () {
+      fail(t("iconError") + ": " + icon);
+      image.style.display = "none";
+    };
+    image.src = "../icons/" + encodeURIComponent(icon) + ".svg";
+    controlButton.appendChild(image);
+    controlButton.appendChild(el("span", title, "home-control-title"));
+    if (state !== null) controlButton.appendChild(el("span", " · " + state, "home-control-state"));
   }
   function menuItems() {
     var result = [], overrides = {}, builtins = [
@@ -323,33 +357,45 @@
       events.forEach(function (event) { line(box, eventText(event)); });
     }
   }
-  function renderPage(page) {
+  function renderPage(page, parent, homeStyle) {
+    parent = parent || content;
     (page.tiles || []).forEach(function (tile, index) {
       var box, id = tile.entity;
       if (tile.type === "hero") {
-        box = el("section", null, "card hero-card");
-        if (tile.show_clock !== false) box.appendChild(clockPanel(tile));
-        if (tile.weather_entity) box.appendChild(weatherPanel(tile.weather_entity));
-        var quick = el("div", null, "hero-actions");
-        (tile.buttons || []).forEach(function (b) { quickAction(quick, b); });
-        box.appendChild(quick);
-        content.appendChild(box);
+        if (tile.show_clock !== false || tile.weather_entity || !homeStyle) {
+          box = el("section", null, "card hero-card");
+          if (tile.show_clock !== false) box.appendChild(clockPanel(tile));
+          if (tile.weather_entity) box.appendChild(weatherPanel(tile.weather_entity));
+          if (!homeStyle) {
+            var quick = el("div", null, "hero-actions");
+            (tile.buttons || []).forEach(function (b) { quickAction(quick, b); });
+            box.appendChild(quick);
+          }
+          parent.appendChild(box);
+        }
+        if (homeStyle) (tile.buttons || []).forEach(function (b) { quickAction(parent, b, null, true); });
       } else if (tile.type === "toggle" && id) {
-        box = card(tile.name || name(id));
-        quickAction(box, tile, id);
-        content.appendChild(box);
+        if (homeStyle) quickAction(parent, tile, id, true);
+        else {
+          box = card(tile.name || name(id));
+          quickAction(box, tile, id);
+          parent.appendChild(box);
+        }
       } else if (tile.type === "buttons") {
-        box = card(tile.title || tile.name || t("home"));
-        (tile.buttons || []).forEach(function (b) { quickAction(box, b); });
-        content.appendChild(box);
+        if (homeStyle) (tile.buttons || []).forEach(function (b) { quickAction(parent, b, null, true); });
+        else {
+          box = card(tile.title || tile.name || t("home"));
+          (tile.buttons || []).forEach(function (b) { quickAction(box, b); });
+          parent.appendChild(box);
+        }
       } else if (tile.type === "vehicle" && id) {
         box = card(tile.name || name(id)); line(box, stateText(id));
         (tile.rows || []).forEach(function (row) { if (row.entity) line(box, name(row.entity) + ": " + stateText(row.entity)); });
-        content.appendChild(box);
+        parent.appendChild(box);
       } else if (tile.type === "calendar") {
         box = card(tile.name || t("calendar"));
         agenda(tile, page.id + ":" + index, box);
-        content.appendChild(box);
+        parent.appendChild(box);
       } else if (tile.type === "media") {
         box = card(tile.name || t("media"));
         var ids = tile.entities === "music" ? (models.music && models.music.players || []) : (tile.entities || []);
@@ -360,19 +406,31 @@
           playerControls(box, player);
         });
         if (!ids.length) line(box, t("empty"));
-        content.appendChild(box);
+        parent.appendChild(box);
       } else {
         box = card(tile.name || tile.type);
         line(box, t("unsupported"));
-        content.appendChild(box);
+        parent.appendChild(box);
       }
     });
   }
-  function climate(id, parent) {
+  function climate(id, parent, homeStyle) {
     var e = states[id], attrs = e && e.attributes || {}, box = card(name(id));
-    line(box, t("current") + ": " + (attrs.current_temperature == null ? t("unavailable") : attrs.current_temperature + "°"));
     var target = pending[id] ? pending[id].value : attrs.temperature;
-    line(box, t("target") + ": " + (target == null ? t("unavailable") : target + "°"));
+    var validTarget = target != null && target !== "" && isFinite(Number(target));
+    var currentText = t("current") + ": " + (attrs.current_temperature == null ? t("unavailable") : attrs.current_temperature + "°");
+    var targetText = t("target") + ": " + (target == null ? t("unavailable") : target + "°");
+    if (homeStyle) {
+      box.className += " home-thermostat" + (available(id) && String(e.state).toLowerCase() !== "off" ? " is-active" : "");
+      var valueText = validTarget ? target + "°" : t("unavailable");
+      var value = el("div", valueText, "thermostat-value" + (validTarget ? "" : " is-unavailable"));
+      value.setAttribute("aria-label", t("target") + ": " + valueText);
+      box.appendChild(value);
+      line(box, currentText + " · " + stateText(id));
+    } else {
+      line(box, currentText);
+      line(box, targetText);
+    }
     function nudge(direction) {
       var item = pending[id] || {}, now = item.value == null ? Number(attrs.temperature) : item.value;
       item.value = Math.max(attrs.min_temp == null ? 5 : Number(attrs.min_temp),
@@ -389,10 +447,10 @@
       render();
     }
     var enabled = !status.readOnly && status.ha && available(id);
-    var validTarget = target != null && target !== "" && isFinite(Number(target));
-    button(box, "− 0.5°", function () { nudge(-1); }, enabled && validTarget);
-    button(box, "+ 0.5°", function () { nudge(1); }, enabled && validTarget);
-    button(box, t("power"), function () {
+    var controls = homeStyle ? el("div", null, "thermostat-controls") : box;
+    button(controls, "− 0.5°", function () { nudge(-1); }, enabled && validTarget);
+    button(controls, "+ 0.5°", function () { nudge(1); }, enabled && validTarget);
+    button(controls, t("power"), function () {
       var modes = attrs.hvac_modes || [], mode = null;
       if (e.state !== "off") {
         if (modes.indexOf("off") !== -1) call("climate", "set_hvac_mode", id, { hvac_mode: "off" });
@@ -404,6 +462,7 @@
         else call("climate", "turn_on", id);
       }
     }, enabled);
+    if (homeStyle) box.appendChild(controls);
     parent.appendChild(box);
   }
   function device(id, parent) {
@@ -709,10 +768,13 @@
       if (menu.some(function (item) { return item.id === "calendar" && !item.page; })) renderCalendar();
       else line(content, t("unavailable"));
     } else if (id === "home" || id === "home_plus") {
-      if (page) renderPage(page); else line(content, t("empty"));
-      if (id === "home_plus" && menu.some(function (item) { return item.id === "climate" && !item.page; })) {
-        (models.climate.entities || []).forEach(function (entity) { climate(entity, content); });
+      var thermostats = [];
+      if (menu.some(function (item) { return item.id === "climate" && !item.page; })) {
+        thermostats = models.climate.entities || [];
+        if (thermostats.length) climate(thermostats[0], content, true);
       }
+      if (page) renderPage(page, content, true); else line(content, t("empty"));
+      if (id === "home_plus") thermostats.slice(1).forEach(function (entity) { climate(entity, content); });
     } else if (id === "flow") {
       showClock(hero); showWeather(hero);
     } else {
@@ -731,8 +793,15 @@
     renderFaces(face);
     content.textContent = "";
     content.className = "";
+    document.documentElement.lang = config.language === "da" ? "da" : "en";
     document.getElementById("title").textContent = config.title || "Dasher";
-    document.getElementById("connection").textContent = (status.ha ? t("connected") : t("disconnected")) + (status.readOnly ? " · " + t("readonly") : "");
+    document.getElementById("standard-dashboard").textContent = t("standardDashboard");
+    faceElement.setAttribute("aria-label", t("dashboardFaces"));
+    menuElement.setAttribute("aria-label", t("dashboardPages"));
+    var connectionText = (status.ha ? t("connected") : t("disconnected")) + (status.readOnly ? " · " + t("readonly") : "");
+    document.getElementById("connection").textContent = connectionText;
+    document.getElementById("connection-warning").textContent = !status.ha || status.readOnly ? connectionText : "";
+    navigationToggle.setAttribute("aria-label", t(navigationOpen ? "closeMenu" : "openMenu"));
     var nightButton = document.getElementById("night-mode");
     nightButton.textContent = t("nightMode");
     nightButton.setAttribute("aria-label", t("nightMode"));
@@ -768,6 +837,13 @@
     applyWallpaper();
     render();
   }
+  function setNavigation(open) {
+    navigationOpen = open;
+    navigation.hidden = !open;
+    navigationToggle.textContent = open ? "×" : "☰";
+    navigationToggle.setAttribute("aria-expanded", open ? "true" : "false");
+    navigationToggle.setAttribute("aria-label", t(open ? "closeMenu" : "openMenu"));
+  }
   function setWallpaper(file) {
     var requestId = ++wallpaperRequest;
     document.body.style.backgroundImage = "";
@@ -786,11 +862,15 @@
     };
     image.src = url;
   }
+  navigationToggle.onclick = function () { setNavigation(!navigationOpen); };
+  setNavigation(false);
   document.getElementById("night-mode").onclick = function () { setNightMode(!nightModeEnabled); };
   function connect() {
     var source = new EventSource("../api/events");
     source.onerror = function () {
-      status.ha = false; render();
+      status.ha = false;
+      if (!config) document.getElementById("connection-warning").textContent = t("disconnected");
+      render();
       if (source.readyState === EventSource.CLOSED) { source.close(); setTimeout(connect, 3000); }
     };
     ["status", "config", "areas", "music", "plex", "ev", "climate", "energy", "snapshot", "state"].forEach(function (type) {
@@ -820,7 +900,18 @@
       });
     });
   }
-  window.addEventListener("hashchange", render);
+  window.addEventListener("hashchange", function () {
+    var restoreFocus = navigationOpen;
+    setNavigation(false);
+    if (restoreFocus && navigationToggle.focus) navigationToggle.focus();
+    render();
+  });
+  window.addEventListener("keydown", function (event) {
+    if (navigationOpen && (event.key === "Escape" || event.keyCode === 27)) {
+      setNavigation(false);
+      if (navigationToggle.focus) navigationToggle.focus();
+    }
+  });
   if (content.addEventListener) {
     var swipe = null;
     content.addEventListener("touchstart", function (event) {

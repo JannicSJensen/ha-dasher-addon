@@ -24,10 +24,12 @@ function harness() {
     }
   }
   const all = (root) => [root, ...root.children.flatMap(all)];
-  const elements = Object.fromEntries(["notice", "content", "menu", "faces", "title", "connection", "night-mode"].map((id) => [id, new Element("div")]));
+  const elements = Object.fromEntries(["notice", "content", "menu", "faces", "title", "connection", "connection-warning",
+    "night-mode", "navigation", "navigation-toggle", "standard-dashboard"].map((id) => [id, new Element("div")]));
   const images = [];
   const document = {
     body: new Element("body"),
+    documentElement: new Element("html"),
     getElementById: (id) => elements[id], createElement: (tag) => {
       const element = new Element(tag);
       if (tag === "img") images.push(element);
@@ -78,7 +80,8 @@ function harness() {
   const findClass = (name) => all(elements.content).find((item) => (item.className || "").split(" ").includes(name));
   const tick = (time) => { now = Date.parse(time); intervals.get(1000)(); };
   const findTag = (tag) => all(elements.content).find((item) => item.tag === tag);
-  return { elements, document, images, source, requests, find, findClass, findTag, route, flush, tick, location };
+  const keydown = (key) => listeners.keydown({ key });
+  return { elements, document, images, source, requests, find, findClass, findTag, route, flush, tick, keydown, location };
 }
 
 const config = {
@@ -272,6 +275,9 @@ test("legacy faces preserve menu controls and load configured albums and cameras
   h.source.emit("config", { config, errors: [], legacy });
   assert.match(h.elements.faces.textContent, /Home Modular Plus/);
   assert.match(h.elements.faces.textContent, /Home Camera/);
+  assert.ok(h.findClass("home-thermostat"));
+  assert.match(h.find("Lights · on").className, /is-active/);
+  assert.equal(h.findClass("home-control-icon").src, "../icons/lightbulb.svg");
   h.find("Lights · on").onclick();
   assert.equal(h.requests.at(-1).body.service, "toggle");
   for (const id of ["home_plus", "modular", "weather", "clock", "analog", "flow"]) {
@@ -297,6 +303,77 @@ test("legacy faces preserve menu controls and load configured albums and cameras
   assert.match(h.findClass("face-image").src, /legacy\/camera\?entity=camera.front/);
   h.route("climate");
   assert.match(h.elements.content.textContent, /0.5°/);
+});
+
+test("legacy face controls reflect live state and honor climate visibility", () => {
+  const h = harness(); setup(h);
+  const legacy = { faces: ["home", "home_plus"], errors: [] };
+  h.source.emit("config", { config, errors: [], legacy });
+  assert.match(h.findClass("thermostat-value").textContent, /20°/);
+  h.find("+ 0.5°").onclick();
+  h.flush();
+  assert.deepEqual(h.requests.at(-1).body, { domain: "climate", service: "set_temperature", entity_id: "climate.room", data: { temperature: 20.5 } });
+  h.source.emit("state", entity("light.lamp", "off"));
+  assert.doesNotMatch(h.find("Lights · off").className, /is-active/);
+  h.source.emit("state", entity("climate.room", "off", { temperature: 20.5, current_temperature: 19, hvac_modes: ["off", "heat"] }));
+  assert.doesNotMatch(h.findClass("home-thermostat").className, /is-active/);
+  assert.match(h.findClass("home-thermostat").textContent, /off/);
+  h.source.emit("state", entity("climate.room", "heat", { temperature: null, current_temperature: 19 }));
+  assert.equal(h.findClass("thermostat-value").textContent, "Unavailable");
+  assert.match(h.findClass("thermostat-value").className, /is-unavailable/);
+  assert.equal(h.find("+ 0.5°").disabled, true);
+  h.source.emit("status", { ha: true, readOnly: true });
+  assert.equal(h.find("Lights · off").disabled, true);
+  assert.equal(h.find("+ 0.5°").disabled, true);
+  h.source.emit("config", { config: { ...config, menu_items: [{ id: "climate", visible: false }] }, errors: [], legacy });
+  assert.equal(h.findClass("home-thermostat"), undefined);
+  h.route("face/home_plus");
+  assert.equal(h.findClass("home-thermostat"), undefined);
+});
+
+test("legacy navigation opens on demand and keeps connection warnings visible", () => {
+  const h = harness();
+  h.source.onerror();
+  assert.match(h.elements["connection-warning"].textContent, /Disconnected/);
+  setup(h);
+  h.source.emit("config", { config, errors: [], legacy: { faces: ["home", "clock"], errors: [] } });
+  const toggle = h.elements["navigation-toggle"], navigation = h.elements.navigation;
+  assert.equal(navigation.hidden, true);
+  assert.equal(toggle.getAttribute("aria-expanded"), "false");
+  toggle.onclick();
+  assert.equal(navigation.hidden, false);
+  assert.equal(toggle.getAttribute("aria-label"), "Close dashboard menu");
+  h.source.emit("status", { ha: false, readOnly: false });
+  assert.equal(navigation.hidden, false);
+  assert.match(h.elements["connection-warning"].textContent, /Disconnected/);
+  h.route("face/clock");
+  assert.equal(navigation.hidden, true);
+  assert.equal(toggle.getAttribute("aria-expanded"), "false");
+  h.source.emit("status", { ha: true, readOnly: true });
+  assert.match(h.elements["connection-warning"].textContent, /Read-only/);
+  h.source.emit("status", { ha: true, readOnly: false });
+  assert.equal(h.elements["connection-warning"].textContent, "");
+  toggle.onclick();
+  h.elements["night-mode"].onclick();
+  assert.equal(h.elements["night-mode"].getAttribute("aria-pressed"), "true");
+  assert.equal(navigation.hidden, false);
+  h.keydown("Escape");
+  assert.equal(navigation.hidden, true);
+  h.source.emit("config", { config: { ...config, language: "da" }, errors: [], legacy: { faces: ["home"], errors: [] } });
+  assert.equal(h.document.documentElement.lang, "da");
+  assert.equal(toggle.getAttribute("aria-label"), "Åbn dashboardmenu");
+  assert.equal(h.elements.menu.getAttribute("aria-label"), "Dashboardsider");
+});
+
+test("home plus keeps additional thermostats after the main controls", () => {
+  const h = harness(); setup(h);
+  h.source.emit("climate", { enabled: true, entities: ["climate.room", "climate.second"] });
+  h.source.emit("state", entity("climate.second", "heat", { friendly_name: "Bedroom", temperature: 21 }));
+  h.source.emit("config", { config, errors: [], legacy: { faces: ["home_plus"], errors: [] } });
+  const children = h.elements.content.children;
+  assert.ok(children.findIndex((child) => child.className.includes("home-control")) <
+    children.findIndex((child) => child.textContent.includes("Bedroom")));
+  assert.match(h.elements.content.textContent, /Bedroom/);
 });
 
 test("legacy wallpaper loads local assets, reports errors and ignores stale loads", () => {

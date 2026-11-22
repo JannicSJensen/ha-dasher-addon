@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.50.0
+
+- **Immersive legacy home faces.** A compact menu replaces the persistent navigation bars, leaving more room for a large thermostat and individual, stateful quick-action tiles inspired by the Rehome demonstration. Disconnection and read-only warnings remain visible, and additional thermostats remain on Home Modular Plus.
+- **Legacy visual refinements.** The default background uses an original warm gradient; custom wallpapers are unchanged. Tile order still follows the dashboard configuration rather than drag-and-drop editing. Physical iOS 12.5.8 testing remains necessary.
+
 ## 0.49.1
 
 - **HomeView design refinements.** The Modular face now uses enlarged, background-free tiles inspired by Apple's widget guidance. Add a manual red-tinted Night mode for iOS 12 Safari, which does not provide a reliable ambient-light signal.

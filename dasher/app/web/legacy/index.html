@@ -7,14 +7,18 @@
   <link rel="stylesheet" href="legacy.css">
 </head>
 <body>
-  <header>
-    <strong id="title">Dasher</strong>
-    <span id="connection" role="status">Connecting...</span>
-    <button id="night-mode" type="button" aria-pressed="false">Night mode</button>
-    <a href="../">Standard dashboard</a>
-  </header>
-  <nav id="faces" aria-label="Dashboard faces"></nav>
-  <nav id="menu" aria-label="Dashboard pages"></nav>
+  <button id="navigation-toggle" type="button" aria-controls="navigation" aria-expanded="false" aria-label="Open dashboard menu">☰</button>
+  <div id="navigation" hidden>
+    <header>
+      <strong id="title">Dasher</strong>
+      <span id="connection">Connecting...</span>
+      <button id="night-mode" type="button" aria-pressed="false">Night mode</button>
+      <a id="standard-dashboard" href="../">Standard dashboard</a>
+    </header>
+    <nav id="faces" aria-label="Dashboard faces"></nav>
+    <nav id="menu" aria-label="Dashboard pages"></nav>
+  </div>
+  <div id="connection-warning" role="status"></div>
   <div id="notice" role="alert"></div>
   <main id="content"><p>Connecting to Dasher...</p></main>
   <script src="legacy.js"></script>
