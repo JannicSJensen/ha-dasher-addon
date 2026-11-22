@@ -24,6 +24,11 @@ export function legacyOptions(options = {}) {
       errors.push("Invalid legacy photo album list; use folder names only.");
     } else albums = [...new Set(options.legacy_photo_albums)];
   }
+  let wallpaper = null;
+  if (options.legacy_wallpaper != null && options.legacy_wallpaper !== "") {
+    if (photoName(options.legacy_wallpaper)) wallpaper = options.legacy_wallpaper;
+    else errors.push("Invalid legacy wallpaper; use a JPEG, PNG or GIF filename in assets.");
+  }
   const interval = (value, fallback, min, max, name) => {
     if (value == null) return fallback;
     if (Number.isInteger(value) && value >= min && value <= max) return value;
@@ -32,6 +37,7 @@ export function legacyOptions(options = {}) {
   };
   return {
     faces,
+    wallpaper,
     photos: options.legacy_photos === true && !errors.some((error) => error.startsWith("Invalid legacy photo album")),
     albums,
     photo_interval: interval(options.legacy_photo_interval, 120, 10, 3600, "legacy photo interval"),

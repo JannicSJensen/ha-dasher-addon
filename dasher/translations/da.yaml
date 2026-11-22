@@ -11,6 +11,9 @@ configuration:
   legacy_faces:
     name: Legacy-dashboardets visninger
     description: "Vælg og sortér visningerne på /legacy/. Eksisterende dashboardsider er fortsat tilgængelige i sidemenuen. Genstart efter ændring."
+  legacy_wallpaper:
+    name: Legacy-baggrund
+    description: "Valgfrit filnavn på et JPEG-, PNG- eller GIF-billede i appens assets-mappe. Lad feltet være tomt for den indbyggede baggrund. Genstart efter ændring."
   legacy_photos:
     name: Legacy-fotoalbum
     description: "Tillad fotovisningen at vise billeder fra assets/photos. Alle, der kan nå appens direkte port, kan se billederne. Genstart efter ændring."

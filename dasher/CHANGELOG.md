@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.49.0
+
+- **Redesigned legacy dashboard.** The ten faces and legacy pages use a new HomeView-inspired modular interface with oversized clocks, rounded controls, an original gradient background and a simplified music player. Flow is a quiet clock and weather view; existing page controls remain available through the page menu.
+- **Optional legacy wallpaper.** Select an image from the app's assets folder as the background for every legacy face and page. Third-party wallpapers are not included. Physical iOS 12.5.8 testing remains necessary.
+
 ## 0.48.0
 
 - **Legacy dashboard faces.** Ten independently designed faces offer modular home controls, weather, a read-only calendar, clocks, photos and camera snapshots, with configurable ordering and touch navigation. Existing legacy pages remain available.

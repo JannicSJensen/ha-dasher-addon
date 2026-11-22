@@ -15,6 +15,7 @@
   var agendas = {};
   var pending = {};
   var musicFocus = null;
+  var wallpaperRequest = 0;
   var notice = document.getElementById("notice");
   var content = document.getElementById("content");
   var menuElement = document.getElementById("menu");
@@ -34,7 +35,7 @@
       photos: "Photos", cameras: "Home Camera", homeFace: "Home Modular", albums: "Album", allAlbums: "All albums",
       photosDisabled: "Enable legacy photo albums in the app configuration.", camerasDisabled: "Enable legacy camera snapshots in the app configuration.",
       noPhotos: "No photos found in the selected albums.", photoFolderMissing: "The assets/photos folder does not exist.", noCameras: "No cameras discovered.", imageError: "Could not load image.",
-      wind: "Wind", humidity: "Humidity", pressure: "Pressure" },
+      wind: "Wind", humidity: "Humidity", pressure: "Pressure", wallpaperError: "Could not load legacy wallpaper" },
     da: { climate: "Klima", areas: "Områder", music: "Musik", media: "Medier", calendar: "Kalender", ev: "Bil", energy: "Energi",
       connecting: "Forbinder", connected: "Forbundet", disconnected: "Ingen forbindelse til Home Assistant", readonly: "Skrivebeskyttet",
       unavailable: "Ikke tilgængelig", unknown: "Ukendt", empty: "Intet at vise.", unsupported: "Dette element er ikke tilgængeligt i legacy-tilstand.",
@@ -49,7 +50,7 @@
       photos: "Fotos", cameras: "Hjemmekamera", homeFace: "Hjem Modular", albums: "Album", allAlbums: "Alle album",
       photosDisabled: "Slå legacy-fotoalbum til i appens konfiguration.", camerasDisabled: "Slå legacy-kamerabilleder til i appens konfiguration.",
       noPhotos: "Ingen billeder fundet i de valgte album.", photoFolderMissing: "Mappen assets/photos findes ikke.", noCameras: "Ingen kameraer fundet.", imageError: "Kunne ikke indlæse billedet.",
-      wind: "Vind", humidity: "Luftfugtighed", pressure: "Lufttryk" }
+      wind: "Vind", humidity: "Luftfugtighed", pressure: "Lufttryk", wallpaperError: "Kunne ikke indlæse legacy-baggrund" }
   };
   var weatherLabels = {
     en: { sunny: "Sunny", "clear-night": "Clear night", partlycloudy: "Partly cloudy", cloudy: "Cloudy", fog: "Fog",
@@ -190,6 +191,7 @@
     menu.forEach(function (item) {
       var a = el("a", item.title, item === active ? "active" : "");
       a.href = "#/" + item.id;
+      if (item === active) a.setAttribute("aria-current", "page");
       menuElement.appendChild(a);
     });
   }
@@ -440,25 +442,18 @@
       var box = card(name(id)), attrs = states[id] && states[id].attributes || {};
       if (turntable) {
         box.className += " music-card";
-        var deck = el("div", null, "turntable");
-        deck.setAttribute("aria-hidden", "true");
-        var record = el("div", null, "record" + (states[id] && states[id].state === "playing" ? " is-playing" : ""));
-        // Keep the rotation continuous when live events rebuild the card.
-        var delay = -(Date.now() % 9000) / 1000 + "s";
-        record.style.animationDelay = delay;
-        record.style.webkitAnimationDelay = delay;
-        var label = el("div", null, "record-label"), picture = artworkUrl(attrs.entity_picture);
+        var picture = artworkUrl(attrs.entity_picture);
+        var placeholder = el("div", "♪", "music-placeholder");
+        placeholder.setAttribute("aria-hidden", "true");
         if (picture) {
-          var img = el("img", null, "record-art");
+          var img = el("img", null, "music-artwork");
           img.alt = "";
-          img.onerror = function () { this.style.display = "none"; };
+          img.onerror = function () { this.style.display = "none"; placeholder.style.display = "block"; };
           img.src = picture;
-          label.appendChild(img);
+          placeholder.style.display = "none";
+          box.appendChild(img);
         }
-        record.appendChild(label);
-        deck.appendChild(record);
-        deck.appendChild(el("div", null, "tonearm"));
-        box.appendChild(deck);
+        box.appendChild(placeholder);
         box.appendChild(el("div", attrs.media_title || t("nothingPlaying"), "track-title"));
         if (attrs.media_artist || attrs.media_album_name) {
           box.appendChild(el("div", attrs.media_artist || attrs.media_album_name, "track-artist"));
@@ -717,6 +712,8 @@
       if (id === "home_plus" && menu.some(function (item) { return item.id === "climate" && !item.page; })) {
         (models.climate.entities || []).forEach(function (entity) { climate(entity, content); });
       }
+    } else if (id === "flow") {
+      showClock(hero); showWeather(hero);
     } else {
       showClock(hero); showWeather(hero);
       if (page) {
@@ -752,6 +749,23 @@
     else if (item.id === "calendar") renderCalendar();
     else if (item.id === "energy") renderEnergy();
   }
+  function setWallpaper(file) {
+    var requestId = ++wallpaperRequest;
+    document.body.style.backgroundImage = "";
+    document.body.style.backgroundSize = "";
+    if (!file) return;
+    var image = el("img");
+    var url = "../assets/" + encodeURIComponent(file);
+    image.onload = function () {
+      if (requestId !== wallpaperRequest) return;
+      document.body.style.backgroundImage = "linear-gradient(rgba(12,16,30,.35), rgba(12,16,30,.35)), url(\"" + url + "\")";
+      document.body.style.backgroundSize = "cover";
+    };
+    image.onerror = function () {
+      if (requestId === wallpaperRequest) fail(t("wallpaperError") + ": " + file);
+    };
+    image.src = url;
+  }
   function connect() {
     var source = new EventSource("../api/events");
     source.onerror = function () {
@@ -767,6 +781,7 @@
         else if (type === "config") {
           config = data.config;
           legacy = data.legacy || null;
+          setWallpaper(legacy && legacy.wallpaper);
           photos = { loading: false, data: null, error: null, album: null };
           cameras = { loading: false, data: null, error: null };
           agendas = {};

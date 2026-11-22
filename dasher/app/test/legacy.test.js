@@ -25,8 +25,14 @@ function harness() {
   }
   const all = (root) => [root, ...root.children.flatMap(all)];
   const elements = Object.fromEntries(["notice", "content", "menu", "faces", "title", "connection"].map((id) => [id, new Element("div")]));
+  const images = [];
   const document = {
-    getElementById: (id) => elements[id], createElement: (tag) => new Element(tag),
+    body: new Element("body"),
+    getElementById: (id) => elements[id], createElement: (tag) => {
+      const element = new Element(tag);
+      if (tag === "img") images.push(element);
+      return element;
+    },
     querySelectorAll: (selector) => Object.values(elements).flatMap(all).filter((item) =>
       (selector === "[data-legacy-clock]" && item.getAttribute("data-legacy-clock") !== null) ||
       (selector === "[data-analog-clock]" && item.getAttribute("data-analog-clock") !== null)),
@@ -72,7 +78,7 @@ function harness() {
   const findClass = (name) => all(elements.content).find((item) => (item.className || "").split(" ").includes(name));
   const tick = (time) => { now = Date.parse(time); intervals.get(1000)(); };
   const findTag = (tag) => all(elements.content).find((item) => item.tag === tag);
-  return { elements, source, requests, find, findClass, findTag, route, flush, tick, location };
+  return { elements, document, images, source, requests, find, findClass, findTag, route, flush, tick, location };
 }
 
 const config = {
@@ -157,14 +163,13 @@ test("legacy music presents artwork through the proxy and responds to playback s
   assert.equal(h.elements.content.children[1].children[0].textContent, "Active speaker");
   assert.match(h.elements.content.textContent, /A song/);
   assert.match(h.elements.content.textContent, /An artist/);
-  assert.match(h.findClass("record").className, /is-playing/);
-  assert.equal(h.findClass("record-art").src, "../api/proxy?path=%2Fapi%2Fmedia_player_proxy%2Fmedia_player.speaker%3Ftoken%3Dmock");
+  assert.equal(h.findClass("music-artwork").src, "../api/proxy?path=%2Fapi%2Fmedia_player_proxy%2Fmedia_player.speaker%3Ftoken%3Dmock");
   h.find("Play / pause").onclick();
   assert.equal(h.requests.at(-1).body.service, "media_play_pause");
   h.source.emit("state", entity("media_player.speaker", "paused", { friendly_name: "Active speaker", entity_picture: "javascript:alert(1)" }));
   assert.equal(h.elements.content.children[1].children[0].textContent, "Active speaker");
-  assert.doesNotMatch(h.findClass("record").className, /is-playing/);
-  assert.equal(h.findClass("record-art"), undefined);
+  assert.equal(h.findClass("music-artwork"), undefined);
+  assert.ok(h.findClass("music-placeholder"));
 });
 
 test("legacy climate batches half-degree changes and preserves thermostat power modes", () => {
@@ -273,6 +278,7 @@ test("legacy faces preserve menu controls and load configured albums and cameras
     h.route("face/" + id);
     assert.ok(h.elements.content.textContent.length, id);
   }
+  assert.doesNotMatch(h.elements.content.textContent, /Scene/);
   h.route("face/photos");
   const photos = h.requests.at(-1);
   assert.equal(photos.url, "../api/legacy/photos");
@@ -291,6 +297,24 @@ test("legacy faces preserve menu controls and load configured albums and cameras
   assert.match(h.findClass("face-image").src, /legacy\/camera\?entity=camera.front/);
   h.route("climate");
   assert.match(h.elements.content.textContent, /0.5°/);
+});
+
+test("legacy wallpaper loads local assets, reports errors and ignores stale loads", () => {
+  const h = harness(); setup(h);
+  const legacy = { faces: ["clock"], wallpaper: "home view.jpg" };
+  h.source.emit("config", { config, errors: [], legacy });
+  const first = h.images.at(-1);
+  assert.equal(first.src, "../assets/home%20view.jpg");
+  h.source.emit("config", { config, errors: [], legacy: { ...legacy, wallpaper: "new.png" } });
+  const second = h.images.at(-1);
+  first.onload();
+  assert.equal(h.document.body.style.backgroundImage, "");
+  second.onload();
+  assert.match(h.document.body.style.backgroundImage, /new\.png/);
+  h.source.emit("config", { config, errors: [], legacy });
+  h.images.at(-1).onerror();
+  assert.match(h.elements.notice.textContent, /Could not load legacy wallpaper: home view.jpg/);
+  assert.equal(h.document.body.style.backgroundImage, "");
 });
 
 test("disabled legacy image faces avoid requests and swipe switches faces", () => {

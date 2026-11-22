@@ -11,6 +11,9 @@ configuration:
   legacy_faces:
     name: Legacy dashboard faces
     description: "Choose and order the faces available at /legacy/. Existing dashboard pages remain available in the page menu. Restart after changing."
+  legacy_wallpaper:
+    name: Legacy wallpaper
+    description: "Optional JPEG, PNG or GIF filename in the app's assets folder. Leave empty for the built-in background. Restart after changing."
   legacy_photos:
     name: Legacy photo albums
     description: "Allow the legacy photo face to show images from assets/photos. Anyone who can reach the app's direct port can view these photos. Restart after changing."

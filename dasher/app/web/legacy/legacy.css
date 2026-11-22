@@ -1,85 +1,107 @@
 * { box-sizing: border-box; }
-body { margin: 0; background: #07090a; color: #f0f1ee; font: 16px -apple-system, BlinkMacSystemFont, sans-serif; }
-header { padding: 18px 22px; background: #101416; border-bottom: 1px solid #252b2d; }
-header strong { font-size: 20px; letter-spacing: .03em; }
-header span, header a { display: inline-block; margin-left: 16px; }
-header span { color: #a9b5b2; font-size: 14px; }
-a { color: #b7d6ca; }
-nav { padding: 8px 14px; background: #101416; border-bottom: 1px solid #252b2d; }
-nav a { display: inline-block; padding: 10px 15px; margin: 4px; border-radius: 22px; text-decoration: none; color: #c6cfcc; background: #202729; }
-nav a.active { background: #c2ded3; color: #10211b; }
-main { max-width: 1080px; margin: auto; padding: 20px; }
-h1 { margin: 8px 0 20px; font-size: 24px; font-weight: 500; }
-h2 { font-size: 19px; font-weight: 500; margin: 0 0 12px; }
-p { line-height: 1.4; }
-.card { display: inline-block; vertical-align: top; width: 100%; max-width: 460px; padding: 20px; margin: 0 10px 14px 0; border: 1px solid #30383a; border-radius: 18px; background: #151a1c; }
-.muted { color: #b6c0bd; }
-button, select { font: inherit; margin: 4px; padding: 10px 16px; min-height: 44px; border: 1px solid #3a4844; border-radius: 22px; color: #e7f2ed; background: #273733; }
-button:disabled { opacity: .45; }
-button:focus, a:focus, select:focus { outline: 2px solid #d5f3e5; outline-offset: 2px; }
-select { background: #26302e; }
-#notice { padding: 0 22px; color: #ffd1bd; }
-#notice:not(:empty) { padding-top: 12px; }
-#faces { white-space: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-#faces:empty { display: none; }
-#faces button { min-height: 40px; padding: 8px 14px; }
-.legacy-face { max-width: 1280px; }
-.legacy-face > h1 { font-size: 15px; color: #aab4b1; letter-spacing: .08em; text-transform: uppercase; }
-.legacy-face .card { border-radius: 22px; background: #1b2221; }
-.legacy-face .face-clock, .legacy-face .face-weather { text-align: center; }
-.face-weather .face-weather { background: #253b3c; }
-.face-flow .card { display: block; max-width: none; }
-.face-home_plus .card { background: #202c29; }
-.face-modular .card { background: #24292c; }
-.face-photos .face-photos, .face-cameras .face-cameras { display: block; max-width: none; }
-.face-image { display: block; width: 100%; max-height: 70vh; margin: 14px auto; object-fit: contain; background: #080b0b; border-radius: 12px; }
-.camera-frame { display: inline-block; vertical-align: top; width: 100%; padding: 12px; }
-.face-analog .face-analog { display: block; max-width: 600px; margin: auto; text-align: center; }
-.face-analog .clock-digits { font-size: .5em; }
-.face-analog .clock-block { font-size: 30px; }
-.face-analog .clock-colon { font-size: 28px; }
-.analog-dial { position: relative; width: 260px; height: 260px; max-width: 100%; margin: 16px auto 28px; border: 4px solid #d6e5dc; border-radius: 50%; background: #182521; }
-.analog-number { position: absolute; color: #d6e5dc; }
-.analog-n12 { top: 8px; left: 47%; } .analog-n3 { top: 46%; right: 12px; }
-.analog-n6 { bottom: 8px; left: 49%; } .analog-n9 { top: 46%; left: 12px; }
-.analog-hour, .analog-minute { position: absolute; left: 50%; bottom: 50%; width: 4px; background: #e7f2ed; border-radius: 4px; -webkit-transform-origin: 50% 100%; transform-origin: 50% 100%; }
-.analog-hour { height: 27%; } .analog-minute { height: 37%; width: 3px; }
-.analog-center { position: absolute; left: 48.5%; top: 48.5%; width: 3%; height: 3%; border-radius: 50%; background: #e7f2ed; }
-.hero-card { display: block; max-width: none; margin-right: 0; padding: 34px 20px 24px; text-align: center; background: #101415; }
-.clock-date { color: #aab4b1; font-size: 16px; letter-spacing: .06em; }
-.clock-digits { margin: 20px 0; white-space: nowrap; }
-.clock-block { position: relative; display: inline-block; min-width: 1.4em; padding: .08em .12em; border: 1px solid #3a4141; border-radius: 12px; background: #202526; color: #f4f5f2; font-size: 58px; font-weight: 700; line-height: 1; letter-spacing: -.05em; }
-.clock-block:after { position: absolute; top: 50%; left: 0; right: 0; border-top: 1px solid #0b0d0e; content: ""; }
-.clock-colon { display: inline-block; margin: 0 .08em; color: #c9d4cf; font-size: 50px; font-weight: 700; vertical-align: .08em; }
-.clock-suffix { display: inline-block; color: #b6c0bd; font-size: 16px; vertical-align: bottom; }
-.weather-panel { margin: 16px 0 24px; color: #b6c0bd; font-size: 18px; }
-.weather-symbol, .weather-temperature, .weather-condition { display: inline-block; margin: 0 6px; vertical-align: middle; }
-.weather-symbol { color: #d3e8de; font-size: 27px; }
-.weather-temperature { color: #f0f1ee; font-size: 24px; }
-.hero-actions { margin-top: 18px; }
-.music-card { display: block; max-width: 560px; margin: 0 auto 18px; padding: 22px; text-align: center; }
-.music-card h2 { color: #c0cbc7; }
-.turntable { position: relative; width: 100%; max-width: 310px; margin: 18px auto 22px; padding: 20px; overflow: hidden; border: 1px solid #4b5851; border-radius: 18px; background: #283a32; }
-.record { position: relative; width: 100%; height: 0; padding-bottom: 100%; border: 4px solid #0a0c0d; border-radius: 50%; background: repeating-radial-gradient(circle, #181c1d 0, #181c1d 4px, #262c2b 5px, #101314 7px); box-shadow: 0 8px 20px rgba(0,0,0,.45); }
-.record.is-playing { -webkit-animation: record-spin 9s linear infinite; animation: record-spin 9s linear infinite; }
-.record-label { position: absolute; top: 32%; left: 32%; width: 36%; height: 36%; overflow: hidden; border: 4px solid #111818; border-radius: 50%; background: #a9c5b5; }
-.record-label:after { position: absolute; top: 46%; left: 46%; width: 8%; height: 8%; border-radius: 50%; background: #101414; content: ""; }
-.record-art { display: block; width: 100%; height: 100%; object-fit: cover; }
-.tonearm { position: absolute; top: 13%; right: 12%; width: 6px; height: 53%; border-radius: 6px; background: #c8d0ca; box-shadow: 2px 3px 4px rgba(0,0,0,.5); -webkit-transform: rotate(20deg); transform: rotate(20deg); -webkit-transform-origin: top center; transform-origin: top center; }
-.tonearm:before { position: absolute; top: -5px; left: -6px; width: 18px; height: 18px; border-radius: 50%; background: #dce5df; content: ""; }
-.tonearm:after { position: absolute; bottom: -5px; left: -4px; width: 14px; height: 22px; border-radius: 3px; background: #111817; content: ""; }
-.track-title { font-size: 22px; line-height: 1.25; }
-.track-artist { margin-top: 6px; color: #b6c0bd; }
-.player-controls { margin-top: 12px; }
-@-webkit-keyframes record-spin { from { -webkit-transform: rotate(0deg); } to { -webkit-transform: rotate(360deg); } }
-@keyframes record-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-@media (min-width: 600px) {
-  .hero-card { padding: 46px 28px 32px; }
-  .clock-block { font-size: 108px; }
-  .clock-colon { font-size: 90px; }
-  .weather-panel { font-size: 21px; }
-  .camera-frame { width: 49%; }
+html { min-height: 100%; background: #171d37; }
+body {
+  margin: 0; min-height: 100vh; color: #fff;
+  font: 16px -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #303e69;
+  background-image: radial-gradient(ellipse at 85% 4%, #dd9ca8 0%, transparent 52%),
+    radial-gradient(ellipse at 9% 85%, #597dba 0%, transparent 55%),
+    linear-gradient(140deg, #343251, #526d9a 55%, #917282);
+  background-attachment: fixed;
 }
-@media (prefers-reduced-motion: reduce) {
-  .record.is-playing { -webkit-animation: none; animation: none; }
+header { padding: 18px 24px 6px; }
+header strong { font-size: 22px; font-weight: 700; }
+header span, header a { display: inline-block; margin-left: 14px; font-size: 13px; }
+header span { color: rgba(255,255,255,.75); }
+a { color: #fff; }
+header a { opacity: .8; }
+nav { padding: 7px 20px; white-space: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+nav::-webkit-scrollbar { display: none; }
+nav a, nav button {
+  display: inline-block; vertical-align: middle; min-height: 40px; margin: 3px;
+  padding: 10px 15px; border: 0; border-radius: 22px; text-decoration: none;
+  color: #fff; background: rgba(18,24,44,.4); font-size: 14px; font-weight: 600;
+}
+nav a.active { color: #202539; background: #fff; }
+#faces:empty { display: none; }
+main { max-width: 1440px; margin: auto; padding: 18px 24px 32px; }
+main:after { display: block; clear: both; content: ""; }
+h1 { margin: 4px 0 18px; font-size: 30px; font-weight: 700; letter-spacing: -.03em; }
+h2 { font-size: 17px; font-weight: 650; margin: 0 0 12px; }
+p { line-height: 1.4; }
+.card {
+  display: inline-block; vertical-align: top; width: calc(50% - 14px); min-width: 260px;
+  padding: 22px; margin: 0 10px 14px 0; border: 1px solid rgba(255,255,255,.12);
+  border-radius: 26px; background: rgba(24,30,51,.72);
+  box-shadow: 0 8px 26px rgba(10,15,30,.12);
+}
+.muted { color: rgba(255,255,255,.76); }
+button, select {
+  font: inherit; margin: 4px; padding: 11px 17px; min-height: 44px; border: 0;
+  border-radius: 16px; color: #fff; background: rgba(255,255,255,.16);
+}
+button:disabled { opacity: .45; }
+button:focus, a:focus, select:focus { outline: 2px solid #fff; outline-offset: 2px; }
+select { background: #444e69; }
+#notice { padding: 0 24px; color: #fff0b8; font-weight: 600; }
+#notice:not(:empty) { padding-top: 12px; }
+.legacy-face > h1 { font-size: 16px; color: rgba(255,255,255,.8); letter-spacing: .02em; }
+.legacy-face .card { background: rgba(23,29,49,.68); }
+.hero-card { display: block; width: 100%; min-width: 0; padding: 28px; }
+.clock-date { color: rgba(255,255,255,.8); font-size: 17px; font-weight: 600; }
+.clock-digits { margin: 6px 0; white-space: nowrap; line-height: 1; }
+.clock-block, .clock-colon { display: inline-block; font-size: 76px; font-weight: 700; letter-spacing: -.065em; }
+.clock-suffix { display: inline-block; margin-left: 8px; font-size: 16px; font-weight: 600; }
+.weather-panel { margin: 14px 0; font-size: 17px; }
+.weather-symbol, .weather-temperature, .weather-condition { display: inline-block; margin-right: 8px; vertical-align: middle; }
+.weather-symbol { color: #ffdd88; font-size: 28px; }
+.weather-temperature { font-size: 26px; font-weight: 600; }
+.hero-actions { margin-top: 16px; }
+.hero-actions button { min-width: 120px; min-height: 62px; text-align: left; }
+.face-clock, .face-weather, .face-analog, .face-photos, .face-cameras { min-width: 0; }
+.legacy-face.face-clock .face-clock, .legacy-face.face-analog .face-analog {
+  display: block; width: 100%; min-height: 50vh; text-align: center;
+  padding: 10vh 20px; background: rgba(18,23,39,.32);
+}
+.face-clock .clock-block, .face-clock .clock-colon { font-size: 120px; }
+.face-weather .face-weather { background: rgba(65,110,171,.72); }
+.face-weather .weather-temperature { font-size: 68px; letter-spacing: -.05em; }
+.face-weather .weather-panel { margin: 24px 0; }
+.face-photos, .face-cameras { display: block; width: 100%; }
+.face-image { display: block; width: 100%; max-height: 65vh; margin: 14px auto; object-fit: contain; background: #171d30; border-radius: 18px; }
+.camera-frame { display: inline-block; vertical-align: top; width: 49%; padding: 10px; }
+.analog-dial { position: relative; width: 260px; height: 260px; max-width: 100%; margin: 0 auto 20px; border-radius: 50%; background: #a7d6ef; color: #213d5c; }
+.analog-number { position: absolute; font-size: 29px; font-weight: 700; }
+.analog-n12 { top: 8px; left: 42%; } .analog-n3 { top: 43%; right: 15px; }
+.analog-n6 { bottom: 8px; left: 46%; } .analog-n9 { top: 43%; left: 15px; }
+.analog-hour, .analog-minute { position: absolute; left: 50%; bottom: 50%; width: 6px; background: #213d5c; border-radius: 6px; -webkit-transform-origin: 50% 100%; transform-origin: 50% 100%; }
+.analog-hour { height: 25%; } .analog-minute { height: 34%; width: 4px; }
+.analog-center { position: absolute; left: 48.5%; top: 48.5%; width: 3%; height: 3%; border-radius: 50%; background: #213d5c; }
+.face-analog .clock-digits { display: none; }
+.music-card { text-align: center; }
+.music-artwork { display: block; width: 100%; max-width: 230px; margin: 16px auto; border-radius: 20px; }
+.music-placeholder { width: 180px; height: 180px; margin: 16px auto; padding: 50px 0; border-radius: 20px; background: rgba(255,255,255,.12); font-size: 60px; }
+.track-title { font-size: 22px; font-weight: 700; line-height: 1.25; }
+.track-artist { margin-top: 6px; color: rgba(255,255,255,.72); }
+.player-controls { margin-top: 12px; }
+.face-flow .card { background: rgba(91,70,126,.38); }
+@media (min-width: 700px) {
+  .legacy-face.face-home, .legacy-face.face-home_plus, .legacy-face.face-modular, .legacy-face.face-flow, .legacy-face.face-calendar, .legacy-face.face-weather {
+    display: -webkit-flex; display: flex; -webkit-flex-wrap: wrap; flex-wrap: wrap; -webkit-align-items: stretch; align-items: stretch;
+  }
+  .legacy-face > h1 { width: 100%; }
+  .legacy-face.face-home .card, .legacy-face.face-home_plus .card, .legacy-face.face-modular .card, .legacy-face.face-flow .card, .legacy-face.face-calendar .card, .legacy-face.face-weather .card {
+    -webkit-flex: 1 1 280px; flex: 1 1 280px; width: auto;
+  }
+  .legacy-face.face-home .hero-card, .legacy-face.face-home_plus .hero-card { -webkit-flex: 2 1 420px; flex: 2 1 420px; }
+  .clock-block, .clock-colon { font-size: 108px; }
+  .face-clock .clock-block, .face-clock .clock-colon { font-size: 180px; }
+}
+@media (max-width: 599px) {
+  header { padding: 14px 16px 4px; }
+  nav { padding: 5px 12px; }
+  main { padding: 16px; }
+  .card { display: block; width: 100%; min-width: 0; margin-right: 0; }
+  .camera-frame { width: 100%; }
+  .face-clock .clock-block, .face-clock .clock-colon { font-size: 76px; }
 }

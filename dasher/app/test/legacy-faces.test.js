@@ -10,6 +10,7 @@ test("legacy configuration is ordered, opt-in and reports invalid values", () =>
   assert.deepEqual(defaults.faces, LEGACY_FACES);
   assert.equal(defaults.photos, false);
   assert.equal(defaults.cameras, false);
+  assert.equal(defaults.wallpaper, null);
   const options = legacyOptions({ legacy_faces: ["weather", "home", "weather"], legacy_photos: true,
     legacy_photo_albums: ["Family"], legacy_cameras: true, legacy_camera_interval: 60 });
   assert.deepEqual(options.faces, ["weather", "home"]);
@@ -20,6 +21,12 @@ test("legacy configuration is ordered, opt-in and reports invalid values", () =>
   assert.equal(bad.photos, false);
   assert.equal(bad.errors.length, 3);
   assert.deepEqual(legacyOptions({ legacy_faces: [] }).faces, []);
+  assert.equal(legacyOptions({ legacy_wallpaper: "Home view.png" }).wallpaper, "Home view.png");
+  for (const filename of ["../wallpaper.jpg", "wallpaper.svg", "https://example.com/image.jpg", 123]) {
+    const invalid = legacyOptions({ legacy_wallpaper: filename });
+    assert.equal(invalid.wallpaper, null);
+    assert.match(invalid.errors.join(" "), /Invalid legacy wallpaper/);
+  }
 });
 
 test("photo albums constrain selection, extensions, sizes and symlinks", async (t) => {
