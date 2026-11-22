@@ -31,11 +31,7 @@ export function neighbourTab(tabs, current, step) {
   return next >= 0 && next < tabs.length ? tabs[next] : null;
 }
 
-/** A horizontal flick: long enough, mostly sideways and not a slow drag. */
-export function swipeStep(dx, dy, ms) {
-  if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.8 || ms > 700) return 0;
-  return dx < 0 ? 1 : -1;
-}
+export { swipeStep } from "./swipe.js";
 
 const CONTAINER_START = new Set(["album", "playlist", "podcast"]);
 

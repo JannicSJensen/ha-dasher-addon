@@ -1098,24 +1098,47 @@
       if (navigationToggle.focus) navigationToggle.focus();
     }
   });
-  if (content.addEventListener) {
+  if (document.body.addEventListener) {
     var swipe = null;
-    content.addEventListener("touchstart", function (event) {
-      var target = event.target;
+    document.body.addEventListener("touchstart", function (event) {
+      var target = event.target, face = currentFace(), touch, onFace = target === document.body;
       swipe = null;
-      while (target && target !== content) {
-        if (/^(BUTTON|A|SELECT|INPUT|TEXTAREA)$/.test(target.tagName)) return;
+      if (!face || legacy.faces.length < 2 || navigationOpen || facePickerOpen || event.touches.length !== 1) return;
+      while (target && target !== document.body) {
+        if (target === content) { onFace = true; break; }
+        if (/^(SELECT|INPUT|TEXTAREA|OPTION)$/.test(target.tagName) || target.isContentEditable ||
+            (target.getAttribute && target.getAttribute("role") === "slider")) return;
         target = target.parentNode;
       }
-      if (event.touches.length === 1) swipe = { x: event.touches[0].clientX, y: event.touches[0].clientY };
-    });
-    content.addEventListener("touchend", function (event) {
-      if (!swipe || !event.changedTouches.length) return;
-      var dx = event.changedTouches[0].clientX - swipe.x, dy = event.changedTouches[0].clientY - swipe.y;
+      if (!onFace) return;
+      touch = event.touches[0];
+      swipe = { id: touch.identifier, x: touch.clientX, y: touch.clientY, face: face, hash: window.location.hash };
+    }, { passive: true });
+    document.body.addEventListener("touchmove", function (event) {
+      if (!swipe) return;
+      if (event.touches.length !== 1 || event.touches[0].identifier !== swipe.id ||
+          currentFace() !== swipe.face || window.location.hash !== swipe.hash || navigationOpen || facePickerOpen) {
+        swipe = null; return;
+      }
+      var dx = event.touches[0].clientX - swipe.x, dy = event.touches[0].clientY - swipe.y;
+      if (Math.abs(dx) > 14 && Math.abs(dx) > Math.abs(dy) * 2 && event.cancelable) event.preventDefault();
+    }, { passive: false });
+    document.body.addEventListener("touchend", function (event) {
+      var start = swipe, touch = null, i, dx, dy;
       swipe = null;
-      if (currentFace() && Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 2) shiftFace(dx < 0 ? 1 : -1);
-    });
-    content.addEventListener("touchcancel", function () { swipe = null; });
+      if (!start || event.touches.length !== 0 || navigationOpen || facePickerOpen ||
+          currentFace() !== start.face || window.location.hash !== start.hash || legacy.faces.length < 2) return;
+      for (i = 0; i < event.changedTouches.length; i++) {
+        if (event.changedTouches[i].identifier === start.id) touch = event.changedTouches[i];
+      }
+      if (!touch) return;
+      dx = touch.clientX - start.x; dy = touch.clientY - start.y;
+      if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 2) {
+        if (event.cancelable) event.preventDefault();
+        shiftFace(dx < 0 ? 1 : -1);
+      }
+    }, { passive: false });
+    document.body.addEventListener("touchcancel", function () { swipe = null; });
   }
   setInterval(function () {
     updateClocks(); updateAnalog();

@@ -6,7 +6,7 @@ import { test } from "node:test";
 import YAML from "yaml";
 import { ConfigStore, parseConfig } from "../src/config.js";
 import { makeTranslator } from "../web/js/lib/i18n.js";
-import { BUILTIN_MENU_ITEMS, menuItemActive, menuItems, menuRoute } from "../web/js/lib/menu.js";
+import { BUILTIN_MENU_ITEMS, menuItemActive, menuItems, menuRoute, swipeMenuItems } from "../web/js/lib/menu.js";
 
 const base = "pages:\n  - { id: home, title: Home, icon: home }\n  - { id: garage, title: Garage, icon: garage }\n";
 const t = makeTranslator("en");
@@ -119,6 +119,23 @@ test("a custom radio page remains reachable when the built-in Music page is hidd
   assert.deepEqual(menuRoute("#/radio", menuItems(config, ready, t)), { kind: "page", id: "radio" });
   const shown = parse([], yaml).config;
   assert.deepEqual(menuRoute("#/radio", menuItems(shown, ready, t)), { kind: "music", id: null });
+});
+
+test("page swipes skip menu entries shadowed by an available or pending built-in route", () => {
+  const yaml = `${base}  - { id: radio }\n  - { id: music }\n`;
+  const shown = parse([], yaml).config;
+  assert.ok(menuItems(shown, ready, t).some((item) => item.key === "page:music"));
+  for (const state of [ready, {}]) {
+    const items = swipeMenuItems(shown, state, t);
+    assert.ok(!items.some((item) => ["page:radio", "page:music"].includes(item.key)));
+    assert.ok(items.some((item) => item.key === "page:home"));
+  }
+  assert.ok(swipeMenuItems(shown, ready, t).some((item) => item.key === "music"));
+  const hidden = parse([{ id: "music", visible: false }], yaml).config;
+  const items = swipeMenuItems(hidden, ready, t);
+  assert.ok(items.some((item) => item.key === "page:radio"));
+  assert.ok(items.some((item) => item.key === "page:music"));
+  assert.ok(!items.some((item) => item.key === "music"));
 });
 
 test("availability updates and pending data do not expose disabled menu items", () => {

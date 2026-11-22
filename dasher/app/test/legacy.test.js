@@ -44,6 +44,7 @@ function harness() {
       (selector === "[data-legacy-clock]" && item.getAttribute("data-legacy-clock") !== null) ||
       (selector === "[data-analog-clock]" && item.getAttribute("data-analog-clock") !== null)),
   };
+  document.body.appendChild(elements.content);
   const listeners = {};
   const location = { hash: "" };
   const window = { location, addEventListener: (type, fn) => { listeners[type] = fn; } };
@@ -587,6 +588,24 @@ test("legacy wallpaper loads local assets, reports errors and ignores stale load
   assert.equal(h.document.body.style.backgroundImage, "");
 });
 
+const touchPoint = (x, y, identifier = 1) => ({ clientX: x, clientY: y, identifier });
+function touchEvent(target, touches = [], changedTouches = []) {
+  return {
+    target, touches, changedTouches, cancelable: true, defaultPrevented: false,
+    preventDefault() { this.defaultPrevented = true; },
+  };
+}
+function swipeFace(h, target, from, to) {
+  const listeners = h.document.body.listeners;
+  const start = touchEvent(target, [touchPoint(...from)]);
+  const move = touchEvent(target, [touchPoint(...to)]);
+  const end = touchEvent(target, [], [touchPoint(...to)]);
+  listeners.touchstart(start);
+  listeners.touchmove(move);
+  listeners.touchend(end);
+  return { start, move, end };
+}
+
 test("disabled legacy image faces avoid requests and swipe switches faces", () => {
   const h = harness(); setup(h);
   const legacy = { faces: ["photos", "cameras"], photos: false, cameras: false, photo_interval: 120, camera_interval: 30, errors: [] };
@@ -594,10 +613,117 @@ test("disabled legacy image faces avoid requests and swipe switches faces", () =
   assert.match(h.elements.content.textContent, /Enable legacy photo/);
   assert.ok(!h.requests.some((r) => /legacy\/photos/.test(r.url)));
   const target = h.elements.content;
-  target.listeners.touchstart({ target, touches: [{ clientX: 200, clientY: 100 }] });
-  target.listeners.touchend({ changedTouches: [{ clientX: 100, clientY: 102 }] });
+  assert.equal(swipeFace(h, target, [200, 100], [100, 102]).end.defaultPrevented, true);
   assert.equal(h.location.hash, "#/face/cameras");
   h.route("face/cameras");
   assert.match(h.elements.content.textContent, /Enable legacy camera/);
   assert.ok(!h.requests.some((r) => /legacy\/cameras/.test(r.url)));
+});
+
+test("legacy swipes work across buttons, follow configured order and wrap", () => {
+  const h = harness(); setup(h);
+  h.source.emit("config", { config, errors: [], legacy: { faces: ["home", "weather", "clock"] } });
+  const control = h.findClass("home-control");
+  const requests = h.requests.length;
+  const first = swipeFace(h, control.children[0], [200, 150], [100, 153]);
+  assert.equal(first.move.defaultPrevented, true);
+  assert.equal(first.end.defaultPrevented, true);
+  assert.equal(h.location.hash, "#/face/weather");
+  assert.equal(h.requests.length, requests);
+
+  h.route("face/weather");
+  swipeFace(h, h.elements.content, [100, 150], [200, 150]);
+  assert.equal(h.location.hash, "#/face/home");
+  h.route("face/home");
+  swipeFace(h, h.elements.content, [100, 150], [200, 150]);
+  assert.equal(h.location.hash, "#/face/clock");
+  h.route("face/clock");
+  swipeFace(h, h.elements.content, [200, 150], [100, 150]);
+  assert.equal(h.location.hash, "#/face/home");
+});
+
+test("legacy swipes work on the empty face background, but not on the dock", () => {
+  const h = harness(); setup(h);
+  h.source.emit("config", { config, errors: [], legacy: { faces: ["home", "cameras"], cameras: false } });
+  h.route("face/cameras");
+  assert.equal(swipeFace(h, h.document.body, [200, 150], [100, 150]).end.defaultPrevented, true);
+  assert.equal(h.location.hash, "#/face/home");
+  h.route("face/home");
+  const dock = h.document.createElement("div"), dockButton = h.document.createElement("button");
+  h.document.body.appendChild(dock);
+  dock.appendChild(dockButton);
+  assert.equal(swipeFace(h, dockButton, [200, 150], [100, 150]).end.defaultPrevented, false);
+  assert.equal(h.location.hash, "#/face/home");
+});
+
+test("legacy taps and vertical scrolls are not swallowed; form controls keep their gestures", () => {
+  const h = harness(); setup(h);
+  h.source.emit("config", { config, errors: [], legacy: { faces: ["home", "weather"] } });
+  const control = h.findClass("home-control");
+  const tap = swipeFace(h, control, [200, 150], [204, 152]);
+  assert.equal(tap.move.defaultPrevented, false);
+  assert.equal(tap.end.defaultPrevented, false);
+  control.onclick();
+  assert.ok(h.requests.some((request) => request.method === "POST" && request.body.service === "toggle"));
+  const vertical = swipeFace(h, control, [200, 150], [190, 30]);
+  assert.equal(vertical.move.defaultPrevented, false);
+  assert.equal(vertical.end.defaultPrevented, false);
+  const diagonal = swipeFace(h, control, [200, 150], [100, 90]);
+  assert.equal(diagonal.end.defaultPrevented, false);
+  const short = swipeFace(h, control, [200, 150], [140, 150]);
+  assert.equal(short.end.defaultPrevented, false);
+  assert.equal(swipeFace(h, control, [200, 150], [100, 100]).end.defaultPrevented, false);
+  for (const tag of ["select", "input", "textarea"]) {
+    const field = h.document.createElement(tag);
+    h.elements.content.appendChild(field);
+    const result = swipeFace(h, field, [200, 150], [100, 150]);
+    assert.equal(result.move.defaultPrevented, false, tag);
+    assert.equal(result.end.defaultPrevented, false, tag);
+  }
+  const slider = h.document.createElement("div");
+  slider.setAttribute("role", "slider");
+  h.elements.content.appendChild(slider);
+  assert.equal(swipeFace(h, slider, [200, 150], [100, 150]).end.defaultPrevented, false);
+  assert.equal(h.location.hash, "");
+});
+
+test("legacy does not intercept gestures when fewer than two faces are configured", () => {
+  const h = harness(); setup(h);
+  for (const faces of [[], ["clock"]]) {
+    h.source.emit("config", { config, errors: [], legacy: { faces } });
+    const result = swipeFace(h, h.document.body, [200, 150], [100, 150]);
+    assert.equal(result.move.defaultPrevented, false);
+    assert.equal(result.end.defaultPrevented, false);
+    assert.equal(h.location.hash, "");
+  }
+});
+
+test("legacy ignores multi-touch, cancellation, route changes and open overlays", () => {
+  const h = harness(); setup(h);
+  h.source.emit("config", { config, errors: [], legacy: { faces: ["home", "weather"] } });
+  const content = h.elements.content, listeners = h.document.body.listeners;
+  listeners.touchstart(touchEvent(content, [touchPoint(200, 150)]));
+  listeners.touchmove(touchEvent(content, [touchPoint(100, 150), touchPoint(120, 150, 2)]));
+  listeners.touchend(touchEvent(content, [], [touchPoint(100, 150)]));
+  assert.equal(h.location.hash, "");
+  listeners.touchstart(touchEvent(content, [touchPoint(200, 150)]));
+  listeners.touchcancel(touchEvent(content));
+  listeners.touchend(touchEvent(content, [], [touchPoint(100, 150)]));
+  assert.equal(h.location.hash, "");
+  listeners.touchstart(touchEvent(content, [touchPoint(200, 150)]));
+  listeners.touchend(touchEvent(content, [], [touchPoint(100, 150, 2)]));
+  assert.equal(h.location.hash, "");
+  listeners.touchstart(touchEvent(content, [touchPoint(200, 150)]));
+  h.route("face/weather");
+  listeners.touchend(touchEvent(content, [], [touchPoint(100, 150)]));
+  assert.equal(h.location.hash, "#/face/weather");
+  h.elements["navigation-toggle"].onclick();
+  assert.equal(swipeFace(h, content, [200, 150], [100, 150]).end.defaultPrevented, false);
+  h.elements["navigation-toggle"].onclick();
+  h.elements["face-picker-toggle"].onclick();
+  assert.equal(swipeFace(h, content, [200, 150], [100, 150]).end.defaultPrevented, false);
+  h.elements["face-picker-close"].onclick();
+  h.route("climate");
+  assert.equal(swipeFace(h, content, [200, 150], [100, 150]).end.defaultPrevented, false);
+  assert.equal(h.location.hash, "#/climate");
 });

@@ -53,3 +53,10 @@ export function menuItemActive(item, route) {
     ? route.kind === "page" && route.id === item.id
     : item.kind === route.kind || (item.kind === "areas" && route.kind === "area");
 }
+
+export function swipeMenuItems(config, state, t) {
+  const available = menuItems(config, state, t);
+  // Pending built-ins can still claim the URL of a custom page.
+  const routes = menuItems(config, state, t, { includePending: true });
+  return available.filter((item) => menuItemActive(item, menuRoute(item.href, routes)));
+}

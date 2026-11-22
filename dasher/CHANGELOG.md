@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.53.0
+
+- **Swipe navigation.** Swipe up or down between visible pages in the standard dashboard, in menu order. Scrollable content keeps its normal scrolling; a new swipe at its top or bottom changes pages.
+- **Legacy face swipes.** Swipe horizontally across faces, including their backgrounds and buttons, without activating controls. Form controls, multi-touch gestures and the face chooser keep their existing behavior.
+
 ## 0.52.0
 
 - **Original analog watch face.** Pair an oversized live digital time and date with a separate round dial, hour markers and a sweeping second hand. The face follows the configured home time format and uses a distinct deep-teal palette; existing faces and optional wallpapers remain supported.

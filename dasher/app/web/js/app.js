@@ -4,7 +4,8 @@ import { icon } from "./core/icons.js";
 import { Store } from "./core/store.js";
 import { collectEntities } from "./lib/entities.js";
 import { makeTranslator } from "./lib/i18n.js";
-import { menuItemActive, menuItems, menuRoute } from "./lib/menu.js";
+import { menuItemActive, menuItems, menuRoute, swipeMenuItems } from "./lib/menu.js";
+import { installPageSwipe } from "./lib/page-swipe.js";
 import { createAreaPage } from "./pages/area.js";
 import { createAreasPage } from "./pages/areas.js";
 import { createAmbient } from "./components/ambient.js";
@@ -356,6 +357,12 @@ function resetAmbient() {
 for (const ev of ["pointerdown", "keydown"]) document.addEventListener(ev, resetAmbient, { passive: true, capture: true });
 
 // ---- wiring -------------------------------------------------------------------
+
+installPageSwipe(stage, () => {
+  const state = store.getState();
+  if (!state.config || document.querySelector(".modal") || !alarmAlert.el.hidden || nowScreen?.isOpen || ambient?.isOpen) return null;
+  return { items: swipeMenuItems(state.config, state, t), route, hash: location.hash };
+}, (href) => { location.hash = href; });
 
 store.subscribe((s) => s.entities, () => {
   refreshTiles();
