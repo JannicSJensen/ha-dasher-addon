@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.54.0
+
+- **Dasher Apple is independent.** Remove the `/legacy/` frontend, dedicated photo/camera endpoints, legacy app options and their translations. Older-iPad faces now live in [ha-dasher-apple](https://github.com/JannicSJensen/ha-dasher-apple), installed separately on port 8100.
+- **Migration required for legacy users.** Copy your dashboard, wanted assets and face settings to Dasher Apple before updating tablet bookmarks. Existing Dasher configuration and assets are not deleted. The standard dashboard remains on port 8099.
+- Remove legacy-only tests and the ES5 parser dependency; preserve standard-dashboard functionality and unrelated backwards-compatible configuration handling.
+
 ## 0.53.0
 
 - **Swipe navigation.** Swipe up or down between visible pages in the standard dashboard, in menu order. Scrollable content keeps its normal scrolling; a new swipe at its top or bottom changes pages.

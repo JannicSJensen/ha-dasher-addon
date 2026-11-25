@@ -8,27 +8,6 @@ configuration:
   weather_background:
     name: Animeret vejrbaggrund
     description: "Erstat forsidens store baggrund med animeret aktuelt vejr, og behold ur, beskeder og knapper. Bruger kalenderflisens vejrentitet eller den første HA-vejrentitet; følger sun.sun for dag/nat. Slå fra for at gendanne det oprindelige billede/rum. Respekterer indstillingen for reduceret bevægelse. Genstart appen efter ændring."
-  legacy_faces:
-    name: Legacy-dashboardets visninger
-    description: "Vælg og sortér visningerne på /legacy/. Eksisterende dashboardsider er fortsat tilgængelige i sidemenuen. Genstart efter ændring."
-  legacy_wallpaper:
-    name: Legacy-baggrund
-    description: "Valgfrit filnavn på et JPEG-, PNG- eller GIF-billede i appens assets-mappe. Lad feltet være tomt for den indbyggede baggrund. Genstart efter ændring."
-  legacy_photos:
-    name: Legacy-fotoalbum
-    description: "Tillad fotovisningen at vise billeder fra assets/photos. Alle, der kan nå appens direkte port, kan se billederne. Genstart efter ændring."
-  legacy_photo_albums:
-    name: Legacy-fotoalbumsmappenavne
-    description: "Mappenavne direkte under assets/photos. Lad listen være tom for alle mapper og billeder direkte i assets/photos. En udfyldt liste inkluderer kun de nævnte mapper. Genstart efter ændring."
-  legacy_photo_interval:
-    name: Legacy-fotointerval
-    description: "Sekunder mellem billeder (10–3600). Genstart efter ændring."
-  legacy_cameras:
-    name: Legacy-kamerabilleder
-    description: "Vis billeder fra alle fundne HA-kameraer i legacy-kameravisningen. Alle, der kan nå appens direkte port, kan se dem, også kameraer der tilføjes senere. Slået fra som standard. Genstart efter ændring. Den eksisterende generelle billedproxy er uafhængig af denne indstilling."
-  legacy_camera_interval:
-    name: Legacy-kameraopdatering
-    description: "Sekunder mellem kamerabilleder (10–3600). Genstart efter ændring."
   entity_map:
     name: Entitetstilknytning
     description: "Brug entiteter fra din Home Assistant i stedet for dem, dashboard.yaml nævner, uden at redigere filen. Hver række har entitets-id'et som skrevet i dashboard.yaml (Fra) og den entitet der skal bruges i stedet (Til); begge skal være af samme slags (et lys til et lys, en sensor til en sensor). Dashboard-entiteter som Home Assistant ikke kender vises nederst på tabletsiden og står i appens log med forslag. Genstart appen efter ændring."

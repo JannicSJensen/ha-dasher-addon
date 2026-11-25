@@ -8,27 +8,6 @@ configuration:
   weather_background:
     name: Animated weather background
     description: "Replace the front-page hero background with animated current weather, keeping the clock, reminders and buttons. Uses the calendar tile's weather entity, or the first HA weather entity; follows sun.sun for day/night. Turn off to restore the original picture/room. Respects reduced-motion preferences. Restart the app after changing."
-  legacy_faces:
-    name: Legacy dashboard faces
-    description: "Choose and order the faces available at /legacy/. Existing dashboard pages remain available in the page menu. Restart after changing."
-  legacy_wallpaper:
-    name: Legacy wallpaper
-    description: "Optional JPEG, PNG or GIF filename in the app's assets folder. Leave empty for the built-in background. Restart after changing."
-  legacy_photos:
-    name: Legacy photo albums
-    description: "Allow the legacy photo face to show images from assets/photos. Anyone who can reach the app's direct port can view these photos. Restart after changing."
-  legacy_photo_albums:
-    name: Legacy photo album folders
-    description: "Folder names directly inside assets/photos. Leave empty to include all folders and photos in assets/photos itself. When set, only named folders are included. Restart after changing."
-  legacy_photo_interval:
-    name: Legacy photo interval
-    description: "Seconds between photos (10–3600). Restart after changing."
-  legacy_cameras:
-    name: Legacy camera snapshots
-    description: "Expose all discovered HA camera snapshots to the legacy camera face. Anyone who can reach the app's direct port can view them, including cameras added later. Disabled by default. Restart after changing. The existing general image proxy is separate from this option."
-  legacy_camera_interval:
-    name: Legacy camera refresh
-    description: "Seconds between camera snapshots (10–3600). Restart after changing."
   entity_map:
     name: Entity mapping
     description: "Use entities of your Home Assistant in place of the ones dashboard.yaml names, without editing the file. Each row has the entity id as written in dashboard.yaml (From) and the entity to use instead (To); both must be of the same kind (a light for a light, a sensor for a sensor). Dashboard entities that Home Assistant does not know are shown at the bottom of the tablet page and listed in the app log with suggestions. Restart the app after changing."

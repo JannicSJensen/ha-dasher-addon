@@ -1,5 +1,5 @@
 name: Dasher
-version: "0.53.0"
+version: "0.54.0"
 slug: dasher
 url: https://github.com/JannicSJensen/ha-dasher-addon
 description: Wall-tablet dashboard that serves a ready-to-use web page for tablets
@@ -27,23 +27,6 @@ options:
   entity_map: []
   menu_items: []
   weather_background: true
-  legacy_faces:
-    - home
-    - home_plus
-    - modular
-    - weather
-    - calendar
-    - clock
-    - analog
-    - flow
-    - photos
-    - cameras
-  legacy_wallpaper: ""
-  legacy_photos: false
-  legacy_photo_albums: []
-  legacy_photo_interval: 120
-  legacy_cameras: false
-  legacy_camera_interval: 30
   allow_todo_management: true
   allow_area_editing: true
   allow_area_picture_upload: true
@@ -57,15 +40,6 @@ schema:
   log_level: list(debug|info|warning|error)
   read_only: bool
   weather_background: bool
-  legacy_faces:
-    - list(home|home_plus|modular|weather|calendar|clock|analog|flow|photos|cameras)
-  legacy_wallpaper: str
-  legacy_photos: bool
-  legacy_photo_albums:
-    - str
-  legacy_photo_interval: int(10,3600)
-  legacy_cameras: bool
-  legacy_camera_interval: int(10,3600)
   entity_map:
     - from: str
       to: str

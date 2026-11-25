@@ -31,7 +31,6 @@ import { HAClient } from "./ha-client.js";
 import { iconSvg } from "./icons.js";
 import { AreaPictures } from "./area-pictures.js";
 import { validateProxyPath, validateServiceCall } from "./policy.js";
-import { cameraList, legacyOptions, listPhotoAlbums, openPhoto } from "./legacy-faces.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const appRoot = path.resolve(here, "..");
@@ -59,8 +58,6 @@ const logger = Object.fromEntries(
     return [name, (msg) => level >= minLevel && out(`[${new Date().toISOString()}] ${name.toUpperCase()} ${msg}`)];
   }),
 );
-const legacySettings = legacyOptions(options);
-for (const error of legacySettings.errors) logger.warn(error);
 
 const PORT = Number(process.env.PORT ?? 8099);
 const READ_ONLY = options.read_only === true;
@@ -347,7 +344,7 @@ function publicConfig(config) {
   if (!config?.family?.people?.some((p) => p.pin)) return config;
   return { ...config, family: { ...config.family, people: config.family.people.map(({ pin, ...rest }) => ({ ...rest, has_pin: Boolean(pin) })) } };
 }
-const configPayload = () => ({ config: publicConfig(weatherModel.config ?? configStore.current.config), errors: configStore.current.errors, legacy: legacySettings });
+const configPayload = () => ({ config: publicConfig(weatherModel.config ?? configStore.current.config), errors: configStore.current.errors });
 const statusPayload = () => ({
   ha: ha.connected,
   readOnly: READ_ONLY,
@@ -504,44 +501,6 @@ async function proxyImage(res, requestedPath, cacheControl = "private, max-age=3
     logger.debug(`Image proxy failed: ${err.message}`);
     json(res, 502, { error: "Upstream failed." });
   }
-}
-
-async function handleLegacyPhotos(res) {
-  if (!legacySettings.photos) return json(res, 403, { error: "Legacy photos are disabled in app configuration." });
-  try {
-    return json(res, 200, await listPhotoAlbums(configStore.assetsDir, legacySettings.albums));
-  } catch (err) {
-    logger.warn(`Legacy photos failed: ${err.message}`);
-    return json(res, err.status ?? 500, { error: err.status ? err.message : "Could not read photo albums." });
-  }
-}
-
-async function handleLegacyPhoto(req, res, params) {
-  if (!legacySettings.photos) return json(res, 403, { error: "Legacy photos are disabled in app configuration." });
-  try {
-    const photo = await openPhoto(configStore.assetsDir, params.get("album") ?? "", params.get("name"), legacySettings.albums);
-    res.writeHead(200, { "Content-Type": MIME[photo.extension], "Content-Length": photo.size, "Cache-Control": "private, max-age=60" });
-    if (req.method === "HEAD") { await photo.handle.close(); return res.end(); }
-    const stream = photo.handle.createReadStream();
-    stream.on("error", (err) => { logger.warn(`Legacy photo stream failed: ${err.message}`); res.destroy(); });
-    return stream.pipe(res);
-  } catch (err) {
-    logger.warn(`Legacy photo failed: ${err.message}`);
-    return json(res, err.status ?? 500, { error: err.status ? err.message : "Could not read photo." });
-  }
-}
-
-function handleLegacyCameras(res) {
-  if (!legacySettings.cameras) return json(res, 403, { error: "Legacy cameras are disabled in app configuration." });
-  if (!ha.connected) return json(res, 503, { error: "Home Assistant is disconnected." });
-  return json(res, 200, { cameras: cameraList(ha.entityIndex, true) });
-}
-
-async function handleLegacyCamera(res, id) {
-  if (!legacySettings.cameras) return json(res, 403, { error: "Legacy cameras are disabled in app configuration." });
-  if (!ha.connected) return json(res, 503, { error: "Home Assistant is disconnected." });
-  if (!cameraList(ha.entityIndex, true).some((camera) => camera.id === id)) return json(res, 404, { error: "Unknown camera." });
-  return proxyImage(res, `/api/camera_proxy/${encodeURIComponent(id)}`, "private, max-age=10");
 }
 
 function handleEvents(req, res) {
@@ -1236,10 +1195,6 @@ const server = http.createServer(async (req, res) => {
       if (p === "/api/calendar") return await handleCalendar(res, url.searchParams);
       if (p === "/api/calendar/view") return await handleCalendarView(res, url.searchParams);
       if (p === "/api/energy") return await handleEnergy(res, url.searchParams);
-      if (p === "/api/legacy/photos") return await handleLegacyPhotos(res);
-      if (p === "/api/legacy/photo") return await handleLegacyPhoto(req, res, url.searchParams);
-      if (p === "/api/legacy/cameras") return handleLegacyCameras(res);
-      if (p === "/api/legacy/camera") return await handleLegacyCamera(res, url.searchParams.get("entity"));
       if (p === "/api/meals") return json(res, 200, mealsPayload());
       if (p === "/api/family") return json(res, 200, familyPayload());
       if (p === "/api/meals/cookbook") return await handleCookbook(res, url.searchParams);
@@ -1260,11 +1215,7 @@ const server = http.createServer(async (req, res) => {
         return serveFile(res, path.resolve(configStore.assetsDir), p.slice("/assets/".length), "no-cache");
       }
       if (p.startsWith("/api/")) return json(res, 404, { error: "Not found." });
-      if (p === "/legacy") {
-        res.writeHead(302, { Location: "legacy/" });
-        return res.end();
-      }
-      const rel = p === "/" ? "index.html" : p === "/legacy/" ? "legacy/index.html" : p.slice(1);
+      const rel = p === "/" ? "index.html" : p.slice(1);
       const longCache = rel.startsWith("fonts/");
       return serveFile(res, webRoot, rel, longCache ? "public, max-age=31536000, immutable" : "no-cache");
     }
@@ -1301,7 +1252,7 @@ radio.start();
 setInterval(() => ha.connected && energy.refresh(), 60_000).unref();
 setInterval(rescanImages, 3000).unref();
 
-server.listen(PORT, () => logger.info(`Dasher ${version} listening on :${PORT} (config: ${configStore.file})`));
+server.listen(PORT, () => logger.info(`Dasher ${version} listening on :${server.address().port} (config: ${configStore.file})`));
 
 for (const sig of ["SIGTERM", "SIGINT"]) {
   process.on(sig, () => {
