@@ -1,3 +1,18 @@
+# Moved to Home Assistant Apps
+
+Dasher is now maintained in the public
+[JannicSJensen/ha-apps](https://github.com/JannicSJensen/ha-apps) repository.
+Add that repository URL to Home Assistant for new installations and future updates.
+
+**Existing installations do not migrate automatically.** Back up the app,
+install its new copy, transfer options/configuration/private data, and verify it
+before uninstalling the old copy. Follow the
+[migration guide](https://github.com/JannicSJensen/ha-apps/blob/main/MIGRATION.md).
+This original repository is archived; running apps are not stopped or deleted,
+but will receive no further updates here.
+
+## Historical documentation
+
 # Dasher – Home Assistant app repository
 
 [![Add repository to my Home Assistant](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2FJannicSJensen%2Fha-dasher-addon)
